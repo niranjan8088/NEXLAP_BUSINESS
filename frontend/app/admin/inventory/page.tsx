@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import {
   Package,
   Search,
@@ -13,13 +13,32 @@ import {
   PlusCircle,
   Trash2,
   TrendingDown,
+  RefreshCw,
+  Clock,
+  Layers,
+  ArrowUpDown
 } from "lucide-react";
 import { dbHelper } from "@/lib/dbHelper";
 
-type StockStatus = "in_stock" | "low_stock" | "out_of_stock";
+export type StockStatus = "in_stock" | "low_stock" | "out_of_stock";
 
-function getStatus(qty: number, threshold: number): StockStatus {
-  if (qty === 0) return "out_of_stock";
+export interface InventoryItem {
+  itemKey: string; // Unique key: productId + (variantId || 'base')
+  productId: string;
+  variantId?: string;
+  sku: string;
+  productTitle: string;
+  variantName?: string;
+  category: string;
+  stock: number;
+  price: number;
+  threshold: number;
+  status: StockStatus;
+  lastUpdated: string;
+}
+
+function computeStatus(qty: number, threshold: number): StockStatus {
+  if (qty <= 0) return "out_of_stock";
   if (qty <= threshold) return "low_stock";
   return "in_stock";
 }
@@ -27,17 +46,17 @@ function getStatus(qty: number, threshold: number): StockStatus {
 const STATUS_CONFIG: Record<StockStatus, { label: string; color: string; icon: React.ReactNode }> = {
   in_stock: {
     label: "In Stock",
-    color: "text-green-400 bg-green-500/10 border-green-500/20",
+    color: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
     icon: <CheckCircle className="h-3.5 w-3.5" />,
   },
   low_stock: {
-    label: "Low Stock",
-    color: "text-yellow-400 bg-yellow-500/10 border-yellow-500/20",
+    label: "Low Stock Alert",
+    color: "text-amber-400 bg-amber-500/10 border-amber-500/20",
     icon: <TrendingDown className="h-3.5 w-3.5" />,
   },
   out_of_stock: {
     label: "Out of Stock",
-    color: "text-red-400 bg-red-500/10 border-red-500/20",
+    color: "text-rose-400 bg-rose-500/10 border-rose-500/20",
     icon: <XCircle className="h-3.5 w-3.5" />,
   },
 };
@@ -47,232 +66,379 @@ export default function AdminInventoryControl() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | StockStatus>("all");
   const [threshold, setThreshold] = useState(5);
+  const [activeTab, setActiveTab] = useState<"all" | "alerts">("alerts");
 
-  // Inline editing
-  const [editingId, setEditingId] = useState<string | null>(null);
+  // Inline editing state
+  const [editingKey, setEditingKey] = useState<string | null>(null);
   const [editQty, setEditQty] = useState(0);
 
   // Add stock modal
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalProduct, setModalProduct] = useState<any | null>(null);
+  const [modalItem, setModalItem] = useState<InventoryItem | null>(null);
   const [addQty, setAddQty] = useState(0);
 
-  const load = async () => {
+  const loadData = async () => {
     const list = await dbHelper.products.list();
     setProducts(list);
   };
 
   useEffect(() => {
-    load();
-    window.addEventListener("nexbyte-realtime", load);
-    return () => window.removeEventListener("nexbyte-realtime", load);
+    loadData();
+    const handler = () => loadData();
+    window.addEventListener("nexbyte-realtime", handler);
+    return () => window.removeEventListener("nexbyte-realtime", handler);
   }, []);
 
-  const handleSaveQty = async (id: string) => {
-    await dbHelper.products.update(id, { stock: editQty });
-    setEditingId(null);
-    load();
+  // Deterministically derive inventory items from actual products & variants
+  const inventoryItems: InventoryItem[] = useMemo(() => {
+    const items: InventoryItem[] = [];
+
+    products.forEach((p) => {
+      const pSku = p.sku || `SKU-${p.id.toUpperCase()}`;
+      const pUpdated = p.updated_at || p.created_at || new Date().toISOString();
+
+      if (Array.isArray(p.variants) && p.variants.length > 0) {
+        p.variants.forEach((v: any, vIdx: number) => {
+          const vSku = v.sku || `${pSku}-V${vIdx + 1}`;
+          const vStock = Math.max(0, Number(v.stock ?? p.stock ?? 0));
+          const vPrice = Number(v.price ?? p.price ?? 0);
+          const vThreshold = Number(v.lowStockThreshold ?? threshold);
+          const vKey = `${p.id}:${v.id || vIdx}`;
+
+          items.push({
+            itemKey: vKey,
+            productId: p.id,
+            variantId: v.id || String(vIdx),
+            sku: vSku,
+            productTitle: p.title,
+            variantName: v.name || v.label,
+            category: p.category || "hardware",
+            stock: vStock,
+            price: vPrice,
+            threshold: vThreshold,
+            status: computeStatus(vStock, vThreshold),
+            lastUpdated: v.updated_at || pUpdated,
+          });
+        });
+      } else {
+        const pStock = Math.max(0, Number(p.stock ?? 0));
+        const pPrice = Number(p.price ?? 0);
+        const pKey = `${p.id}:base`;
+
+        items.push({
+          itemKey: pKey,
+          productId: p.id,
+          sku: pSku,
+          productTitle: p.title,
+          category: p.category || "hardware",
+          stock: pStock,
+          price: pPrice,
+          threshold,
+          status: computeStatus(pStock, threshold),
+          lastUpdated: pUpdated,
+        });
+      }
+    });
+
+    return items;
+  }, [products, threshold]);
+
+  const handleSaveStock = async (item: InventoryItem, newQty: number) => {
+    const sanitizedQty = Math.max(0, Number(newQty)); // Prevent negative stock
+    const prod = products.find((p) => p.id === item.productId);
+    if (!prod) return;
+
+    if (item.variantId && Array.isArray(prod.variants)) {
+      const updatedVariants = prod.variants.map((v: any, idx: number) => {
+        if ((v.id && v.id === item.variantId) || String(idx) === item.variantId) {
+          return { ...v, stock: sanitizedQty, updated_at: new Date().toISOString() };
+        }
+        return v;
+      });
+      const totalStock = updatedVariants.reduce((sum: number, v: any) => sum + (Number(v.stock) || 0), 0);
+      await dbHelper.products.update(prod.id, {
+        variants: updatedVariants,
+        stock: totalStock,
+        updated_at: new Date().toISOString()
+      });
+    } else {
+      await dbHelper.products.update(prod.id, {
+        stock: sanitizedQty,
+        updated_at: new Date().toISOString()
+      });
+    }
+
+    setEditingKey(null);
+    loadData();
   };
 
-  const handleOpenAdd = (p: any) => {
-    setModalProduct(p);
-    setAddQty(0);
-    setIsModalOpen(true);
-  };
-
-  const handleAddStock = async () => {
-    if (!modalProduct) return;
-    const newQty = (modalProduct.stock || 0) + Number(addQty);
-    await dbHelper.products.update(modalProduct.id, { stock: newQty });
+  const handleRestockSubmit = async () => {
+    if (!modalItem) return;
+    const currentStock = modalItem.stock;
+    const additional = Math.max(0, Number(addQty));
+    await handleSaveStock(modalItem, currentStock + additional);
     setIsModalOpen(false);
-    setModalProduct(null);
-    load();
+    setModalItem(null);
   };
 
-  const filtered = products.filter((p) => {
-    const status = getStatus(p.stock ?? 0, threshold);
-    const matchSearch =
-      p.title.toLowerCase().includes(search.toLowerCase()) ||
-      p.category.toLowerCase().includes(search.toLowerCase());
-    const matchStatus = statusFilter === "all" || status === statusFilter;
-    return matchSearch && matchStatus;
-  });
+  // Filter items
+  const filteredItems = useMemo(() => {
+    return inventoryItems.filter((item) => {
+      const q = search.toLowerCase();
+      const matchSearch =
+        !q ||
+        item.sku.toLowerCase().includes(q) ||
+        item.productTitle.toLowerCase().includes(q) ||
+        (item.variantName || "").toLowerCase().includes(q) ||
+        item.category.toLowerCase().includes(q);
 
-  // Summary stats
-  const totalProducts = products.length;
-  const inStockCount = products.filter((p) => getStatus(p.stock ?? 0, threshold) === "in_stock").length;
-  const lowStockCount = products.filter((p) => getStatus(p.stock ?? 0, threshold) === "low_stock").length;
-  const outStockCount = products.filter((p) => getStatus(p.stock ?? 0, threshold) === "out_of_stock").length;
+      const matchStatus = statusFilter === "all" || item.status === statusFilter;
+      const matchTab = activeTab === "all" || item.status === "low_stock" || item.status === "out_of_stock";
+
+      return matchSearch && matchStatus && matchTab;
+    });
+  }, [inventoryItems, search, statusFilter, activeTab]);
+
+  // Alert summary metrics
+  const totalItems = inventoryItems.length;
+  const inStockCount = inventoryItems.filter((i) => i.status === "in_stock").length;
+  const lowStockCount = inventoryItems.filter((i) => i.status === "low_stock").length;
+  const outOfStockCount = inventoryItems.filter((i) => i.status === "out_of_stock").length;
+  const activeAlertsCount = lowStockCount + outOfStockCount;
 
   return (
     <div className="space-y-6">
-
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="font-display text-2xl font-bold text-white">Inventory Control</h1>
-          <p className="text-xs text-nex-mist mt-0.5">Track stock levels, trigger threshold alerts, and restock product quantities.</p>
+          <h1 className="font-display text-2xl font-bold text-white flex items-center gap-2">
+            <Package className="h-6 w-6 text-nex-blueLight" />
+            Inventory &amp; Alert Management
+          </h1>
+          <p className="text-xs text-nex-mist mt-0.5">
+            Real-time stock monitoring derived from authoritative product and variant SKU quantities. Alerts resolve automatically upon restocking.
+          </p>
         </div>
-        <div className="flex items-center gap-2 text-xs text-white/80">
-          <span className="text-nex-mist">Alert threshold:</span>
+
+        <div className="flex items-center gap-2 text-xs text-white/90">
+          <span className="text-nex-mist font-semibold">Low-Stock Threshold:</span>
           <input
             type="number"
             min={1}
-            max={50}
+            max={100}
             value={threshold}
-            onChange={(e) => setThreshold(Number(e.target.value))}
-            className="w-16 rounded-xl bg-nex-black border border-white/10 px-3 py-2 text-center text-white focus:outline-none"
+            onChange={(e) => setThreshold(Math.max(1, Number(e.target.value)))}
+            className="w-16 rounded-xl bg-nex-black border border-white/20 px-3 py-1.5 text-center text-white font-bold focus:outline-none"
           />
           <span className="text-nex-mist">units</span>
         </div>
       </div>
 
-      {/* Summary KPI Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      {/* KPI Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: "Total SKUs", value: totalProducts, color: "text-white" },
-          { label: "In Stock", value: inStockCount, color: "text-green-400" },
-          { label: "Low Stock", value: lowStockCount, color: "text-yellow-400" },
-          { label: "Out of Stock", value: outStockCount, color: "text-red-400" },
+          { label: "Total Tracked SKUs", value: totalItems, color: "text-white" },
+          { label: "Healthy In Stock", value: inStockCount, color: "text-emerald-400" },
+          { label: "Low Stock Alerts", value: lowStockCount, color: "text-amber-400" },
+          { label: "Out of Stock SKUs", value: outOfStockCount, color: "text-rose-400" },
         ].map((card) => (
-          <div
-            key={card.label}
-            className="glass-panel bg-nex-ink border border-white/5 rounded-2xl p-4 flex flex-col gap-1"
-          >
-            <span className="text-[10px] text-nex-mist font-medium uppercase tracking-wider">{card.label}</span>
-            <span className={`text-3xl font-display font-bold ${card.color}`}>{card.value}</span>
+          <div key={card.label} className="glass-panel bg-nex-ink/80 border border-white/5 rounded-2xl p-4 flex flex-col gap-1">
+            <span className="text-[10px] text-nex-mist font-bold uppercase tracking-wider">{card.label}</span>
+            <span className={`text-2xl font-display font-bold ${card.color}`}>{card.value}</span>
           </div>
         ))}
       </div>
 
-      {/* Filters strip */}
-      <div className="glass-panel p-5 rounded-2xl border border-white/5 bg-nex-ink flex flex-col sm:flex-row gap-4 items-center">
-        <div className="relative w-full sm:max-w-md">
-          <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-nex-mist" />
-          <input
-            type="text"
-            placeholder="Search product title or category..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full rounded-xl bg-nex-black border border-white/[0.08] pl-10 pr-4 py-2.5 text-xs text-white focus:outline-none"
-          />
+      {/* Alert Banner */}
+      {activeAlertsCount > 0 ? (
+        <div className="flex items-center justify-between rounded-2xl border border-amber-500/30 bg-amber-500/10 px-5 py-3 text-xs text-amber-200">
+          <div className="flex items-center gap-2.5">
+            <AlertTriangle className="h-5 w-5 shrink-0 text-amber-400" />
+            <span>
+              <strong>{activeAlertsCount} active inventory alert(s)</strong> require replenishment attention ({outOfStockCount} out of stock, {lowStockCount} below threshold).
+            </span>
+          </div>
+          <button
+            onClick={() => { setActiveTab("alerts"); setStatusFilter("all"); }}
+            className="rounded-lg bg-amber-500/20 px-3 py-1 font-bold text-amber-300 hover:bg-amber-500/30 text-[11px]"
+          >
+            Filter Alerts
+          </button>
         </div>
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value as any)}
-          className="w-full sm:w-44 rounded-xl bg-nex-black border border-white/10 px-3.5 py-2.5 text-xs text-white focus:outline-none"
-        >
-          <option value="all">All Stock Levels</option>
-          <option value="in_stock">In Stock Only</option>
-          <option value="low_stock">Low Stock Only</option>
-          <option value="out_of_stock">Out of Stock</option>
-        </select>
-      </div>
-
-      {/* Low stock alert banner */}
-      {lowStockCount + outStockCount > 0 && (
-        <div className="flex items-center gap-3 rounded-2xl border border-yellow-500/20 bg-yellow-500/5 px-5 py-3.5 text-xs text-yellow-300">
-          <AlertTriangle className="h-5 w-5 shrink-0 text-yellow-400" />
-          <span>
-            <strong>{lowStockCount + outStockCount} product(s)</strong> need restocking attention — {outStockCount} out of stock, {lowStockCount} below threshold.
-          </span>
+      ) : (
+        <div className="flex items-center gap-2.5 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 px-5 py-3 text-xs text-emerald-300">
+          <CheckCircle className="h-4 w-4 text-emerald-400 shrink-0" />
+          <span>All hardware catalog SKUs and variants are above the minimum stock threshold.</span>
         </div>
       )}
 
+      {/* View Switcher & Filters */}
+      <div className="glass-panel p-4 rounded-2xl border border-white/5 bg-nex-ink flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setActiveTab("alerts")}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
+              activeTab === "alerts"
+                ? "bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-glow-amber"
+                : "bg-white/5 text-nex-mist hover:text-white"
+            }`}
+          >
+            Active Stock Alerts ({activeAlertsCount})
+          </button>
+          <button
+            onClick={() => setActiveTab("all")}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
+              activeTab === "all"
+                ? "bg-nex-blue text-white shadow-glow-blue"
+                : "bg-white/5 text-nex-mist hover:text-white"
+            }`}
+          >
+            All Inventory Items ({totalItems})
+          </button>
+        </div>
+
+        <div className="flex items-center gap-2 flex-1 max-w-md">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-nex-mist" />
+            <input
+              type="text"
+              placeholder="Search by SKU, product name, or variant..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full rounded-xl bg-nex-black border border-white/10 pl-8 pr-3 py-2 text-xs text-white focus:outline-none"
+            />
+          </div>
+
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as any)}
+            className="rounded-xl bg-nex-black border border-white/10 px-3 py-2 text-xs text-white focus:outline-none font-bold"
+          >
+            <option value="all">All Levels</option>
+            <option value="out_of_stock">Out of Stock</option>
+            <option value="low_stock">Low Stock</option>
+            <option value="in_stock">In Stock</option>
+          </select>
+        </div>
+      </div>
+
       {/* Inventory Table */}
-      {filtered.length === 0 ? (
-        <div className="text-center py-20 glass-panel rounded-2xl">
-          <Package className="h-10 w-10 text-nex-mist mx-auto mb-3" />
-          <p className="text-xs text-white">No inventory items match the current filter.</p>
+      {filteredItems.length === 0 ? (
+        <div className="text-center py-16 glass-panel rounded-2xl border border-white/5 bg-nex-ink space-y-2">
+          <Package className="h-8 w-8 text-nex-mist mx-auto" />
+          <p className="text-xs text-white font-semibold">No inventory items match the current filter.</p>
         </div>
       ) : (
         <div className="glass-panel rounded-2xl border border-white/5 bg-nex-ink overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-xs text-left text-white border-collapse">
               <thead>
-                <tr className="border-b border-white/10 bg-white/[0.01] text-nex-mist font-semibold">
-                  <th className="py-3 px-5">Product / Category</th>
+                <tr className="border-b border-white/10 bg-white/[0.02] text-nex-mist font-bold uppercase tracking-wider text-[10px]">
+                  <th className="py-3 px-4">SKU / Item Key</th>
+                  <th className="py-3 px-4">Product &amp; Configuration</th>
+                  <th className="py-3 px-4">Category</th>
                   <th className="py-3 px-4">Stock Qty</th>
+                  <th className="py-3 px-4">Threshold</th>
                   <th className="py-3 px-4">Status</th>
-                  <th className="py-3 px-4">Price (Rs.)</th>
-                  <th className="py-3 px-5 text-right">Actions</th>
+                  <th className="py-3 px-4">Price</th>
+                  <th className="py-3 px-4 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody>
-                {filtered.map((p) => {
-                  const status = getStatus(p.stock ?? 0, threshold);
-                  const cfg = STATUS_CONFIG[status];
-                  const isEditing = editingId === p.id;
+              <tbody className="divide-y divide-white/[0.03]">
+                {filteredItems.map((item) => {
+                  const cfg = STATUS_CONFIG[item.status];
+                  const isEditing = editingKey === item.itemKey;
 
                   return (
                     <tr
-                      key={p.id}
-                      className={`border-b border-white/[0.03] transition-colors hover:bg-white/[0.01] ${
-                        status === "out_of_stock" ? "opacity-70" : ""
+                      key={item.itemKey}
+                      className={`hover:bg-white/[0.02] transition-colors ${
+                        item.status === "out_of_stock" ? "bg-rose-500/[0.02]" : ""
                       }`}
                     >
-                      {/* Product */}
-                      <td className="py-4 px-5">
-                        <div className="font-semibold text-white">{p.title}</div>
-                        <div className="text-[10px] text-nex-mist mt-0.5 capitalize">{p.category?.replace(/_/g, " ")}</div>
+                      {/* SKU */}
+                      <td className="py-3.5 px-4 font-mono font-bold text-nex-blueLight">
+                        {item.sku}
                       </td>
 
-                      {/* Stock Qty – inline editable */}
-                      <td className="py-4 px-4">
+                      {/* Product Name */}
+                      <td className="py-3.5 px-4">
+                        <div className="font-bold text-white">{item.productTitle}</div>
+                        {item.variantName && (
+                          <div className="text-[10px] text-nex-blueLight font-semibold mt-0.5">
+                            Config: {item.variantName}
+                          </div>
+                        )}
+                      </td>
+
+                      {/* Category */}
+                      <td className="py-3.5 px-4">
+                        <span className="capitalize text-nex-mist">{item.category.replace(/_/g, " ")}</span>
+                      </td>
+
+                      {/* Stock Qty (Inline editable) */}
+                      <td className="py-3.5 px-4">
                         {isEditing ? (
                           <div className="flex items-center gap-1.5">
                             <input
                               type="number"
                               min={0}
                               value={editQty}
-                              onChange={(e) => setEditQty(Number(e.target.value))}
-                              className="w-20 rounded-lg bg-white/[0.05] border border-nex-blue/40 px-2.5 py-1.5 text-xs text-white focus:outline-none"
+                              onChange={(e) => setEditQty(Math.max(0, Number(e.target.value)))}
+                              className="w-16 rounded-lg bg-black border border-nex-blue px-2 py-1 text-xs text-white font-bold focus:outline-none"
                               autoFocus
                             />
                             <button
-                              onClick={() => handleSaveQty(p.id)}
-                              className="h-7 w-7 rounded-full bg-green-500/20 text-green-400 flex items-center justify-center hover:bg-green-500/30"
+                              onClick={() => handleSaveStock(item, editQty)}
+                              className="h-6 w-6 rounded-md bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 flex items-center justify-center"
+                              title="Save quantity"
                             >
                               <Save className="h-3 w-3" />
                             </button>
                             <button
-                              onClick={() => setEditingId(null)}
-                              className="h-7 w-7 rounded-full bg-white/5 text-white/50 flex items-center justify-center hover:bg-white/10"
+                              onClick={() => setEditingKey(null)}
+                              className="h-6 w-6 rounded-md bg-white/10 text-white/60 hover:bg-white/20 flex items-center justify-center"
+                              title="Cancel"
                             >
                               <X className="h-3 w-3" />
                             </button>
                           </div>
                         ) : (
-                          <span
-                            onClick={() => { setEditingId(p.id); setEditQty(p.stock ?? 0); }}
-                            className="cursor-pointer font-bold text-white hover:text-nex-blueLight transition-colors underline decoration-dotted"
-                            title="Click to edit quantity"
+                          <button
+                            onClick={() => { setEditingKey(item.itemKey); setEditQty(item.stock); }}
+                            className="font-mono font-bold text-sm text-white hover:text-nex-blueLight underline decoration-dotted"
+                            title="Click to edit quantity inline"
                           >
-                            {p.stock ?? 0}
-                          </span>
+                            {item.stock}
+                          </button>
                         )}
                       </td>
 
-                      {/* Status badge */}
-                      <td className="py-4 px-4">
-                        <span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${cfg.color}`}>
+                      {/* Threshold */}
+                      <td className="py-3.5 px-4 text-nex-mist font-mono">
+                        {item.threshold} units
+                      </td>
+
+                      {/* Status */}
+                      <td className="py-3.5 px-4">
+                        <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[10px] font-bold ${cfg.color}`}>
                           {cfg.icon} {cfg.label}
                         </span>
                       </td>
 
                       {/* Price */}
-                      <td className="py-4 px-4 font-semibold text-white">
-                        Rs. {(p.price ?? 0).toLocaleString("en-IN")}
+                      <td className="py-3.5 px-4 font-semibold text-white">
+                        ₹{item.price.toLocaleString("en-IN")}
                       </td>
 
                       {/* Actions */}
-                      <td className="py-4 px-5 text-right">
+                      <td className="py-3.5 px-4 text-right">
                         <button
-                          onClick={() => handleOpenAdd(p)}
-                          className="inline-flex items-center gap-1.5 rounded-xl border border-nex-blue/30 bg-nex-blue/10 px-3 py-1.5 text-[10px] font-semibold text-nex-blueLight hover:bg-nex-blue/20 transition-colors"
-                          title="Add stock units"
+                          onClick={() => { setModalItem(item); setAddQty(10); setIsModalOpen(true); }}
+                          className="inline-flex items-center gap-1.5 rounded-xl border border-nex-blue/30 bg-nex-blue/10 px-3 py-1.5 text-[11px] font-bold text-nex-blueLight hover:bg-nex-blue/20 transition-all"
                         >
-                          <PlusCircle className="h-3.5 w-3.5" /> Restock
+                          <PlusCircle className="h-3.5 w-3.5" />
+                          <span>Restock</span>
                         </button>
                       </td>
                     </tr>
@@ -285,44 +451,55 @@ export default function AdminInventoryControl() {
       )}
 
       {/* Restock Modal */}
-      {isModalOpen && modalProduct && (
+      {isModalOpen && modalItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/85 backdrop-blur-sm" onClick={() => setIsModalOpen(false)} />
-          <div className="glass-panel relative w-full max-w-sm rounded-2xl border border-white/10 bg-nex-ink p-6 shadow-glow-blue">
-            <button
-              onClick={() => setIsModalOpen(false)}
-              className="absolute right-4 top-4 text-white/50 hover:text-white"
-            >
-              <X className="h-5 w-5" />
-            </button>
-            <h3 className="font-display text-base font-bold text-white mb-1">Restock Units</h3>
-            <p className="text-[11px] text-nex-mist mb-5">{modalProduct.title}</p>
-
-            <div className="space-y-4">
-              <div className="flex justify-between text-xs text-white/80">
-                <span>Current Stock</span>
-                <span className="font-bold text-white">{modalProduct.stock ?? 0} units</span>
+          <div className="glass-panel relative w-full max-w-md rounded-2xl border border-white/10 bg-nex-ink p-6 shadow-glow-blue z-10 space-y-4">
+            <div className="flex items-center justify-between border-b border-white/10 pb-3">
+              <div>
+                <span className="text-[10px] font-mono text-nex-blueLight font-bold uppercase">{modalItem.sku}</span>
+                <h3 className="font-display text-base font-bold text-white">Restock Hardware Units</h3>
               </div>
-              <div className="space-y-1">
-                <label className="text-xs text-white/80 font-semibold">Units to Add</label>
-                <input
-                  type="number"
-                  min={1}
-                  value={addQty}
-                  onChange={(e) => setAddQty(Number(e.target.value))}
-                  className="w-full rounded-xl bg-white/[0.03] border border-white/10 px-3.5 py-2.5 text-xs text-white focus:outline-none"
-                  autoFocus
-                />
-              </div>
-              <div className="flex justify-between text-xs text-white/80 border-t border-white/5 pt-3">
-                <span>New Total</span>
-                <span className="font-bold text-green-400">{(modalProduct.stock ?? 0) + Number(addQty)} units</span>
-              </div>
+              <button onClick={() => setIsModalOpen(false)} className="text-white/50 hover:text-white">
+                <X className="h-5 w-5" />
+              </button>
             </div>
 
-            <div className="mt-5 flex justify-end gap-2 text-xs">
-              <button onClick={() => setIsModalOpen(false)} className="btn-secondary !py-2 !px-4">Cancel</button>
-              <button onClick={handleAddStock} className="btn-primary !py-2 !px-5">Confirm Restock</button>
+            <div className="space-y-1 text-xs">
+              <div className="text-white font-bold">{modalItem.productTitle}</div>
+              {modalItem.variantName && <div className="text-nex-mist text-[11px]">Variant: {modalItem.variantName}</div>}
+              <div className="text-nex-mist text-[11px]">Current on-hand inventory: <strong className="text-white">{modalItem.stock} units</strong></div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-white/90">Add Additional Stock Units:</label>
+              <input
+                type="number"
+                min={1}
+                value={addQty}
+                onChange={(e) => setAddQty(Math.max(1, Number(e.target.value)))}
+                className="w-full rounded-xl bg-nex-black border border-white/10 px-3.5 py-2.5 text-xs text-white font-bold focus:outline-none"
+              />
+              <span className="text-[10px] text-nex-mist">
+                New resulting inventory will be: <strong>{modalItem.stock + Math.max(0, Number(addQty))} units</strong>
+              </span>
+            </div>
+
+            <div className="pt-2 flex justify-end gap-2 text-xs">
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                className="btn-secondary !py-2 !px-4"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleRestockSubmit}
+                className="btn-primary !py-2 !px-5 font-bold"
+              >
+                Confirm Restock
+              </button>
             </div>
           </div>
         </div>

@@ -21,6 +21,7 @@ export async function POST(request: NextRequest) {
       gstDetails,
       paymentMethod,
       offerCode,
+      protectionPlanId,
     } = body;
 
     if (!items || !Array.isArray(items) || items.length === 0) {
@@ -107,6 +108,7 @@ export async function POST(request: NextRequest) {
     let discountAmount = 0;
     let appliedOfferCode = "";
     let appliedOfferId = "";
+    let offerValidationDetails: any = null;
 
     if (offerCode && String(offerCode).trim()) {
       const valResult = await dbHelper.offers.validateForCustomer(
@@ -125,9 +127,29 @@ export async function POST(request: NextRequest) {
       discountAmount = Number(valResult.discountAmount) || 0;
       appliedOfferCode = String(valResult.offer?.code || offerCode).trim().toUpperCase();
       appliedOfferId = String(valResult.offer?.id || "");
+      offerValidationDetails = valResult.offer;
     }
 
-    // 3. Shipping Calculation
+    // 3. Optional Protection Plan Verification
+    let selectedPlanSnapshot: any = null;
+    let protectionPlanPrice = 0;
+
+    if (protectionPlanId && String(protectionPlanId).trim() && String(protectionPlanId).trim() !== "none") {
+      const allPlans = await dbHelper.protectionPlans.list();
+      const matchedPlan = allPlans.find((p: any) => p.id === String(protectionPlanId).trim() && p.isActive !== false);
+      if (matchedPlan) {
+        protectionPlanPrice = Number(matchedPlan.price) || 0;
+        selectedPlanSnapshot = {
+          id: matchedPlan.id,
+          title: matchedPlan.title,
+          price: protectionPlanPrice,
+          duration: matchedPlan.duration || "1 Year",
+          description: matchedPlan.description || "Hardware coverage plan",
+        };
+      }
+    }
+
+    // 4. Shipping Calculation
     let shippingFee = 0;
     if (deliveryOption === "express") {
       shippingFee = 199;
@@ -135,18 +157,18 @@ export async function POST(request: NextRequest) {
       shippingFee = 99;
     }
 
-    // 4. GST & Tax Calculation (18% inclusive/added breakdown)
+    // 5. GST & Tax Calculation (18% inclusive/added breakdown)
     const netTaxable = Math.max(0, serverSubtotal - discountAmount);
     const gstRate = 0.18;
     const gstAmount = Math.round(netTaxable * gstRate);
     const cgstAmount = Math.round(gstAmount / 2);
     const sgstAmount = gstAmount - cgstAmount;
-    const grandTotal = netTaxable + gstAmount + shippingFee;
+    const grandTotal = netTaxable + gstAmount + shippingFee + protectionPlanPrice;
 
-    // 5. Auth User linking
+    // 6. Auth User linking
     const userId = authUser.id;
 
-    // 6. Generate Order record
+    // 7. Generate Order record with complete Offer & Protection Plan snapshots
     const nextOrderId = await dbHelper.orders.getNextOrderId();
     const orderPayload = {
       order_id: nextOrderId,
@@ -163,7 +185,17 @@ export async function POST(request: NextRequest) {
       items: verifiedItems,
       subtotal_amount: serverSubtotal,
       discount_amount: discountAmount,
-      applied_offer_code: appliedOfferCode,
+      applied_offer_id: appliedOfferId || null,
+      applied_offer_code: appliedOfferCode || null,
+      applied_offer_name: offerValidationDetails?.name || null,
+      applied_offer_type: offerValidationDetails?.discountType || "percentage",
+      applied_offer_value: offerValidationDetails?.discountValue || 0,
+      applied_offer_discount: discountAmount,
+      applied_offer_subtotal_basis: serverSubtotal,
+      applied_offer_timestamp: appliedOfferId ? new Date().toISOString() : null,
+      protection_plan: selectedPlanSnapshot,
+      protection_plan_id: selectedPlanSnapshot?.id || null,
+      protection_plan_price: protectionPlanPrice,
       gst_amount: gstAmount,
       cgst_amount: cgstAmount,
       sgst_amount: sgstAmount,
@@ -195,20 +227,28 @@ export async function POST(request: NextRequest) {
         customerAddress: `${shippingAddress.addressLine1}, ${shippingAddress.city}, ${shippingAddress.state} - ${shippingAddress.pincode}`,
         gstin: gstDetails?.gstin || "",
         companyName: gstDetails?.companyName || "",
-        items: verifiedItems.map((i: any) => ({
-          description: `${i.title}${i.variant ? ` (${i.variant})` : ""}`,
-          quantity: i.quantity,
-          unitPrice: i.unitPrice,
-          total: i.total,
-        })),
-        subtotal: serverSubtotal,
+        items: [
+          ...verifiedItems.map((i: any) => ({
+            description: `${i.title}${i.variant ? ` (${i.variant})` : ""}`,
+            quantity: i.quantity,
+            unitPrice: i.unitPrice,
+            total: i.total,
+          })),
+          ...(selectedPlanSnapshot ? [{
+            description: `Optional Protection: ${selectedPlanSnapshot.title} (${selectedPlanSnapshot.duration})`,
+            quantity: 1,
+            unitPrice: protectionPlanPrice,
+            total: protectionPlanPrice,
+          }] : [])
+        ],
+        subtotal: serverSubtotal + protectionPlanPrice,
         discount: discountAmount,
         tax: gstAmount,
         cgst: cgstAmount,
         sgst: sgstAmount,
         total: grandTotal,
         paymentStatus: paymentMethod === "COD" ? "Unpaid" : "Paid",
-        notes: `Auto-generated Tax Invoice for Order #${nextOrderId}`,
+        notes: `Auto-generated Tax Invoice for Order #${nextOrderId}${selectedPlanSnapshot ? ` [Includes ${selectedPlanSnapshot.title}]` : ""}`,
       });
     } catch (invErr) {
       console.error("Auto Invoice Creation Warning:", invErr);

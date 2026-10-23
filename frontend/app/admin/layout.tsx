@@ -137,7 +137,14 @@ export default function AdminLayout({
   useEffect(() => {
     fetchNotifications();
     realtimeSync.init();
-    const handleRealtime = () => fetchNotifications();
+    let throttleTimeout: any = null;
+    const handleRealtime = () => {
+      if (throttleTimeout) return;
+      throttleTimeout = setTimeout(() => {
+        fetchNotifications();
+        throttleTimeout = null;
+      }, 2000);
+    };
     if (typeof window !== "undefined") {
       window.addEventListener("nexbyte-realtime", handleRealtime);
       try {
@@ -152,6 +159,7 @@ export default function AdminLayout({
       if (typeof window !== "undefined") {
         window.removeEventListener("nexbyte-realtime", handleRealtime);
       }
+      if (throttleTimeout) clearTimeout(throttleTimeout);
     };
   }, [fetchNotifications]);
 
@@ -196,6 +204,7 @@ export default function AdminLayout({
       <Link
         key={item.href}
         href={item.href}
+        prefetch={false}
         onClick={() => setIsMobileOpen(false)}
         title={isDesktopCollapsed ? item.label : undefined}
         className={`relative flex items-center gap-3 rounded-xl px-3 py-2 text-[12px] font-bold tracking-wide transition-all ${

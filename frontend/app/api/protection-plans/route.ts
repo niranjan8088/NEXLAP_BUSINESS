@@ -3,10 +3,10 @@ import { dbHelper } from "@/lib/dbHelper";
 
 export async function GET() {
   try {
-    const plans = await dbHelper.protectionPlans.list();
-    return NextResponse.json({ plans: plans.filter((plan: any) => plan.isActive) });
-  } catch (error) {
-    console.error("Failed to load protection plans:", error);
-    return NextResponse.json({ error: "Failed to load protection plans." }, { status: 500 });
+    const allPlans = await dbHelper.protectionPlans.list();
+    const activePlans = allPlans.filter((p: any) => p.isActive !== false);
+    return NextResponse.json({ success: true, plans: activePlans });
+  } catch (err: any) {
+    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
   }
 }

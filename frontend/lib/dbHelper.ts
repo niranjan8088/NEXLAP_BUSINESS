@@ -3,7 +3,47 @@ import { products as initialProducts, services as initialServices } from "./data
 import { broadcastServerEvent } from "./realtimeServer";
 import { DEFAULT_FILTER_DEFINITIONS } from "./filterEngine";
 
+// In-Memory Query Cache with TTL and Mutation Invalidation
+const queryCache = new Map<string, { data: any; expiry: number }>();
+const CACHE_TTL_MS = 25000; // 25 seconds TTL for instant admin transitions
+
+export function getCachedQuery<T>(key: string): T | null {
+  const item = queryCache.get(key);
+  if (!item) return null;
+  if (Date.now() > item.expiry) {
+    queryCache.delete(key);
+    return null;
+  }
+  return item.data as T;
+}
+
+export function setCachedQuery<T>(key: string, data: T, ttlMs = CACHE_TTL_MS): T {
+  queryCache.set(key, { data, expiry: Date.now() + ttlMs });
+  return data;
+}
+
+export function invalidateQueryCache(tablePrefix?: string) {
+  if (!tablePrefix) {
+    queryCache.clear();
+    return;
+  }
+  const cleanPrefix = tablePrefix.toLowerCase().replace(/_/g, "");
+  for (const key of queryCache.keys()) {
+    const cleanKey = key.toLowerCase().replace(/_/g, "");
+    if (cleanKey.includes(cleanPrefix) || cleanPrefix.includes(cleanKey.split(":")[0])) {
+      queryCache.delete(key);
+    }
+  }
+}
+
+if (typeof window !== "undefined") {
+  window.addEventListener("nexbyte-data-changed", (e: any) => {
+    if (e.detail?.table) invalidateQueryCache(e.detail.table);
+  });
+}
+
 function notifyDataChange(table: string, action: string, data?: any) {
+  invalidateQueryCache(table);
   if (typeof window !== "undefined") {
     // 1. Dispatch locally so the immediate tab updates instantly
     window.dispatchEvent(
@@ -950,12 +990,15 @@ export const dbHelper = {
   // --- PRODUCTS SECTION ---
   products: {
     async list() {
+      const cached = getCachedQuery<any[]>("products:list");
+      if (cached) return cached;
       if (supabase) {
         const { data, error } = await supabase.from("products").select("*").order("created_at", { ascending: false });
         if (error) throw new Error(`Could not load products: ${error.message}`);
-        return (data || []).map((row) => normalizeProductRow(row));
+        const list = (data || []).map((row) => normalizeProductRow(row));
+        return setCachedQuery("products:list", list);
       }
-      return getMockData("products");
+      return setCachedQuery("products:list", getMockData("products"));
     },
     async create(prod: any) {
       let savedData: any;
@@ -1546,11 +1589,13 @@ export const dbHelper = {
   // --- LAPTOP ENQUIRIES SECTION ---
   laptopEnquiries: {
     async list() {
+      const cached = getCachedQuery<any[]>("laptop_enquiries:list");
+      if (cached) return cached;
       if (supabase) {
         const { data } = await supabase.from("laptop_enquiries").select("*").order("created_at", { ascending: false });
-        return data || [];
+        return setCachedQuery("laptop_enquiries:list", data || []);
       }
-      return getMockData("laptop_enquiries");
+      return setCachedQuery("laptop_enquiries:list", getMockData("laptop_enquiries"));
     },
     async create(enquiry: any) {
       let savedData: any;
@@ -1560,9 +1605,21 @@ export const dbHelper = {
 
       const payload = {
         reference_id,
+        category: enquiry.category || "laptop_purchase",
+        product_name: enquiry.product_name || enquiry.laptop_type || "Hardware Enquiry",
         status: enquiry.status || "new",
         admin_notes: enquiry.admin_notes || "",
         customer_reply: enquiry.customer_reply || "",
+        messages: Array.isArray(enquiry.messages) && enquiry.messages.length > 0 ? enquiry.messages : [
+          {
+            id: `msg-${Date.now()}-1`,
+            sender: "customer",
+            sender_name: enquiry.customer_name || "Customer",
+            text: enquiry.message || enquiry.requirements || "Requirement details submitted.",
+            timestamp: new Date().toISOString(),
+            is_internal: false,
+          }
+        ],
         recommended_products: enquiry.recommended_products || [],
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
@@ -1570,9 +1627,29 @@ export const dbHelper = {
       };
 
       if (supabase) {
-        const { data, error } = await supabase.from("laptop_enquiries").insert([payload]).select().single();
-        if (error) throw error;
-        savedData = data;
+        try {
+          const { data, error } = await supabase.from("laptop_enquiries").insert([payload]).select().single();
+          if (error) throw error;
+          savedData = data;
+        } catch (supErr: any) {
+          console.warn("Retrying Supabase insert without extended fields:", supErr?.message);
+          const corePayload = {
+            reference_id: payload.reference_id,
+            customer_name: payload.customer_name,
+            phone: payload.phone,
+            email: payload.email,
+            laptop_type: payload.laptop_type || payload.product_name || payload.category,
+            budget: payload.budget,
+            requirements: payload.requirements || payload.message,
+            status: payload.status,
+            admin_notes: payload.admin_notes,
+            customer_reply: payload.customer_reply,
+            created_at: payload.created_at,
+          };
+          const { data, error } = await supabase.from("laptop_enquiries").insert([corePayload]).select().single();
+          if (error) throw error;
+          savedData = { ...payload, ...data };
+        }
       } else {
         savedData = { id: `lp-${Date.now()}`, ...payload };
         saveMockData("laptop_enquiries", [savedData, ...list]);
@@ -1581,16 +1658,17 @@ export const dbHelper = {
       await dbHelper.customers.autoCreateOrUpdate(enquiry.phone, {
         name: enquiry.customer_name,
         actionType: "enquiry",
-        actionItem: enquiry.laptop_type,
+        actionItem: enquiry.laptop_type || enquiry.product_name || enquiry.category,
       });
 
       await dbHelper.notifications.create({
-        title: "New Laptop Enquiry 💻",
-        message: `${enquiry.customer_name} is looking for a ${enquiry.laptop_type || "Laptop"} (Budget: ${enquiry.budget || "Unspecified"})`,
+        title: "New Customer Enquiry 📩",
+        message: `${enquiry.customer_name} submitted an enquiry for ${enquiry.product_name || enquiry.laptop_type || enquiry.category} (Budget: ${enquiry.budget || "Unspecified"})`,
         type: "laptop_enquiry",
         audience: "admin"
       });
 
+      invalidateQueryCache("laptop_enquiries");
       notifyDataChange("laptop_enquiries", "insert", savedData);
       return savedData;
     },
@@ -1599,10 +1677,22 @@ export const dbHelper = {
         updated_at: new Date().toISOString(),
         ...updates
       };
+      invalidateQueryCache("laptop_enquiries");
       if (supabase) {
-        const { data } = await supabase.from("laptop_enquiries").update(payload).eq("id", id).select().single();
-        notifyDataChange("laptop_enquiries", "update", data);
-        return data;
+        try {
+          const { data, error } = await supabase.from("laptop_enquiries").update(payload).eq("id", id).select().single();
+          if (error) throw error;
+          notifyDataChange("laptop_enquiries", "update", data);
+          return data;
+        } catch (supErr: any) {
+          const coreUpdates: any = { updated_at: payload.updated_at };
+          if ("status" in payload) coreUpdates.status = payload.status;
+          if ("admin_notes" in payload) coreUpdates.admin_notes = payload.admin_notes;
+          if ("customer_reply" in payload) coreUpdates.customer_reply = payload.customer_reply;
+          const { data } = await supabase.from("laptop_enquiries").update(coreUpdates).eq("id", id).select().single();
+          notifyDataChange("laptop_enquiries", "update", data || payload);
+          return data || payload;
+        }
       }
       const list = getMockData("laptop_enquiries");
       const updated = list.map((e) => (e.id === id ? { ...e, ...payload } : e));
@@ -1611,7 +1701,36 @@ export const dbHelper = {
       notifyDataChange("laptop_enquiries", "update", target);
       return target;
     },
+    async addMessage(id: string, message: { sender: "admin" | "customer"; sender_name?: string; text: string; is_internal?: boolean }) {
+      const list = await this.list();
+      const enquiry = list.find((e: any) => e.id === id || e.reference_id === id);
+      if (!enquiry) throw new Error("Enquiry not found.");
+      const currentMessages = Array.isArray(enquiry.messages) ? enquiry.messages : [];
+      const newMsg = {
+        id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        sender: message.sender,
+        sender_name: message.sender_name || (message.sender === "admin" ? "NexLapTech Support" : enquiry.customer_name),
+        text: message.text,
+        timestamp: new Date().toISOString(),
+        is_internal: Boolean(message.is_internal),
+      };
+      const updatedMessages = [...currentMessages, newMsg];
+      const patch: any = {
+        messages: updatedMessages,
+        updated_at: new Date().toISOString(),
+      };
+      if (message.sender === "admin") {
+        if (!message.is_internal) {
+          patch.customer_reply = message.text;
+          patch.status = enquiry.status === "new" ? "replied" : enquiry.status;
+        } else {
+          patch.admin_notes = enquiry.admin_notes ? `${enquiry.admin_notes}\n[${new Date().toLocaleDateString()}] ${message.text}` : message.text;
+        }
+      }
+      return this.update(enquiry.id, patch);
+    },
     async delete(id: string) {
+      invalidateQueryCache("laptop_enquiries");
       if (supabase) {
         await supabase.from("laptop_enquiries").delete().eq("id", id);
       } else {
@@ -2617,11 +2736,13 @@ export const dbHelper = {
       return `NB-ORD-${year}-${String(max + 1).padStart(6, "0")}`;
     },
     async list() {
+      const cached = getCachedQuery<any[]>("orders:list");
+      if (cached) return cached;
       if (supabase) {
         const { data } = await supabase.from("orders").select("*").order("created_at", { ascending: false });
-        return data || [];
+        return setCachedQuery("orders:list", data || []);
       }
-      return getMockData("orders");
+      return setCachedQuery("orders:list", getMockData("orders"));
     },
     async listByUser(userId: string) {
       const list = await this.list();

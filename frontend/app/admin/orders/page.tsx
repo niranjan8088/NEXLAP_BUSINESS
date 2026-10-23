@@ -317,14 +317,70 @@ export default function AdminOrdersPage() {
               </div>
             </div>
 
-            <div className="rounded-xl bg-white/[0.02] border border-white/5 p-4 space-y-1">
-              <div className="text-[11px] font-bold text-nex-mist uppercase tracking-wider">Offer Applied</div>
-              {(selectedOrder.applied_offer_code || selectedOrder.appliedOfferCode) ? (
-                <>
-                  <div className="font-mono text-sm font-bold text-amber-300">{selectedOrder.applied_offer_code || selectedOrder.appliedOfferCode}</div>
-                  <div className="text-xs text-emerald-300">Discount saved: ₹{Number(selectedOrder.discount_amount ?? selectedOrder.discountAmount ?? 0).toLocaleString("en-IN")}</div>
-                </>
-              ) : <div className="text-xs text-nex-mist">No offer code was used for this order.</div>}
+            {/* Promotional Offer & Protection Plan Tracking Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Offer Card */}
+              <div className="rounded-xl bg-white/[0.02] border border-white/5 p-4 space-y-1.5">
+                <div className="text-[11px] font-bold text-nex-mist uppercase tracking-wider flex items-center justify-between">
+                  <span>Promotional Offer</span>
+                  {(selectedOrder.applied_offer_code || selectedOrder.appliedOfferCode) && (
+                    <span className="font-mono text-[10px] text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded">
+                      ID: {selectedOrder.applied_offer_id || "Active"}
+                    </span>
+                  )}
+                </div>
+                {(selectedOrder.applied_offer_code || selectedOrder.appliedOfferCode) ? (
+                  <>
+                    <div className="font-mono text-sm font-bold text-amber-300">
+                      {selectedOrder.applied_offer_code || selectedOrder.appliedOfferCode}
+                      {selectedOrder.applied_offer_name && (
+                        <span className="text-xs text-white/80 font-sans font-normal ml-2">({selectedOrder.applied_offer_name})</span>
+                      )}
+                    </div>
+                    <div className="text-xs text-emerald-400 font-semibold">
+                      Discount applied: -₹{Number(selectedOrder.discount_amount ?? selectedOrder.discountAmount ?? 0).toLocaleString("en-IN")}
+                    </div>
+                    {selectedOrder.applied_offer_subtotal_basis && (
+                      <div className="text-[10px] text-nex-mist">
+                        Calculation basis: ₹{Number(selectedOrder.applied_offer_subtotal_basis).toLocaleString("en-IN")}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="text-xs text-nex-mist pt-1">No promotional offer code was redeemed for this order.</div>
+                )}
+              </div>
+
+              {/* Protection Plan Card */}
+              <div className="rounded-xl bg-white/[0.02] border border-white/5 p-4 space-y-1.5">
+                <div className="text-[11px] font-bold text-nex-mist uppercase tracking-wider flex items-center justify-between">
+                  <span>Hardware Protection Plan</span>
+                  {selectedOrder.protection_plan && (
+                    <span className="font-mono text-[10px] text-purple-400 bg-purple-500/10 px-1.5 py-0.5 rounded">
+                      {selectedOrder.protection_plan.duration || "1 Year"}
+                    </span>
+                  )}
+                </div>
+                {selectedOrder.protection_plan ? (
+                  <>
+                    <div className="text-xs font-bold text-purple-300">
+                      {selectedOrder.protection_plan.title}
+                    </div>
+                    <div className="text-xs text-white/90">
+                      Plan Price: ₹{Number(selectedOrder.protection_plan.price || selectedOrder.protection_plan_price || 0).toLocaleString("en-IN")}
+                    </div>
+                    {selectedOrder.protection_plan.description && (
+                      <div className="text-[10px] text-nex-mist line-clamp-2">
+                        {selectedOrder.protection_plan.description}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="text-xs text-nex-mist pt-1">
+                    Standard 1-Year Warranty (Customer declined optional add-on protection plan).
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Order Items Breakdown */}

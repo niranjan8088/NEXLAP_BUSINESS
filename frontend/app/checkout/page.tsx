@@ -19,7 +19,9 @@ import {
   Lock,
   ChevronRight,
   Check,
-  Package
+  Package,
+  Shield,
+  X
 } from "lucide-react";
 
 export default function CheckoutPage() {
@@ -44,6 +46,10 @@ export default function CheckoutPage() {
 
   // Delivery Option State
   const [deliveryOption, setDeliveryOption] = useState<"standard" | "express">("standard");
+
+  // Optional Protection Plan State (Default: none)
+  const [availablePlans, setAvailablePlans] = useState<any[]>([]);
+  const [selectedPlanId, setSelectedPlanId] = useState<string>("none");
 
   // B2B GST Invoice State
   const [isGstInvoice, setIsGstInvoice] = useState(false);
@@ -79,7 +85,22 @@ export default function CheckoutPage() {
       }
     }
 
+    async function loadProtectionPlans() {
+      try {
+        const res = await fetch("/api/protection-plans");
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data.plans)) {
+            setAvailablePlans(data.plans);
+          }
+        }
+      } catch (e) {
+        console.error("Failed to load protection plans", e);
+      }
+    }
+
     loadCustomerProfile();
+    loadProtectionPlans();
   }, []);
 
   // Calculate Subtotals
@@ -87,8 +108,10 @@ export default function CheckoutPage() {
   const discountAmount = appliedOffer ? appliedOffer.discountAmount : 0;
   const taxableSubtotal = Math.max(0, cartSubtotal - discountAmount);
   const shippingFee = deliveryOption === "express" ? 199 : (cartSubtotal < 1000 ? 99 : 0);
+  const selectedPlan = availablePlans.find((p) => p.id === selectedPlanId);
+  const planPrice = selectedPlan ? Number(selectedPlan.price) || 0 : 0;
   const gstAmount = Math.round(taxableSubtotal * 0.18);
-  const grandTotal = taxableSubtotal + gstAmount + shippingFee;
+  const grandTotal = taxableSubtotal + gstAmount + shippingFee + planPrice;
 
   // Apply Coupon
   const handleApplyCoupon = async (e: React.FormEvent) => {
@@ -102,21 +125,22 @@ export default function CheckoutPage() {
         body: JSON.stringify({
           offerCode: couponCode.trim(),
           cartItems: items,
+          customerEmail: customerEmail.trim() || undefined,
           subtotalAmount: cartSubtotal,
         }),
       });
 
       const data = await res.json();
       if (data.valid) {
-        const discountAmount = Number(data.discountAmount) || 0;
+        const discountVal = Number(data.discountAmount) || 0;
         setAppliedOffer({
           code: data.offer?.code || couponCode.trim().toUpperCase(),
-          discountAmount,
+          discountAmount: discountVal,
         });
         setAppliedOfferCode(data.offer?.code || couponCode.trim().toUpperCase());
         setCouponMessage({
           type: "success",
-          text: `Code ${data.offer?.code || couponCode.trim().toUpperCase()} applied! You save ₹${discountAmount.toLocaleString("en-IN")}`,
+          text: `Code ${data.offer?.code || couponCode.trim().toUpperCase()} applied! You save ₹${discountVal.toLocaleString("en-IN")}`,
         });
       } else {
         setAppliedOffer(null);
@@ -130,6 +154,13 @@ export default function CheckoutPage() {
       setAppliedOfferCode("");
       setCouponMessage({ type: "error", text: "Failed to validate coupon code." });
     }
+  };
+
+  const handleRemoveCoupon = () => {
+    setAppliedOffer(null);
+    setAppliedOfferCode("");
+    setCouponCode("");
+    setCouponMessage(null);
   };
 
   // Submit Order
@@ -177,6 +208,7 @@ export default function CheckoutPage() {
             pincode,
           },
           deliveryOption,
+          protectionPlanId: selectedPlanId !== "none" ? selectedPlanId : undefined,
           gstDetails: {
             isGstInvoice,
             companyName,
@@ -230,56 +262,43 @@ export default function CheckoutPage() {
                 ₹{(orderPlaced.total_amount || grandTotal).toLocaleString("en-IN")}
               </span>
             </div>
-            <div className="text-xs space-y-1 text-slate-600">
+            <div className="text-xs space-y-1.5 text-slate-600">
               <p><strong className="text-slate-900">Deliver to:</strong> {customerName}, {addressLine1}, {city} - {pincode}</p>
               <p><strong className="text-slate-900">Delivery Status:</strong> {orderPlaced.status || "Confirmed"} via {orderPlaced.courier}</p>
               <p><strong className="text-slate-900">Tracking Number:</strong> <span className="font-mono">{orderPlaced.tracking_number}</span></p>
+              
               {orderPlaced.applied_offer_code && (
-                <p><strong className="text-slate-900">Offer Applied:</strong> {orderPlaced.applied_offer_code} (₹{Number(orderPlaced.discount_amount || 0).toLocaleString("en-IN")} saved)</p>
+                <p className="text-emerald-700 font-semibold">
+                  <strong>Offer Applied:</strong> {orderPlaced.applied_offer_code} (Saved ₹{Number(orderPlaced.discount_amount || 0).toLocaleString("en-IN")})
+                </p>
+              )}
+
+              {orderPlaced.protection_plan ? (
+                <p className="text-purple-700 font-semibold">
+                  <strong>Protection Plan:</strong> {orderPlaced.protection_plan.title} ({orderPlaced.protection_plan.duration}) — ₹{Number(orderPlaced.protection_plan.price).toLocaleString("en-IN")}
+                </p>
+              ) : (
+                <p className="text-slate-500">
+                  <strong>Protection Plan:</strong> None selected (Standard 1-Year NexLapTech Warranty applies)
+                </p>
               )}
             </div>
-            {orderPlaced.warning && <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-3">{orderPlaced.warning}</p>}
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+          <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
             <Link
               href="/customer/orders"
-              className="px-6 py-3 bg-[#2563EB] text-white font-bold text-xs rounded-xl hover:bg-blue-700 transition flex items-center justify-center space-x-2 shadow-md shadow-blue-500/20"
+              className="px-6 py-3 bg-[#2563EB] text-white font-bold text-xs rounded-xl hover:bg-blue-700 transition"
             >
-              <Package className="w-4 h-4" />
-              <span>View In Orders &amp; Track Live</span>
+              View My Orders
             </Link>
             <Link
-              href={`/invoice/view/${orderPlaced.id}`}
-              target="_blank"
-              className="px-6 py-3 bg-slate-900 text-white font-bold text-xs rounded-xl hover:bg-slate-800 transition flex items-center justify-center space-x-2 shadow-sm"
+              href="/products"
+              className="px-6 py-3 bg-white border border-slate-200 text-slate-700 font-bold text-xs rounded-xl hover:bg-slate-50 transition"
             >
-              <FileText className="w-4 h-4" />
-              <span>Download Tax Invoice</span>
+              Continue Shopping
             </Link>
           </div>
-        </div>
-      </div>
-    );
-  }
-
-  // EMPTY CART SCREEN
-  if (items.length === 0) {
-    return (
-      <div className="min-h-screen bg-[#F5F7FB] text-slate-900">
-        <CustomerHeader />
-        <div className="max-w-xl mx-auto px-4 py-20 text-center space-y-4">
-          <div className="w-16 h-16 bg-slate-200 rounded-full flex items-center justify-center mx-auto text-slate-400">
-            <ShoppingBag className="w-8 h-8" />
-          </div>
-          <h1 className="text-2xl font-bold text-slate-900">Your Cart is Empty</h1>
-          <p className="text-xs text-slate-500">Please add products to your cart before proceeding to checkout.</p>
-          <Link
-            href="/products"
-            className="inline-flex items-center px-6 py-3 bg-[#2563EB] text-white font-bold text-xs rounded-xl hover:bg-blue-700 transition"
-          >
-            Browse Products
-          </Link>
         </div>
       </div>
     );
@@ -289,29 +308,24 @@ export default function CheckoutPage() {
     <div className="min-h-screen bg-[#F5F7FB] text-slate-900 pb-20">
       <CustomerHeader />
 
-      {/* Breadcrumb Header */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-        <div className="flex items-center space-x-2 text-xs text-slate-500">
-          <Link href="/customer" className="hover:text-[#2563EB]">Home</Link>
-          <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-          <Link href="/products" className="hover:text-[#2563EB]">Products</Link>
-          <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-          <span className="text-slate-900 font-semibold">Secure Checkout</span>
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 pt-8 space-y-8">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900">Secure Checkout</h1>
+          <p className="text-xs text-slate-500 mt-1">
+            Complete your shipping details, review optional protection plans, and confirm your order.
+          </p>
         </div>
-        <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 mt-2">Complete Your Hardware Order</h1>
-      </div>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <form onSubmit={handlePlaceOrder} className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
 
-          {/* LEFT: CUSTOMER DETAILS, ADDRESS & OPTIONS */}
+          {/* LEFT: FORM INPUTS */}
           <div className="lg:col-span-7 space-y-6">
 
-            {/* 1. Customer Contact Details */}
+            {/* 1. Contact Information */}
             <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
               <h2 className="text-base font-bold text-slate-900 flex items-center space-x-2">
                 <span className="w-6 h-6 rounded-full bg-blue-100 text-[#2563EB] text-xs font-extrabold flex items-center justify-center">1</span>
-                <span>Customer Information</span>
+                <span>Contact Details</span>
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                 <div>
@@ -319,7 +333,7 @@ export default function CheckoutPage() {
                   <input
                     type="text"
                     required
-                    placeholder="e.g. Ramesh Kumar"
+                    placeholder="Enter your name"
                     value={customerName}
                     onChange={(e) => setCustomerName(e.target.value)}
                     className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none"
@@ -330,7 +344,7 @@ export default function CheckoutPage() {
                   <input
                     type="tel"
                     required
-                    placeholder="10-digit Mobile Number"
+                    placeholder="10-digit mobile number"
                     value={customerPhone}
                     onChange={(e) => setCustomerPhone(e.target.value)}
                     className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none"
@@ -341,7 +355,7 @@ export default function CheckoutPage() {
                   <input
                     type="email"
                     required
-                    placeholder="customer@email.com"
+                    placeholder="order-confirmation@example.com"
                     value={customerEmail}
                     onChange={(e) => setCustomerEmail(e.target.value)}
                     className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none"
@@ -460,7 +474,100 @@ export default function CheckoutPage() {
               </div>
             </div>
 
-            {/* 4. GST B2B Invoice Option */}
+            {/* 4. OPTIONAL PROTECTION PLANS */}
+            <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
+              <div className="flex items-start justify-between">
+                <div>
+                  <h2 className="text-base font-bold text-slate-900 flex items-center space-x-2">
+                    <span className="w-6 h-6 rounded-full bg-purple-100 text-[#7C3AED] text-xs font-extrabold flex items-center justify-center">4</span>
+                    <ShieldCheck className="w-5 h-5 text-[#7C3AED]" />
+                    <span>Optional Device Protection Plans</span>
+                  </h2>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Add peace of mind with accidental damage, spill protection, and extended doorstep repairs. Protection is 100% optional.
+                  </p>
+                </div>
+              </div>
+
+              {/* Option A: Decline / Continue Without Plan (DEFAULT) */}
+              <div
+                onClick={() => setSelectedPlanId("none")}
+                className={`p-4 rounded-xl border text-left cursor-pointer transition flex items-start justify-between ${
+                  selectedPlanId === "none"
+                    ? "border-slate-900 bg-slate-50 ring-2 ring-slate-900/10 font-bold"
+                    : "border-slate-200 bg-white hover:border-slate-300"
+                }`}
+              >
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      name="protectionPlanOption"
+                      checked={selectedPlanId === "none"}
+                      onChange={() => setSelectedPlanId("none")}
+                      className="text-slate-900 focus:ring-slate-900"
+                    />
+                    <span className="text-xs font-bold text-slate-900">Continue Without Protection Plan</span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 pl-5">
+                    Include standard 1-Year NexLapTech warranty with no additional charge.
+                  </p>
+                </div>
+                <span className="text-xs font-bold text-slate-600">₹0 Free</span>
+              </div>
+
+              {/* Option B: Available Active Protection Plans */}
+              {availablePlans.length > 0 && (
+                <div className="space-y-3 pt-1">
+                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
+                    Available Add-On Protection Packages:
+                  </span>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                    {availablePlans.map((plan) => {
+                      const isSelected = selectedPlanId === plan.id;
+                      return (
+                        <div
+                          key={plan.id}
+                          onClick={() => setSelectedPlanId(plan.id)}
+                          className={`p-4 rounded-xl border text-left cursor-pointer transition space-y-2.5 relative ${
+                            isSelected
+                              ? "border-[#7C3AED] bg-purple-50/50 ring-2 ring-purple-500/20"
+                              : "border-slate-200 bg-white hover:border-slate-300"
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="radio"
+                                name="protectionPlanOption"
+                                checked={isSelected}
+                                onChange={() => setSelectedPlanId(plan.id)}
+                                className="text-[#7C3AED] focus:ring-[#7C3AED]"
+                              />
+                              <h3 className="font-bold text-slate-900">{plan.title}</h3>
+                            </div>
+                            <span className="font-extrabold text-[#7C3AED] shrink-0">
+                              +₹{plan.price.toLocaleString("en-IN")}
+                            </span>
+                          </div>
+
+                          <p className="text-slate-500 text-[11px] pl-5 leading-relaxed">
+                            {plan.description}
+                          </p>
+
+                          <div className="pl-5 text-[10px] text-slate-400 flex items-center justify-between border-t border-slate-100 pt-1.5">
+                            <span>Duration: {plan.duration || "1 Year"}</span>
+                            <span className="text-[#7C3AED] font-semibold">Zero-Deductible</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* 5. GST B2B Invoice Option */}
             <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
@@ -502,10 +609,10 @@ export default function CheckoutPage() {
               )}
             </div>
 
-            {/* 5. Payment Methods */}
+            {/* 6. Payment Methods */}
             <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
               <h2 className="text-base font-bold text-slate-900 flex items-center space-x-2">
-                <span className="w-6 h-6 rounded-full bg-blue-100 text-[#2563EB] text-xs font-extrabold flex items-center justify-center">4</span>
+                <span className="w-6 h-6 rounded-full bg-blue-100 text-[#2563EB] text-xs font-extrabold flex items-center justify-center">5</span>
                 <span>Payment Method</span>
               </h2>
 
@@ -581,9 +688,20 @@ export default function CheckoutPage() {
 
               {/* Coupon Code Input */}
               <div className="pt-4 border-t border-slate-100 space-y-2">
-                <label className="text-xs font-bold text-slate-700 flex items-center space-x-1">
-                  <Tag className="w-3.5 h-3.5 text-[#2563EB]" />
-                  <span>Promo / Referral Code</span>
+                <label className="text-xs font-bold text-slate-700 flex items-center justify-between">
+                  <span className="flex items-center space-x-1">
+                    <Tag className="w-3.5 h-3.5 text-[#2563EB]" />
+                    <span>Promo / Referral Code</span>
+                  </span>
+                  {appliedOffer && (
+                    <button
+                      type="button"
+                      onClick={handleRemoveCoupon}
+                      className="text-[11px] text-rose-500 hover:underline font-semibold flex items-center gap-1"
+                    >
+                      <X className="h-3 w-3" /> Remove Code
+                    </button>
+                  )}
                 </label>
                 <div className="flex space-x-2">
                   <input
@@ -603,7 +721,7 @@ export default function CheckoutPage() {
                 </div>
                 {couponMessage && (
                   <p className={`text-xs font-medium ${
-                    couponMessage.type === "success" ? "text-emerald-600" : "text-red-500"
+                    couponMessage.type === "success" ? "text-emerald-600 font-semibold" : "text-rose-500"
                   }`}>
                     {couponMessage.text}
                   </p>
@@ -621,6 +739,17 @@ export default function CheckoutPage() {
                   <div className="flex justify-between text-emerald-600 font-semibold">
                     <span>Discount ({appliedOffer.code})</span>
                     <span>- ₹{appliedOffer.discountAmount.toLocaleString("en-IN")}</span>
+                  </div>
+                )}
+
+                {/* Optional Protection Plan Line Item */}
+                {selectedPlan && (
+                  <div className="flex justify-between text-purple-700 font-semibold bg-purple-50 p-2 rounded-lg">
+                    <span className="flex items-center gap-1.5">
+                      <ShieldCheck className="h-3.5 w-3.5" />
+                      <span>{selectedPlan.title}</span>
+                    </span>
+                    <span>+ ₹{planPrice.toLocaleString("en-IN")}</span>
                   </div>
                 )}
 
