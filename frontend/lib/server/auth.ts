@@ -106,38 +106,54 @@ export async function getServerSession(): Promise<AuthUser | null> {
   // ── USER ────────────────────────────────────────────────────────────────────
   const userSession = cookieStore.get("nexbyte_customer_session")?.value;
   if (userSession) {
+    const customerEmailCookie = cookieStore.get("nexbyte_customer_email")?.value;
+    const customerNameCookie = cookieStore.get("nexbyte_customer_name")?.value;
+    const decodedName = customerNameCookie ? decodeURIComponent(customerNameCookie) : "";
+
     if (userSession.startsWith("mock-user:")) {
       const parts = userSession.replace("mock-user:", "").split(":");
       const userId = parts[0] || "cust-1";
-      const email = parts[1] || "customer@nexbyte.com";
+      const email = parts[1] || customerEmailCookie || "customer@nexbyte.com";
       return {
         id: userId,
         email,
         role: "user",
-        name: "Customer",
+        name: decodedName || "Customer",
       };
     }
-    try {
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-      const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-      if (supabaseUrl && serviceKey) {
-        const res = await fetch(`${supabaseUrl}/auth/v1/user`, {
-          headers: {
-            Authorization: `Bearer ${userSession}`,
-            apikey: serviceKey,
-          },
-        });
-        if (res.ok) {
-          const { id, email, user_metadata } = await res.json();
-          return {
-            id,
-            email,
-            role: "user",
-            name: user_metadata?.full_name || "Customer",
-          };
+
+    // Supabase JWT token (contains '.')
+    if (userSession.includes(".")) {
+      try {
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+        const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+        if (supabaseUrl && serviceKey) {
+          const res = await fetch(`${supabaseUrl}/auth/v1/user`, {
+            headers: {
+              Authorization: `Bearer ${userSession}`,
+              apikey: serviceKey,
+            },
+          });
+          if (res.ok) {
+            const { id, email, user_metadata } = await res.json();
+            return {
+              id,
+              email,
+              role: "user",
+              name: user_metadata?.full_name || decodedName || "Customer",
+            };
+          }
         }
-      }
-    } catch {}
+      } catch {}
+    }
+
+    // Plain userId or email session (e.g. "cust-1", "user@domain.com")
+    return {
+      id: userSession,
+      email: customerEmailCookie || (userSession.includes("@") ? userSession : `${userSession}@customer.nexbyte.com`),
+      role: "user",
+      name: decodedName || "Customer",
+    };
   }
 
   return null;

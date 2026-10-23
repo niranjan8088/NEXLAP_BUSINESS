@@ -31,52 +31,10 @@ export default function CustomerOrdersPage() {
     setLoading(true);
     try {
       const res = await safeJsonFetch("/api/customer/orders");
-      if (res.ok && res.data?.orders?.length) {
+      if (res.ok && Array.isArray(res.data?.orders)) {
         setOrders(res.data.orders);
       } else {
-        // Sample orders data with variant items & tracking
-        setOrders([
-          {
-            id: "ord-901",
-            order_number: "NEX-2026-0412",
-            created_at: "2026-03-25T10:30:00Z",
-            total_amount: 35000,
-            status: "Delivered",
-            tracking_number: "BLR-EXP-991204",
-            courier: "NexLapTech Express",
-            estimated_delivery: "2026-03-27",
-            items: [
-              {
-                id: "i-1",
-                title: "Samsung 980 PRO PCIe 4.0 NVMe M.2 SSD",
-                variant: "2TB",
-                quantity: 1,
-                price: 35000,
-                image: "/images/poster-products.png"
-              }
-            ]
-          },
-          {
-            id: "ord-902",
-            order_number: "NEX-2026-0489",
-            created_at: "2026-03-29T14:15:00Z",
-            total_amount: 28500,
-            status: "Out for Delivery",
-            tracking_number: "BLR-EXP-104921",
-            courier: "NexLapTech Priority",
-            estimated_delivery: "2026-04-01",
-            items: [
-              {
-                id: "i-2",
-                title: "Lenovo ThinkPad T490 (Certified Refurbished)",
-                variant: "Intel i5 / 8GB / 256GB SSD",
-                quantity: 1,
-                price: 28500,
-                image: "/images/poster-products.png"
-              }
-            ]
-          }
-        ]);
+        setOrders([]);
       }
     } catch (e) {
       console.error("Orders load error", e);
@@ -106,6 +64,31 @@ export default function CustomerOrdersPage() {
         <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-2xl leading-relaxed">
           Track hardware shipments live, view variant details, download official tax invoices, and message your seller.
         </p>
+      </div>
+
+      {/* Activity Workflow Tabs */}
+      <div className="flex items-center gap-2 border-b border-slate-200 dark:border-white/10 pb-2 overflow-x-auto">
+        <Link
+          href="/customer/orders"
+          className="px-4 py-2 rounded-xl text-xs font-bold bg-[#2563EB] text-white shadow-sm flex items-center gap-1.5 shrink-0"
+        >
+          <Package className="h-4 w-4" />
+          <span>Product Orders ({orders.length})</span>
+        </Link>
+        <Link
+          href="/customer/bookings"
+          className="px-4 py-2 rounded-xl text-xs font-bold text-[#64748B] dark:text-[#94A3B8] hover:bg-slate-100 dark:hover:bg-white/5 transition-colors flex items-center gap-1.5 shrink-0"
+        >
+          <Clock className="h-4 w-4" />
+          <span>Service Bookings</span>
+        </Link>
+        <Link
+          href="/customer/laptop-enquiry"
+          className="px-4 py-2 rounded-xl text-xs font-bold text-[#64748B] dark:text-[#94A3B8] hover:bg-slate-100 dark:hover:bg-white/5 transition-colors flex items-center gap-1.5 shrink-0"
+        >
+          <Boxes className="h-4 w-4" />
+          <span>Laptop Enquiries</span>
+        </Link>
       </div>
 
       {/* Orders List */}

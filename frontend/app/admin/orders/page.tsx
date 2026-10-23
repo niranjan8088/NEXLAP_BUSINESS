@@ -27,6 +27,9 @@ export default function AdminOrdersPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
+  const [trackingIdInput, setTrackingIdInput] = useState("");
+  const [trackingCarrierInput, setTrackingCarrierInput] = useState("");
+  const [savingTracking, setSavingTracking] = useState(false);
 
   const loadOrders = async () => {
     setLoading(true);
@@ -57,6 +60,25 @@ export default function AdminOrdersPage() {
       loadOrders();
     } catch (err: any) {
       alert(err.message || "Failed to update order status");
+    }
+  };
+
+  const handleSaveTracking = async () => {
+    if (!selectedOrder) return;
+    setSavingTracking(true);
+    try {
+      const updates = {
+        tracking_id: trackingIdInput.trim() || null,
+        tracking_carrier: trackingCarrierInput.trim() || null,
+      };
+      await dbHelper.orders.update(selectedOrder.id, updates);
+      setSelectedOrder((prev: any) => ({ ...prev, ...updates }));
+      loadOrders();
+      alert("Fulfillment tracking details saved successfully.");
+    } catch (err: any) {
+      alert(err.message || "Failed to save tracking info");
+    } finally {
+      setSavingTracking(false);
     }
   };
 
@@ -229,7 +251,11 @@ export default function AdminOrdersPage() {
                     </td>
                     <td className="py-4 px-4 text-right">
                       <button
-                        onClick={() => setSelectedOrder(o)}
+                        onClick={() => {
+                          setSelectedOrder(o);
+                          setTrackingIdInput(o.tracking_id || "");
+                          setTrackingCarrierInput(o.tracking_carrier || "");
+                        }}
                         className="btn-secondary !py-1.5 !px-3 text-[11px] inline-flex items-center gap-1.5"
                       >
                         <Eye className="h-3.5 w-3.5" /> View Details
@@ -286,6 +312,56 @@ export default function AdminOrdersPage() {
                     {s.label}
                   </button>
                 ))}
+              </div>
+            </div>
+
+            {/* Tracking & Logistics Fulfillment Details */}
+            <div className="rounded-xl bg-nex-black/60 border border-white/10 p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="text-xs font-semibold text-white flex items-center gap-1.5">
+                  <Truck className="h-4 w-4 text-cyan-400" /> Shipment & Tracking Details
+                </div>
+                {selectedOrder.tracking_id && (
+                  <span className="text-[10px] font-mono bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 px-2 py-0.5 rounded">
+                    Tracking: {selectedOrder.tracking_id}
+                  </span>
+                )}
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[10px] font-bold text-nex-mist uppercase tracking-wider block mb-1">
+                    Courier / Carrier
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. DTDC, Blue Dart, Delhivery, Speed Post"
+                    value={trackingCarrierInput}
+                    onChange={(e) => setTrackingCarrierInput(e.target.value)}
+                    className="w-full rounded-lg bg-nex-black border border-white/10 px-3 py-1.5 text-xs text-white placeholder-white/30 focus:border-cyan-400 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-nex-mist uppercase tracking-wider block mb-1">
+                    Tracking ID / AWB
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. TRK-8904760125"
+                    value={trackingIdInput}
+                    onChange={(e) => setTrackingIdInput(e.target.value)}
+                    className="w-full rounded-lg bg-nex-black border border-white/10 px-3 py-1.5 text-xs text-white placeholder-white/30 focus:border-cyan-400 focus:outline-none font-mono"
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end pt-1">
+                <button
+                  onClick={handleSaveTracking}
+                  disabled={savingTracking}
+                  className="btn-primary !py-1.5 !px-4 text-xs flex items-center gap-1.5"
+                >
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  {savingTracking ? "Saving..." : "Save Tracking Info"}
+                </button>
               </div>
             </div>
 

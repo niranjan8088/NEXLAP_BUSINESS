@@ -1967,7 +1967,7 @@ export const dbHelper = {
       return true;
     }
   },
-  
+
   // --- CERTIFICATES SECTION ---
   certificates: {
     async list() {

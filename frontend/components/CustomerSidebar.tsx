@@ -53,9 +53,6 @@ const NAV_CATEGORIES = [
     title: "SHOP",
     items: [
       { href: "/customer/shop", label: "Products", icon: ShoppingBag },
-      { href: "/customer/offers", label: "Offers", icon: Tag },
-      { href: "/customer/favorites", label: "Wishlist", icon: Heart },
-      { href: "/customer/cart", label: "Cart", icon: ShoppingCart, isCart: true },
     ],
   },
   {

@@ -217,11 +217,6 @@ function ProductsCatalogContent() {
   };
 
   const addToCart = (product: Product) => {
-    if (!authChecked) return false;
-    if (!isCustomerAuthenticated) {
-      redirectToSignIn();
-      return false;
-    }
     addCartItem(product);
     return true;
   };
@@ -817,26 +812,32 @@ function ProductsCatalogContent() {
                       <div>
                         {/* Product Image & Badges */}
                         <div className="relative aspect-square w-full rounded-xl overflow-hidden bg-[#F1F5F9] dark:bg-[#162438] p-4 flex items-center justify-center mb-3 border border-[#E2E8F0] dark:border-[#2A3B50]">
-                          <img
-                            src={getSafeImageSrc(prod.image)}
-                            alt={prod.title || "Product"}
-                            loading="lazy"
-                            decoding="async"
-                            className="object-contain max-h-full max-w-full transition-transform duration-500 ease-out group-hover:scale-105"
-                          />
+                          <Link href={`/products/${prod.id}`} className="w-full h-full flex items-center justify-center">
+                            <img
+                              src={getSafeImageSrc(prod.image)}
+                              alt={prod.title || "Product"}
+                              loading="lazy"
+                              decoding="async"
+                              className="object-contain max-h-full max-w-full transition-transform duration-500 ease-out group-hover:scale-105"
+                            />
+                          </Link>
 
                           {/* Discount Badge */}
                           {savePercent > 0 && (
-                            <span className="absolute top-2.5 left-2.5 rounded-full bg-[#2563EB] text-white px-2.5 py-0.5 text-[10px] font-bold shadow-sm">
+                            <span className="absolute top-2.5 left-2.5 rounded-full bg-[#2563EB] text-white px-2.5 py-0.5 text-[10px] font-bold shadow-sm pointer-events-none">
                               {savePercent}% OFF
                             </span>
                           )}
 
                           {/* Favorite Button */}
                           <button
-                            onClick={() => toggleWishlist(prod.id)}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              toggleWishlist(prod.id);
+                            }}
                             aria-label={isFav ? `Remove ${prod.title} from wishlist` : `Add ${prod.title} to wishlist`}
-                            className="absolute top-2.5 right-2.5 h-8 w-8 rounded-full bg-white dark:bg-[#101B2B] border border-[#E2E8F0] dark:border-[#263247] flex items-center justify-center text-[#0F172A] dark:text-white shadow-sm hover:scale-110 transition-all cursor-pointer"
+                            className="absolute top-2.5 right-2.5 z-10 h-8 w-8 rounded-full bg-white dark:bg-[#101B2B] border border-[#E2E8F0] dark:border-[#263247] flex items-center justify-center text-[#0F172A] dark:text-white shadow-sm hover:scale-110 transition-all cursor-pointer"
                           >
                             <Heart className={cn("h-4 w-4", isFav && "fill-rose-500 text-rose-500")} />
                           </button>
@@ -849,9 +850,11 @@ function ProductsCatalogContent() {
                         </div>
 
                         {/* Product Title */}
-                        <h3 className="font-display text-sm font-bold text-[#0F172A] dark:text-white line-clamp-2 leading-tight">
-                          {prod.title}
-                        </h3>
+                        <Link href={`/products/${prod.id}`} className="hover:text-[#2563EB] dark:hover:text-[#60A5FA] transition-colors block">
+                          <h3 className="font-display text-sm font-bold text-[#0F172A] dark:text-white line-clamp-2 leading-tight">
+                            {prod.title}
+                          </h3>
+                        </Link>
 
                         {/* Rating & Reviews */}
                         <div className="flex items-center gap-1.5 mt-1.5 text-xs">
@@ -889,15 +892,12 @@ function ProductsCatalogContent() {
                         </div>
 
                         <div className="flex items-center gap-1.5">
-                          <button
-                            onClick={() => {
-                              setProductDetailModal(prod);
-                              setActiveGalleryIndex(0);
-                            }}
+                          <Link
+                            href={`/products/${prod.id}`}
                             className="rounded-xl border border-[#E2E8F0] dark:border-[#2A3B50] bg-white dark:bg-[#162438] px-3 py-2 text-xs font-bold text-[#0F172A] dark:text-white hover:bg-[#F1F5F9] dark:hover:bg-[#1f3048] cursor-pointer shadow-xs"
                           >
                             Details
-                          </button>
+                          </Link>
 
                           <button
                             disabled={isOutOfStock}

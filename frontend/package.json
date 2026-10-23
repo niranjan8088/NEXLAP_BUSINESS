@@ -9,7 +9,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "build:worker": "npx @opennextjs/cloudflare",
+    "preview:worker": "npx wrangler dev",
+    "deploy:worker": "npx @opennextjs/cloudflare && npx wrangler deploy"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",

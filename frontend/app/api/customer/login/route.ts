@@ -11,7 +11,7 @@ export async function POST(request: Request) {
     const response = NextResponse.json({ success: true });
     
     // Set customer session token cookie
-    response.cookies.set("nexbyte_customer_session", userId, {
+    response.cookies.set("nexbyte_customer_session", `mock-user:${userId}:${email}`, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
@@ -20,8 +20,8 @@ export async function POST(request: Request) {
     });
 
     // Also store customer email & name in custom cookie for simple client layout displays
-    response.cookies.set("nexbyte_customer_email", email, { path: "/" });
-    response.cookies.set("nexbyte_customer_name", fullName || email.split("@")[0], { path: "/" });
+    response.cookies.set("nexbyte_customer_email", email, { path: "/", maxAge: 7 * 24 * 60 * 60 });
+    response.cookies.set("nexbyte_customer_name", encodeURIComponent(fullName || email.split("@")[0]), { path: "/", maxAge: 7 * 24 * 60 * 60 });
 
     return response;
   } catch (e: any) {

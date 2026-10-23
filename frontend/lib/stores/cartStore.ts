@@ -80,7 +80,7 @@ export const useCartStore = create<CartStore>()(
 
       removeItem: (id) => {
         set((state) => ({
-          items: state.items.filter((item) => item.id !== id && item.productId !== id),
+          items: state.items.filter((item) => item.id !== id),
         }));
       },
 
@@ -91,7 +91,7 @@ export const useCartStore = create<CartStore>()(
         }
         set((state) => ({
           items: state.items.map((item) =>
-            item.id === id || item.productId === id ? { ...item, quantity } : item
+            item.id === id ? { ...item, quantity } : item
           ),
         }));
       },

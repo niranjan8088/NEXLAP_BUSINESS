@@ -17,6 +17,7 @@ import {
   Calendar,
   Sun,
   Tag,
+  Heart,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -137,10 +138,22 @@ export default function CustomerHeader({ onOpenMobileMenu }: CustomerHeaderProps
 
           {/* Right: Actions */}
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            {/* Wishlist shortcut */}
+            <Link
+              href="/customer/favorites"
+              aria-label="Wishlist"
+              id="customer-wishlist-btn"
+              className="p-2.5 rounded-xl border border-[#E2E8F0] dark:border-[#263247] bg-white dark:bg-[#111827] text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors"
+              title="My Wishlist"
+            >
+              <Heart className="h-4.5 w-4.5 fill-rose-500 text-rose-500" />
+            </Link>
+
             {/* Offers shortcut */}
             <Link
               href="/customer/offers"
               aria-label="Offers"
+              id="customer-offers-btn"
               className="hidden sm:flex p-2.5 rounded-xl border border-[#E2E8F0] dark:border-[#263247] bg-white dark:bg-[#111827] text-[#F59E0B] hover:bg-[#FFFBEB] dark:hover:bg-[#422006]/50 transition-colors"
               title="Offers & Deals"
             >

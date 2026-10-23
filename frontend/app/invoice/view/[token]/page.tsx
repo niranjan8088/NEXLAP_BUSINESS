@@ -17,19 +17,34 @@ export default function PublicInvoiceViewPage({
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState("");
   const [invoice, setInvoice] = useState<any | null>(null);
+  const [businessInfo, setBusinessInfo] = useState<any>({
+    business_name: "NexLapTech",
+    tagline: "Connecting Customers with Trusted Tech Experts",
+    phone1: "+91 8088979706",
+    phone2: "+91 8904760125",
+    email: "nexbytetechnologies@gmail.com",
+    address: "Bengaluru, Karnataka, India",
+    gstin: "",
+    invoice_footer: "Thank you for choosing NexLapTech! • Computers • Laptop Service • Gaming PCs • Bulk IT Hardware"
+  });
 
   useEffect(() => {
     if (!token) return;
-    fetch(`/api/public/invoices/${token}`)
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.error) {
-          setErrorMsg(data.error);
+    Promise.all([
+      fetch(`/api/public/invoices/${token}`).then((res) => res.json()),
+      fetch(`/api/system/settings?key=business_info`).then((res) => res.json()).catch(() => null),
+    ])
+      .then(([invoiceData, settingsData]) => {
+        if (invoiceData?.error) {
+          setErrorMsg(invoiceData.error);
         } else {
-          setInvoice(data.invoice);
+          setInvoice(invoiceData.invoice);
+        }
+        if (settingsData?.value) {
+          setBusinessInfo((prev: any) => ({ ...prev, ...settingsData.value }));
         }
       })
-      .catch((err) => {
+      .catch(() => {
         setErrorMsg("Failed to load invoice details.");
       })
       .finally(() => setLoading(false));
@@ -105,6 +120,48 @@ export default function PublicInvoiceViewPage({
 
         {/* Printable Canvas Document */}
         <div id="invoice-print-area" className="bg-white text-slate-900 rounded-2xl p-6 sm:p-8 shadow-2xl border border-slate-200 text-xs font-sans space-y-5">
+          <style dangerouslySetInnerHTML={{ __html: `
+            @media print {
+              @page {
+                margin: 12mm;
+                size: A4 portrait;
+              }
+              body {
+                background: white !important;
+                color: black !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+              }
+              .print\\:hidden, header, nav, footer {
+                display: none !important;
+              }
+              #invoice-print-area {
+                box-shadow: none !important;
+                border: none !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                width: 100% !important;
+                max-width: 100% !important;
+              }
+              table {
+                width: 100% !important;
+                page-break-inside: auto;
+              }
+              thead {
+                display: table-header-group !important;
+              }
+              tr {
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+                page-break-after: auto;
+              }
+              .avoid-page-break {
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+              }
+            }
+          `}} />
+
           {/* Header */}
           <div className="flex justify-between items-start border-b border-slate-200 pb-4">
             <div className="space-y-1">
@@ -113,15 +170,17 @@ export default function PublicInvoiceViewPage({
                   <BrandLogo width={72} height={72} className="h-full w-full" />
                 </div>
                 <span className="font-bold text-lg tracking-tight text-slate-900">
-                  NexLapTech
+                  {businessInfo.business_name || "NexLapTech"}
                 </span>
               </div>
               <p className="text-xs text-slate-500 font-semibold">
-                Connecting Customers with Trusted Tech Experts
+                {businessInfo.tagline || "Connecting Customers with Trusted Tech Experts"}
               </p>
               <div className="text-[9px] text-slate-500 space-y-0.5 pt-0.5">
-                <p>Contact: +91 8088979706 | +91 8904760125</p>
-                <p>Email: nexbytetechnologies@gmail.com</p>
+                <p>Contact: {businessInfo.phone1} {businessInfo.phone2 ? `| ${businessInfo.phone2}` : ""}</p>
+                <p>Email: {businessInfo.email || "nexbytetechnologies@gmail.com"}</p>
+                {businessInfo.address && <p>{businessInfo.address}</p>}
+                {businessInfo.gstin && <p className="font-semibold text-slate-700">Seller GSTIN: {businessInfo.gstin}</p>}
               </div>
             </div>
 
@@ -136,7 +195,7 @@ export default function PublicInvoiceViewPage({
           </div>
 
           {/* Bill To */}
-          <div className="grid grid-cols-2 gap-4 bg-slate-50 p-3.5 rounded-xl border border-slate-200 text-[11px]">
+          <div className="grid grid-cols-2 gap-4 bg-slate-50 p-3.5 rounded-xl border border-slate-200 text-[11px] avoid-page-break">
             <div>
               <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">
                 BILL TO:
@@ -146,13 +205,13 @@ export default function PublicInvoiceViewPage({
               {email && <div className="text-slate-600">Email: {email}</div>}
             </div>
             <div className="text-right">
-              {addr && <div className="text-slate-600">{addr}</div>}
+              {addr && <div className="text-slate-600 break-words">{addr}</div>}
               <div className="text-slate-600">
                 {[city, state, pin].filter(Boolean).join(", ")}
               </div>
               {gstEnabled && gstin && (
                 <div className="mt-1 font-bold text-blue-700 text-[10px]">
-                  GSTIN: {gstin}
+                  Customer GSTIN: {gstin}
                 </div>
               )}
             </div>
@@ -173,17 +232,21 @@ export default function PublicInvoiceViewPage({
             <tbody className="divide-y divide-slate-100">
               {sanitizeInvoiceItems(items).map((item: any, idx: number) => (
                 <tr key={item.id || idx} className="text-slate-700">
-                  <td className="py-2 px-2 text-slate-400">{idx + 1}</td>
-                  <td className="py-2 px-2">
-                    <div className="font-semibold text-slate-900">{item.name}</div>
-                    {item.description && <div className="text-[9px] text-slate-500">{item.description}</div>}
+                  <td className="py-2 px-2 text-slate-400 align-top">{idx + 1}</td>
+                  <td className="py-2 px-2 align-top">
+                    <div className="font-semibold text-slate-900 break-words">{item.name}</div>
+                    {item.description && (
+                      <div className="text-[9px] text-slate-500 break-words max-w-sm whitespace-normal">
+                        {item.description}
+                      </div>
+                    )}
                   </td>
-                  <td className="py-2 px-2 text-center font-medium">{item.quantity}</td>
-                  <td className="py-2 px-2 text-right">{formatRupees(item.unitPrice)}</td>
-                  <td className="py-2 px-2 text-right text-slate-500">
+                  <td className="py-2 px-2 text-center font-medium align-top">{item.quantity}</td>
+                  <td className="py-2 px-2 text-right align-top">{formatRupees(item.unitPrice)}</td>
+                  <td className="py-2 px-2 text-right text-slate-500 align-top">
                     {item.discount > 0 ? formatRupees(item.discount) : "-"}
                   </td>
-                  <td className="py-2 px-2 text-right font-bold text-slate-900">
+                  <td className="py-2 px-2 text-right font-bold text-slate-900 align-top">
                     {formatRupees(item.lineTotal || (item.quantity * item.unitPrice - (item.discount || 0)))}
                   </td>
                 </tr>
@@ -192,7 +255,7 @@ export default function PublicInvoiceViewPage({
           </table>
 
           {/* Financial Summary */}
-          <div className="border-t border-slate-200 pt-3 flex justify-end">
+          <div className="border-t border-slate-200 pt-3 flex justify-end avoid-page-break">
             <div className="w-full max-w-[260px] space-y-1.5 text-[11px]">
               <div className="flex justify-between text-slate-600">
                 <span>Subtotal:</span>
@@ -253,8 +316,8 @@ export default function PublicInvoiceViewPage({
           </div>
 
           {/* Footer Terms */}
-          <div className="border-t border-slate-200 pt-4 text-[9px] text-slate-400 text-center space-y-0.5">
-            <p>Thank you for choosing NexLapTech!</p>
+          <div className="border-t border-slate-200 pt-4 text-[9px] text-slate-400 text-center space-y-0.5 avoid-page-break">
+            <p>{businessInfo.invoice_footer || "Thank you for choosing NexLapTech!"}</p>
             <p>Computers • Laptop Service • Gaming PCs • Bulk IT Hardware • CCTV Systems</p>
           </div>
         </div>

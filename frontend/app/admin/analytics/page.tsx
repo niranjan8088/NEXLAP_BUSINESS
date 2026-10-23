@@ -1,88 +1,136 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { BarChart3, TrendingUp, Users, DollarSign, Award, Laptop, Star, Clock, AlertCircle } from "lucide-react";
+import { BarChart3, TrendingUp, Users, DollarSign, Award, Laptop, Star, Clock, AlertCircle, ShoppingBag, Package } from "lucide-react";
 import { dbHelper } from "@/lib/dbHelper";
 
 export default function AdminAnalyticsPage() {
   const [stats, setStats] = useState({
-    todayBookings: 3,
-    pendingBookings: 5,
-    completedBookings: 12,
-    todayRevenue: 15400,
-    monthlyRevenue: 245000,
-    trainingStudents: 18,
-    internshipStudents: 14,
-    certsIssued: 8,
-    productsSold: 22,
-    avgRating: 4.8,
-    visitors: 450,
-    liveUsers: 4,
-    unreadNotifications: 2,
-    pendingReviews: 1,
+    pendingBookings: 0,
+    completedBookings: 0,
+    monthlyRevenue: 0,
+    totalRevenue: 0,
+    totalOrders: 0,
+    productsSold: 0,
+    registeredCustomers: 0,
+    avgRating: 0,
+    reviewCount: 0,
+    unreadNotifications: 0,
+    pendingReviews: 0,
   });
 
+  const [weeklyData, setWeeklyData] = useState<{ label: string; count: number; val: number }[]>([]);
   const [loading, setLoading] = useState(true);
 
   const calculateRealStats = async () => {
     setLoading(true);
     try {
-      const bookings = await dbHelper.bookings.list();
-      const enrollments = await dbHelper.enrollments.list();
-      const reviews = await dbHelper.reviews.list();
-      const certs = await dbHelper.certificates.list();
-      const notifications = await dbHelper.notifications.list();
+      const [orders, bookings, reviews, notifications, customers] = await Promise.all([
+        dbHelper.orders.list().catch(() => []),
+        dbHelper.bookings.list().catch(() => []),
+        dbHelper.reviews.list().catch(() => []),
+        dbHelper.notifications.list().catch(() => []),
+        dbHelper.customers.list().catch(() => []),
+      ]);
 
-      const pendingB = bookings.filter((b: any) => b.status === "pending" || b.status === "new").length;
-      const completedB = bookings.filter((b: any) => b.status === "completed").length;
-      const training = enrollsFilterCount(enrollments, "training");
-      const internships = enrollsFilterCount(enrollments, "internship");
-      const unreadN = notifications.filter((n: any) => n.status === "unread").length;
-      const pendingR = reviews.filter((r: any) => r.status === "pending").length;
+      // Filter valid orders (exclude cancelled or failed)
+      const validOrders = (orders || []).filter(
+        (o: any) => o.status !== "cancelled" && o.status !== "failed"
+      );
 
-      const sumRating = reviews.reduce((acc: number, r: any) => acc + (r.rating || 5), 0);
-      const avgR = reviews.length > 0 ? parseFloat((sumRating / reviews.length).toFixed(1)) : 4.8;
+      // Current month calculations
+      const now = new Date();
+      const currentMonth = now.getMonth();
+      const currentYear = now.getFullYear();
 
-      setStats((prev) => ({
-        ...prev,
+      let mRevenue = 0;
+      let tRevenue = 0;
+      let pSold = 0;
+
+      validOrders.forEach((o: any) => {
+        const orderDate = new Date(o.created_at || Date.now());
+        const amount = Number(o.total_amount || o.total || o.amount || 0);
+        
+        tRevenue += amount;
+        if (orderDate.getMonth() === currentMonth && orderDate.getFullYear() === currentYear) {
+          mRevenue += amount;
+        }
+
+        // Sum product items quantity
+        if (Array.isArray(o.items)) {
+          o.items.forEach((item: any) => {
+            pSold += Number(item.quantity || 1);
+          });
+        } else {
+          pSold += 1;
+        }
+      });
+
+      const pendingB = (bookings || []).filter((b: any) => b.status === "pending" || b.status === "new").length;
+      const completedB = (bookings || []).filter((b: any) => b.status === "completed").length;
+      const unreadN = (notifications || []).filter((n: any) => n.status === "unread" || !n.is_read).length;
+      const pendingR = (reviews || []).filter((r: any) => r.status === "pending").length;
+
+      const sumRating = (reviews || []).reduce((acc: number, r: any) => acc + (Number(r.rating) || 0), 0);
+      const avgR = reviews && reviews.length > 0 ? parseFloat((sumRating / reviews.length).toFixed(1)) : 0;
+
+      // Calculate last 7 days distribution
+      const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+      const last7Days: { label: string; count: number; val: number }[] = [];
+      let maxDayOrders = 1;
+
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        const dayLabel = days[d.getDay()];
+        const dStr = d.toISOString().split("T")[0];
+
+        const dayOrders = validOrders.filter((o: any) => {
+          if (!o.created_at) return false;
+          return o.created_at.startsWith(dStr);
+        }).length;
+
+        if (dayOrders > maxDayOrders) maxDayOrders = dayOrders;
+        last7Days.push({ label: dayLabel, count: dayOrders, val: 0 });
+      }
+
+      // Normalize val between 5% and 100% for bar visualization
+      last7Days.forEach((item) => {
+        item.val = item.count > 0 ? Math.max(15, Math.round((item.count / maxDayOrders) * 100)) : 4;
+      });
+
+      setWeeklyData(last7Days);
+
+      setStats({
         pendingBookings: pendingB,
         completedBookings: completedB,
-        trainingStudents: training || prev.trainingStudents,
-        internshipStudents: internships || prev.internshipStudents,
-        certsIssued: certs.length || prev.certsIssued,
+        monthlyRevenue: mRevenue,
+        totalRevenue: tRevenue,
+        totalOrders: validOrders.length,
+        productsSold: pSold,
+        registeredCustomers: Array.isArray(customers) ? customers.length : 0,
+        avgRating: avgR,
+        reviewCount: (reviews || []).length,
         unreadNotifications: unreadN,
         pendingReviews: pendingR,
-        avgRating: avgR,
-      }));
-    } catch {
-      // Keep static ROG values as beautiful placeholder fallback
+      });
+    } catch (err) {
+      console.error("Failed to calculate real analytics:", err);
     } finally {
       setLoading(false);
     }
   };
 
-  const enrollsFilterCount = (list: any[], type: string) => {
-    return list.filter((e) => e.type === type).length;
-  };
-
   useEffect(() => {
     calculateRealStats();
-    
-    // Simulate live user changes every 8s
-    const timer = setInterval(() => {
-      setStats((prev) => ({
-        ...prev,
-        liveUsers: Math.max(1, prev.liveUsers + (Math.random() > 0.5 ? 1 : -1)),
-        visitors: prev.visitors + Math.floor(Math.random() * 3),
-      }));
-    }, 8000);
 
     const handler = () => calculateRealStats();
     window.addEventListener("nexbyte-realtime", handler);
+    window.addEventListener("nexbyte-data-changed", handler);
 
     return () => {
-      clearInterval(timer);
       window.removeEventListener("nexbyte-realtime", handler);
+      window.removeEventListener("nexbyte-data-changed", handler);
     };
   }, []);
 
@@ -94,7 +142,7 @@ export default function AdminAnalyticsPage() {
           <h1 className="font-display text-2xl font-bold text-white flex items-center gap-2">
             <BarChart3 className="h-6 w-6 text-cyan-400" /> Executive Analytics
           </h1>
-          <p className="text-xs text-nex-mist mt-0.5">Realtime metrics, revenue monitoring, and student registration tracking.</p>
+          <p className="text-xs text-nex-mist mt-0.5">Authoritative metrics calculated from real database orders, services, and inventory records.</p>
         </div>
       </div>
 
@@ -111,38 +159,50 @@ export default function AdminAnalyticsPage() {
           </div>
           <div>
             <span className="text-[9px] uppercase font-bold text-nex-mist tracking-widest">Monthly Revenue</span>
-            <h3 className="font-display text-base font-black text-white mt-0.5">₹{stats.monthlyRevenue.toLocaleString("en-IN")}</h3>
-            <span className="text-[8px] text-green-400 font-bold block mt-0.5">+12.4% vs last month</span>
+            <h3 className="font-display text-base font-black text-white mt-0.5">
+              ₹{stats.monthlyRevenue.toLocaleString("en-IN")}
+            </h3>
+            <span className="text-[8px] text-nex-mist block mt-0.5">
+              Total: ₹{stats.totalRevenue.toLocaleString("en-IN")}
+            </span>
           </div>
         </div>
 
-        {/* Live Users */}
+        {/* Valid Orders & Products Sold */}
         <div className="glass-card p-5 border-cyan-500/10 flex items-center gap-4 relative overflow-hidden">
-          <div className="absolute right-0 bottom-0 opacity-[0.02] text-red-500 transform translate-x-2 translate-y-2">
+          <div className="absolute right-0 bottom-0 opacity-[0.02] text-blue-500 transform translate-x-2 translate-y-2">
+            <Package size={80} />
+          </div>
+          <div className="h-10 w-10 bg-blue-500/10 border border-blue-500/30 text-blue-400 rounded-xl flex items-center justify-center shrink-0">
+            <Package className="h-5 w-5" />
+          </div>
+          <div>
+            <span className="text-[9px] uppercase font-bold text-nex-mist tracking-widest">Products Sold</span>
+            <h3 className="font-display text-base font-black text-white mt-0.5">
+              {stats.productsSold} units
+            </h3>
+            <span className="text-[8px] text-cyan-400 font-bold block mt-0.5">
+              {stats.totalOrders} confirmed orders
+            </span>
+          </div>
+        </div>
+
+        {/* Registered Customers */}
+        <div className="glass-card p-5 border-cyan-500/10 flex items-center gap-4 relative overflow-hidden">
+          <div className="absolute right-0 bottom-0 opacity-[0.02] text-cyan-400 transform translate-x-2 translate-y-2">
             <Users size={80} />
           </div>
-          <div className="h-10 w-10 bg-red-500/10 border border-red-500/30 text-red-400 rounded-xl flex items-center justify-center shrink-0 animate-pulse">
+          <div className="h-10 w-10 bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 rounded-xl flex items-center justify-center shrink-0">
             <Users className="h-5 w-5" />
           </div>
           <div>
-            <span className="text-[9px] uppercase font-bold text-nex-mist tracking-widest">Live Platform Users</span>
-            <h3 className="font-display text-base font-black text-white mt-0.5">{stats.liveUsers} active</h3>
-            <span className="text-[8px] text-cyan-400 font-bold block mt-0.5">Realtime WebSockets active</span>
-          </div>
-        </div>
-
-        {/* Training Students */}
-        <div className="glass-card p-5 border-cyan-500/10 flex items-center gap-4 relative overflow-hidden">
-          <div className="absolute right-0 bottom-0 opacity-[0.02] text-cyan-400 transform translate-x-2 translate-y-2">
-            <Award size={80} />
-          </div>
-          <div className="h-10 w-10 bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 rounded-xl flex items-center justify-center shrink-0">
-            <Award className="h-5 w-5" />
-          </div>
-          <div>
-            <span className="text-[9px] uppercase font-bold text-nex-mist tracking-widest">Academy Students</span>
-            <h3 className="font-display text-base font-black text-white mt-0.5">{stats.trainingStudents} active</h3>
-            <span className="text-[8px] text-nex-mist block mt-0.5">{stats.certsIssued} certified</span>
+            <span className="text-[9px] uppercase font-bold text-nex-mist tracking-widest">Registered Clients</span>
+            <h3 className="font-display text-base font-black text-white mt-0.5">
+              {stats.registeredCustomers} active
+            </h3>
+            <span className="text-[8px] text-nex-mist block mt-0.5">
+              {stats.completedBookings} services completed
+            </span>
           </div>
         </div>
 
@@ -156,8 +216,12 @@ export default function AdminAnalyticsPage() {
           </div>
           <div>
             <span className="text-[9px] uppercase font-bold text-nex-mist tracking-widest">Customer Satisfaction</span>
-            <h3 className="font-display text-base font-black text-white mt-0.5">{stats.avgRating} / 5.0</h3>
-            <span className="text-[8px] text-yellow-400 font-bold block mt-0.5">{stats.pendingReviews} reviews pending</span>
+            <h3 className="font-display text-base font-black text-white mt-0.5">
+              {stats.reviewCount > 0 ? `${stats.avgRating} / 5.0` : "No ratings yet"}
+            </h3>
+            <span className="text-[8px] text-yellow-400 font-bold block mt-0.5">
+              {stats.pendingReviews} reviews pending moderation
+            </span>
           </div>
         </div>
 
@@ -169,8 +233,11 @@ export default function AdminAnalyticsPage() {
         {/* Sales Chart (SVG Visualization) */}
         <div className="glass-card p-6 border-cyan-500/10 md:col-span-2 space-y-4">
           <div className="flex justify-between items-center">
-            <h3 className="font-bold text-white text-sm">Weekly Enrollment Analytics</h3>
-            <span className="text-[9px] bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 px-2 py-0.5 rounded font-black">LIVE</span>
+            <div>
+              <h3 className="font-bold text-white text-sm">7-Day Order Volume</h3>
+              <p className="text-[10px] text-nex-mist">Real orders created per day</p>
+            </div>
+            <span className="text-[9px] bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 px-2 py-0.5 rounded font-black">DATABASE VERIFIED</span>
           </div>
           
           <div className="h-52 w-full flex items-end justify-between pt-6 border-b border-white/10 relative">
@@ -181,25 +248,28 @@ export default function AdminAnalyticsPage() {
             <div className="absolute inset-x-0 bottom-36 h-px bg-white/5" />
 
             {/* Custom Bar Graphs */}
-            {[
-              { label: "Mon", val: 30, color: "bg-cyan-500" },
-              { label: "Tue", val: 55, color: "bg-cyan-500" },
-              { label: "Wed", val: 40, color: "bg-cyan-400" },
-              { label: "Thu", val: 78, color: "bg-cyan-500" },
-              { label: "Fri", val: 65, color: "bg-cyan-400" },
-              { label: "Sat", val: 90, color: "bg-cyan-500 shadow-[0_0_15px_rgba(0,242,254,0.4)]" },
-              { label: "Sun", val: 12, color: "bg-white/20" },
-            ].map((bar, idx) => (
-              <div key={idx} className="flex flex-col items-center flex-1 space-y-2">
-                <div className="w-8 relative flex flex-col justify-end h-40">
-                  <div 
-                    className={`w-full rounded-t-lg transition-all duration-1000 ${bar.color}`} 
-                    style={{ height: `${bar.val}%` }} 
-                  />
+            {weeklyData.length > 0 ? (
+              weeklyData.map((bar, idx) => (
+                <div key={idx} className="flex flex-col items-center flex-1 space-y-2">
+                  <span className="text-[8px] font-mono text-cyan-400">
+                    {bar.count > 0 ? bar.count : ""}
+                  </span>
+                  <div className="w-8 relative flex flex-col justify-end h-36">
+                    <div 
+                      className={`w-full rounded-t-lg transition-all duration-700 ${
+                        bar.count > 0 ? "bg-cyan-500 shadow-[0_0_12px_rgba(0,242,254,0.3)]" : "bg-white/5"
+                      }`} 
+                      style={{ height: `${bar.val}%` }} 
+                    />
+                  </div>
+                  <span className="text-[9px] font-bold text-nex-mist">{bar.label}</span>
                 </div>
-                <span className="text-[9px] font-bold text-nex-mist">{bar.label}</span>
+              ))
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-xs text-nex-mist">
+                Loading weekly metrics...
               </div>
-            ))}
+            )}
           </div>
         </div>
 
@@ -211,8 +281,8 @@ export default function AdminAnalyticsPage() {
               
               <div className="flex justify-between items-center bg-white/[0.01] border border-white/5 p-3 rounded-xl">
                 <div className="flex items-center gap-2">
-                  <span className="h-2.5 w-2.5 rounded-full bg-cyan-400 animate-ping" />
-                  <span className="font-medium text-white">Pending Service Orders</span>
+                  <span className="h-2.5 w-2.5 rounded-full bg-cyan-400" />
+                  <span className="font-medium text-white">Pending Service Bookings</span>
                 </div>
                 <span className="font-bold text-cyan-400">{stats.pendingBookings} items</span>
               </div>
@@ -237,7 +307,7 @@ export default function AdminAnalyticsPage() {
           </div>
 
           <div className="pt-4 border-t border-white/5 text-[9px] text-nex-mist text-center">
-            System sync status: Operational · All systems nominal
+            System sync status: Operational · Database Connected
           </div>
         </div>
 

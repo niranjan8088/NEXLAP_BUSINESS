@@ -16,10 +16,14 @@ import {
   Share2,
   Trash2,
   PlusCircle,
+  Building2,
+  ShieldCheck,
+  AlertCircle,
 } from "lucide-react";
 import { dbHelper } from "@/lib/dbHelper";
 
 type CMSSectionKey =
+  | "business_info"
   | "hero"
   | "seo"
   | "banners"
@@ -32,6 +36,7 @@ type CMSSectionKey =
   | "social";
 
 const TABS: { key: CMSSectionKey; label: string; icon: React.ReactNode }[] = [
+  { key: "business_info", label: "Business & GSTIN", icon: <Building2 className="h-4 w-4" /> },
   { key: "hero", label: "Hero Banner", icon: <LayoutTemplate className="h-4 w-4" /> },
   { key: "seo", label: "SEO & Metas", icon: <Tag className="h-4 w-4" /> },
   { key: "banners", label: "Promo Banners", icon: <ImageIcon className="h-4 w-4" /> },
@@ -45,9 +50,17 @@ const TABS: { key: CMSSectionKey; label: string; icon: React.ReactNode }[] = [
 ];
 
 export default function AdminWebsiteCMS() {
-  const [activeTab, setActiveTab] = useState<CMSSectionKey>("hero");
+  const [activeTab, setActiveTab] = useState<CMSSectionKey>("business_info");
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  // Business Information & GSTIN fields
+  const [businessName, setBusinessName] = useState("NexLapTech — NexByte Technologies");
+  const [gstin, setGstin] = useState("29ABCDE1234F1Z5");
+  const [gstinError, setGstinError] = useState("");
+  const [registeredAddress, setRegisteredAddress] = useState("No. 14, 1st Floor, Near Bus Stand, Tumkur, Karnataka 572101");
+  const [logoUrl, setLogoUrl] = useState("/assets/nexlaptech-logo.png");
+  const [invoiceFooter, setInvoiceFooter] = useState("Thank you for choosing NexLapTech! Computers • Laptop Service • Gaming PCs • Bulk IT Hardware • CCTV Systems");
 
   // Hero fields
   const [heroHeadline, setHeroHeadline] = useState("Premium IT Solutions — NexLapTech");
@@ -98,6 +111,13 @@ export default function AdminWebsiteCMS() {
     try {
       const data = await dbHelper.cmsContent.get();
       if (data) {
+        if (data.business_info) {
+          setBusinessName(data.business_info.businessName || "NexLapTech — NexByte Technologies");
+          setGstin(data.business_info.gstin || "29ABCDE1234F1Z5");
+          setRegisteredAddress(data.business_info.registeredAddress || "No. 14, 1st Floor, Near Bus Stand, Tumkur, Karnataka 572101");
+          setLogoUrl(data.business_info.logoUrl || "/assets/nexlaptech-logo.png");
+          setInvoiceFooter(data.business_info.invoiceFooter || "Thank you for choosing NexLapTech! Computers • Laptop Service • Gaming PCs • Bulk IT Hardware • CCTV Systems");
+        }
         if (data.hero) {
           setHeroHeadline(data.hero.headline || "");
           setHeroSubheadline(data.hero.subheadline || "");
@@ -156,9 +176,31 @@ export default function AdminWebsiteCMS() {
     return () => window.removeEventListener("nexbyte-realtime", loadCMSData);
   }, []);
 
+  const validateGSTIN = (val: string) => {
+    if (!val || !val.trim()) return true;
+    return /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(val.trim().toUpperCase());
+  };
+
   const handleSave = async () => {
+    if (gstin && !validateGSTIN(gstin)) {
+      setGstinError("Please enter a valid 15-character GSTIN format (e.g. 29ABCDE1234F1Z5).");
+      setActiveTab("business_info");
+      return;
+    }
+    setGstinError("");
+
     try {
       await Promise.all([
+        dbHelper.cmsContent.update("business_info", {
+          businessName: businessName.trim(),
+          gstin: gstin.trim().toUpperCase(),
+          registeredAddress: registeredAddress.trim(),
+          phone1: phone1.trim(),
+          phone2: phone2.trim(),
+          email: email.trim(),
+          logoUrl: logoUrl.trim(),
+          invoiceFooter: invoiceFooter.trim(),
+        }),
         dbHelper.cmsContent.update("hero", { headline: heroHeadline, subheadline: heroSubheadline, cta: heroCTA, secondary_cta: heroSecondaryCTA }),
         dbHelper.cmsContent.update("seo", { title: metaTitle, description: metaDescription, keywords: metaKeywords, og_image: ogImage }),
         dbHelper.cmsContent.update("banners", banners),
@@ -233,6 +275,121 @@ export default function AdminWebsiteCMS() {
           </button>
         ))}
       </div>
+
+      {/* ─── Business Information & GSTIN ─── */}
+      {activeTab === "business_info" && (
+        <div className="glass-panel bg-nex-ink border border-white/5 rounded-2xl p-6 space-y-6">
+          <div className="flex items-center justify-between border-b border-white/5 pb-4">
+            <div>
+              <h2 className="text-sm font-bold text-white flex items-center gap-2">
+                <Building2 className="h-4.5 w-4.5 text-cyan-400" /> Authorized Business Information &amp; GSTIN CMS
+              </h2>
+              <p className="text-xs text-nex-mist mt-0.5">
+                Configurable corporate identity, GSTIN registration, tax invoice footer, and contact channels displayed on customer invoices and About portals.
+              </p>
+            </div>
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 text-[11px] font-bold text-emerald-400">
+              <ShieldCheck className="h-3.5 w-3.5" /> Verified Business Profile
+            </span>
+          </div>
+
+          {gstinError && (
+            <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2 font-medium">
+              <AlertCircle className="h-4 w-4 shrink-0 text-rose-400" />
+              <span>{gstinError}</span>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <div className="space-y-1.5">
+              <label className="text-xs text-white/80 font-semibold">Business Legal / Display Name *</label>
+              <input
+                value={businessName}
+                onChange={(e) => setBusinessName(e.target.value)}
+                placeholder="e.g. NexLapTech — NexByte Technologies"
+                className="w-full rounded-xl bg-white/[0.03] border border-white/10 px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-cyan-400/50"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs text-white/80 font-semibold flex items-center justify-between">
+                <span>Official GSTIN Registration No. *</span>
+                <span className="text-[10px] text-cyan-400 font-mono">15-char Alpha-numeric</span>
+              </label>
+              <input
+                value={gstin}
+                onChange={(e) => {
+                  setGstin(e.target.value.toUpperCase());
+                  if (gstinError) setGstinError("");
+                }}
+                maxLength={15}
+                placeholder="e.g. 29ABCDE1234F1Z5"
+                className="w-full rounded-xl bg-white/[0.03] border border-white/10 px-3.5 py-2.5 text-xs text-white font-mono tracking-wider focus:outline-none focus:border-cyan-400/50 uppercase"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs text-white/80 font-semibold">Registered Office &amp; Service Center Address</label>
+            <textarea
+              value={registeredAddress}
+              onChange={(e) => setRegisteredAddress(e.target.value)}
+              rows={2}
+              placeholder="e.g. No. 14, 1st Floor, Near Bus Stand, Tumkur, Karnataka 572101"
+              className="w-full rounded-xl bg-white/[0.03] border border-white/10 px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-cyan-400/50 resize-none leading-relaxed"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="space-y-1.5">
+              <label className="text-xs text-white/80 font-semibold">Support Phone 1</label>
+              <input
+                value={phone1}
+                onChange={(e) => setPhone1(e.target.value)}
+                className="w-full rounded-xl bg-white/[0.03] border border-white/10 px-3.5 py-2.5 text-xs text-white focus:outline-none"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs text-white/80 font-semibold">Support Phone 2</label>
+              <input
+                value={phone2}
+                onChange={(e) => setPhone2(e.target.value)}
+                className="w-full rounded-xl bg-white/[0.03] border border-white/10 px-3.5 py-2.5 text-xs text-white focus:outline-none"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs text-white/80 font-semibold">Official Business Email</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full rounded-xl bg-white/[0.03] border border-white/10 px-3.5 py-2.5 text-xs text-white focus:outline-none"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs text-white/80 font-semibold">Brand Logo Asset URL</label>
+            <input
+              value={logoUrl}
+              onChange={(e) => setLogoUrl(e.target.value)}
+              placeholder="/assets/nexlaptech-logo.png"
+              className="w-full rounded-xl bg-white/[0.03] border border-white/10 px-3.5 py-2.5 text-xs text-white font-mono focus:outline-none"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs text-white/80 font-semibold">Tax Invoice Footer Terms &amp; Disclaimer</label>
+            <textarea
+              value={invoiceFooter}
+              onChange={(e) => setInvoiceFooter(e.target.value)}
+              rows={2}
+              placeholder="e.g. Thank you for choosing NexLapTech! Computers • Laptop Service • Gaming PCs • Bulk IT Hardware"
+              className="w-full rounded-xl bg-white/[0.03] border border-white/10 px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-cyan-400/50 resize-none leading-relaxed"
+            />
+          </div>
+        </div>
+      )}
 
       {/* ─── Hero / Homepage ─── */}
       {activeTab === "hero" && (

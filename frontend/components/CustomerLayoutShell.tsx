@@ -7,7 +7,6 @@ import CustomerSidebar from "@/components/CustomerSidebar";
 import CustomerHeader from "@/components/CustomerHeader";
 import NotificationProvider from "@/components/NotificationProvider";
 import CartDrawer from "@/components/CartDrawer";
-import AiChatWidget from "@/components/AiChatWidget";
 import { realtimeSync } from "@/lib/realtimeSync";
 import { Home, ShoppingBag, Package, MessageSquare, User, MoreHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -161,7 +160,6 @@ export default function CustomerLayoutShell({ children }: { children: React.Reac
 
         {/* Global Components */}
         <CartDrawer />
-        <AiChatWidget portal="customer" />
 
         {/* Mobile Bottom Navigation */}
         <MobileBottomNav onMoreClick={() => setMobileSidebarOpen(true)} />

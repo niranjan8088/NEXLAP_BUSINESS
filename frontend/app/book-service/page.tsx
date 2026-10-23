@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { services, business } from "@/lib/data";
+import { services } from "@/lib/data";
 import { Calendar, User, Phone, Mail, Clock, MessageSquare, CheckCircle, Star } from "lucide-react";
 import StarRating from "@/components/ui/StarRating";
 
@@ -12,6 +12,7 @@ export default function BookServicePage() {
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [serviceName, setServiceName] = useState(services[0]?.title || "Laptop Repair");
+  const [address, setAddress] = useState("");
   const [date, setDate] = useState("");
   const [timeSlot, setTimeSlot] = useState("10:30 AM");
   const [notes, setNotes] = useState("");
@@ -40,12 +41,13 @@ export default function BookServicePage() {
           customerName: name,
           phone,
           email,
+          address,
+          city,
           service_name: serviceName,
           requestType: "service",
           preferredDate: date,
           preferredTime: timeSlot,
           description: notes,
-          city,
           state: "Karnataka",
         }),
       });
@@ -275,12 +277,46 @@ export default function BookServicePage() {
                       onChange={(e) => setServiceName(e.target.value)}
                       className="w-full rounded-xl bg-nex-ink border border-white/[0.08] px-3.5 py-2.5 text-xs text-white focus:border-nex-blue/50 focus:outline-none"
                     >
-                      {services.map((srv) => (
-                        <option key={srv.id} value={srv.title}>
-                          {srv.title}
-                        </option>
-                      ))}
+                      {services.map((srv, idx) => {
+                        const startPrices = [1200, 1500, 800, 600, 500, 1800, 3500, 1000, 2500, 6500, 8500, 4500, 950, 1200, 1500];
+                        const price = startPrices[idx % startPrices.length];
+                        return (
+                          <option key={srv.id} value={srv.title}>
+                            {srv.title} — from ₹{price.toLocaleString("en-IN")}
+                          </option>
+                        );
+                      })}
                     </select>
+                  </div>
+
+                  {/* Address & City */}
+                  <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                    <div className="space-y-1">
+                      <label htmlFor="bk-address" className="text-xs font-semibold text-white/85">
+                        Service Location / Address
+                      </label>
+                      <input
+                        id="bk-address"
+                        type="text"
+                        value={address}
+                        onChange={(e) => setAddress(e.target.value)}
+                        placeholder="e.g. 12th Cross, MG Road"
+                        className="w-full rounded-xl bg-white/[0.04] border border-white/[0.08] px-3.5 py-2.5 text-xs text-white focus:border-nex-blue/50 focus:outline-none"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label htmlFor="bk-city-input" className="text-xs font-semibold text-white/85">
+                        City
+                      </label>
+                      <input
+                        id="bk-city-input"
+                        type="text"
+                        value={city}
+                        onChange={(e) => setCity(e.target.value)}
+                        placeholder="e.g. Bengaluru or Tumkur"
+                        className="w-full rounded-xl bg-white/[0.04] border border-white/[0.08] px-3.5 py-2.5 text-xs text-white focus:border-nex-blue/50 focus:outline-none"
+                      />
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">

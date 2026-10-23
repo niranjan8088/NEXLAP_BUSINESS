@@ -446,11 +446,6 @@ export default function ProductDetailPage({
 
   // Add to Cart Action
   const handleAddToCart = () => {
-    if (!authChecked) return false;
-    if (!isCustomerAuthenticated) {
-      redirectToSignIn();
-      return false;
-    }
     if (!product) return false;
     if (product.hasVariants && !selectedVariant) {
       alert(product.variants?.length
@@ -482,7 +477,37 @@ export default function ProductDetailPage({
 
   // Buy Now Action
   const handleBuyNow = () => {
-    if (handleAddToCart()) router.push("/checkout");
+    if (!product) return;
+    if (product.hasVariants && !selectedVariant) {
+      alert(product.variants?.length
+        ? "Choose an active product configuration before purchasing."
+        : "This product has no active configurations available.");
+      return;
+    }
+    const availableStock = selectedVariant?.stock ?? product.stock ?? 10;
+    if (availableStock < 1 || quantity > availableStock) {
+      alert("The selected configuration does not have enough stock for this quantity.");
+      return;
+    }
+    const finalPrice = selectedVariant ? selectedVariant.price : product.price;
+    const variantTitle = selectedVariant ? ` (${selectedVariant.name})` : "";
+
+    addItemToCart({
+      id: product.id,
+      title: `${product.title}${variantTitle}`,
+      price: finalPrice,
+      image: selectedImage || product.image || "/images/poster-products.png",
+      category: product.category,
+      variantId: selectedVariant?.id,
+      variantSku: selectedVariant?.sku,
+      variantName: selectedVariant?.name,
+    });
+
+    if (!isCustomerAuthenticated) {
+      router.push(`/customer/signin?next=${encodeURIComponent("/checkout")}`);
+    } else {
+      router.push("/checkout");
+    }
   };
 
   const handleAskSellerClick = () => {
