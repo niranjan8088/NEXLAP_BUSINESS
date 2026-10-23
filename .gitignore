@@ -12,6 +12,10 @@ dist/
 build/
 coverage/
 *.tsbuildinfo
+.open-next/
+**/.open-next/
+.wrangler/
+**/.wrangler/
 
 # Environment secrets
 .env
