@@ -44,6 +44,6 @@
     "@types/three": "^0.185.1",
     "eslint": "^8.57.1",
     "eslint-config-next": "15.5.28",
-    "wrangler": "^3.114.17"
+    "wrangler": "^4.148.0"
   }
 }
