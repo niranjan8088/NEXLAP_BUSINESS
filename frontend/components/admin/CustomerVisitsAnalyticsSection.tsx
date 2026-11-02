@@ -272,11 +272,10 @@ export default function CustomerVisitsAnalyticsSection() {
         {/* Feedback Alert */}
         {feedback && (
           <div
-            className={`mt-4 rounded-2xl p-3.5 text-xs font-semibold flex items-center gap-2.5 border ${
-              feedback.type === "success"
-                ? "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-200 border-emerald-200 dark:border-emerald-800"
-                : "bg-rose-50 dark:bg-rose-950/50 text-rose-800 dark:text-rose-200 border-rose-200 dark:border-rose-800"
-            }`}
+            className={`mt-4 rounded-2xl p-3.5 text-xs font-semibold flex items-center gap-2.5 border ${feedback.type === "success"
+              ? "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-200 border-emerald-200 dark:border-emerald-800"
+              : "bg-rose-50 dark:bg-rose-950/50 text-rose-800 dark:text-rose-200 border-rose-200 dark:border-rose-800"
+              }`}
           >
             {feedback.type === "success" ? (
               <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
@@ -306,9 +305,8 @@ export default function CustomerVisitsAnalyticsSection() {
               {data.todayVisits.toLocaleString()}
             </span>
             <span
-              className={`inline-flex items-center gap-0.5 text-xs font-bold ${
-                data.dailyGrowthPct >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
-              }`}
+              className={`inline-flex items-center gap-0.5 text-xs font-bold ${data.dailyGrowthPct >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
+                }`}
             >
               {data.dailyGrowthPct >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
               {Math.abs(data.dailyGrowthPct)}%
@@ -335,9 +333,8 @@ export default function CustomerVisitsAnalyticsSection() {
               {data.thisMonthVisits.toLocaleString()}
             </span>
             <span
-              className={`inline-flex items-center gap-0.5 text-xs font-bold ${
-                data.monthlyGrowthPct >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
-              }`}
+              className={`inline-flex items-center gap-0.5 text-xs font-bold ${data.monthlyGrowthPct >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
+                }`}
             >
               {data.monthlyGrowthPct >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
               {Math.abs(data.monthlyGrowthPct)}%
@@ -414,41 +411,37 @@ export default function CustomerVisitsAnalyticsSection() {
             <div className="inline-flex rounded-xl bg-slate-100 dark:bg-white/5 p-1 text-xs font-semibold">
               <button
                 onClick={() => setTimeframe("7d")}
-                className={`px-3 py-1.5 rounded-lg transition-all ${
-                  timeframe === "7d"
-                    ? "bg-white dark:bg-slate-800 text-blue-600 dark:text-white shadow-sm font-bold"
-                    : "text-slate-500 hover:text-slate-800 dark:hover:text-white"
-                }`}
+                className={`px-3 py-1.5 rounded-lg transition-all ${timeframe === "7d"
+                  ? "bg-white dark:bg-slate-800 text-blue-600 dark:text-white shadow-sm font-bold"
+                  : "text-slate-500 hover:text-slate-800 dark:hover:text-white"
+                  }`}
               >
                 7 Days
               </button>
               <button
                 onClick={() => setTimeframe("14d")}
-                className={`px-3 py-1.5 rounded-lg transition-all ${
-                  timeframe === "14d"
-                    ? "bg-white dark:bg-slate-800 text-blue-600 dark:text-white shadow-sm font-bold"
-                    : "text-slate-500 hover:text-slate-800 dark:hover:text-white"
-                }`}
+                className={`px-3 py-1.5 rounded-lg transition-all ${timeframe === "14d"
+                  ? "bg-white dark:bg-slate-800 text-blue-600 dark:text-white shadow-sm font-bold"
+                  : "text-slate-500 hover:text-slate-800 dark:hover:text-white"
+                  }`}
               >
                 14 Days
               </button>
               <button
                 onClick={() => setTimeframe("30d")}
-                className={`px-3 py-1.5 rounded-lg transition-all ${
-                  timeframe === "30d"
-                    ? "bg-white dark:bg-slate-800 text-blue-600 dark:text-white shadow-sm font-bold"
-                    : "text-slate-500 hover:text-slate-800 dark:hover:text-white"
-                }`}
+                className={`px-3 py-1.5 rounded-lg transition-all ${timeframe === "30d"
+                  ? "bg-white dark:bg-slate-800 text-blue-600 dark:text-white shadow-sm font-bold"
+                  : "text-slate-500 hover:text-slate-800 dark:hover:text-white"
+                  }`}
               >
                 30 Days
               </button>
               <button
                 onClick={() => setTimeframe("monthly")}
-                className={`px-3 py-1.5 rounded-lg transition-all ${
-                  timeframe === "monthly"
-                    ? "bg-white dark:bg-slate-800 text-blue-600 dark:text-white shadow-sm font-bold"
-                    : "text-slate-500 hover:text-slate-800 dark:hover:text-white"
-                }`}
+                className={`px-3 py-1.5 rounded-lg transition-all ${timeframe === "monthly"
+                  ? "bg-white dark:bg-slate-800 text-blue-600 dark:text-white shadow-sm font-bold"
+                  : "text-slate-500 hover:text-slate-800 dark:hover:text-white"
+                  }`}
               >
                 Monthly (12M)
               </button>
@@ -458,21 +451,19 @@ export default function CustomerVisitsAnalyticsSection() {
             <div className="inline-flex rounded-xl bg-slate-100 dark:bg-white/5 p-1 text-xs font-semibold">
               <button
                 onClick={() => setMetricType("visits")}
-                className={`px-3 py-1.5 rounded-lg transition-all ${
-                  metricType === "visits"
-                    ? "bg-cyan-600 text-white shadow-sm font-bold"
-                    : "text-slate-500 hover:text-slate-800 dark:hover:text-white"
-                }`}
+                className={`px-3 py-1.5 rounded-lg transition-all ${metricType === "visits"
+                  ? "bg-cyan-600 text-white shadow-sm font-bold"
+                  : "text-slate-500 hover:text-slate-800 dark:hover:text-white"
+                  }`}
               >
                 Total Visits
               </button>
               <button
                 onClick={() => setMetricType("unique")}
-                className={`px-3 py-1.5 rounded-lg transition-all ${
-                  metricType === "unique"
-                    ? "bg-purple-600 text-white shadow-sm font-bold"
-                    : "text-slate-500 hover:text-slate-800 dark:hover:text-white"
-                }`}
+                className={`px-3 py-1.5 rounded-lg transition-all ${metricType === "unique"
+                  ? "bg-purple-600 text-white shadow-sm font-bold"
+                  : "text-slate-500 hover:text-slate-800 dark:hover:text-white"
+                  }`}
               >
                 Unique Customers
               </button>
@@ -482,22 +473,20 @@ export default function CustomerVisitsAnalyticsSection() {
             <div className="inline-flex rounded-xl bg-slate-100 dark:bg-white/5 p-1 text-xs font-semibold">
               <button
                 onClick={() => setChartType("area")}
-                className={`p-1.5 rounded-lg transition-all ${
-                  chartType === "area"
-                    ? "bg-white dark:bg-slate-800 text-blue-600 dark:text-white shadow-sm"
-                    : "text-slate-400 hover:text-slate-600"
-                }`}
+                className={`p-1.5 rounded-lg transition-all ${chartType === "area"
+                  ? "bg-white dark:bg-slate-800 text-blue-600 dark:text-white shadow-sm"
+                  : "text-slate-400 hover:text-slate-600"
+                  }`}
                 title="Area Curve Chart"
               >
                 <LineChartIcon className="h-4 w-4" />
               </button>
               <button
                 onClick={() => setChartType("bar")}
-                className={`p-1.5 rounded-lg transition-all ${
-                  chartType === "bar"
-                    ? "bg-white dark:bg-slate-800 text-blue-600 dark:text-white shadow-sm"
-                    : "text-slate-400 hover:text-slate-600"
-                }`}
+                className={`p-1.5 rounded-lg transition-all ${chartType === "bar"
+                  ? "bg-white dark:bg-slate-800 text-blue-600 dark:text-white shadow-sm"
+                  : "text-slate-400 hover:text-slate-600"
+                  }`}
                 title="Column Bar Chart"
               >
                 <BarChart3 className="h-4 w-4" />
@@ -766,11 +755,10 @@ export default function CustomerVisitsAnalyticsSection() {
 
                   <div
                     style={{ height: `${Math.max(h.percentage, 4)}%` }}
-                    className={`w-full rounded-t-sm transition-all ${
-                      isPeak
-                        ? "bg-gradient-to-t from-amber-500 to-amber-300 shadow-sm shadow-amber-500/20"
-                        : "bg-slate-200 dark:bg-slate-800 hover:bg-cyan-500/70"
-                    }`}
+                    className={`w-full rounded-t-sm transition-all ${isPeak
+                      ? "bg-gradient-to-t from-amber-500 to-amber-300 shadow-sm shadow-amber-500/20"
+                      : "bg-slate-200 dark:bg-slate-800 hover:bg-cyan-500/70"
+                      }`}
                   />
                   {i % 4 === 0 && (
                     <span className="text-[8px] text-slate-400 mt-1">{h.hour.slice(0, 2)}h</span>
