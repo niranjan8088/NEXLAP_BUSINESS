@@ -290,12 +290,12 @@ export default function CustomerVisitsAnalyticsSection() {
 
       {/* ── KPI HIGHLIGHT CARDS (DAILY, MONTHLY, TOTAL, UNIQUE) ────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Card 1: Today's Customer Visits */}
+        {/* Card 1: Today&apos;s Customer Visits */}
         <div className="rounded-3xl border border-slate-200/90 dark:border-white/10 bg-white dark:bg-slate-900 p-5 shadow-sm relative overflow-hidden group hover:border-cyan-500/40 transition-all">
           <div className="absolute -right-6 -bottom-6 w-24 h-24 rounded-full bg-cyan-500/10 blur-xl group-hover:bg-cyan-500/20 transition-all" />
           <div className="flex items-center justify-between mb-3">
             <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-              Today's Customer Visits
+              Today&apos;s Customer Visits
             </span>
             <div className="h-8 w-8 rounded-xl bg-cyan-50 dark:bg-cyan-950/60 border border-cyan-200 dark:border-cyan-900 flex items-center justify-center text-cyan-600 dark:text-cyan-400">
               <Calendar className="h-4 w-4" />
@@ -319,12 +319,12 @@ export default function CustomerVisitsAnalyticsSection() {
           </p>
         </div>
 
-        {/* Card 2: This Month's Visits */}
+        {/* Card 2: This Month&apos;s Visits */}
         <div className="rounded-3xl border border-slate-200/90 dark:border-white/10 bg-white dark:bg-slate-900 p-5 shadow-sm relative overflow-hidden group hover:border-indigo-500/40 transition-all">
           <div className="absolute -right-6 -bottom-6 w-24 h-24 rounded-full bg-indigo-500/10 blur-xl group-hover:bg-indigo-500/20 transition-all" />
           <div className="flex items-center justify-between mb-3">
             <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-              This Month's Visits
+              This Month&apos;s Visits
             </span>
             <div className="h-8 w-8 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-900 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
               <TrendingUp className="h-4 w-4" />

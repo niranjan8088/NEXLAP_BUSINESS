@@ -31,3 +31,8 @@ pnpm-debug.log*
 # OS and editor files
 .DS_Store
 Thumbs.db
+
+# Archives
+*.zip
+*.tar.gz
+*.rar
