@@ -7,16 +7,10 @@ import {
   AlertTriangle,
   CheckCircle,
   XCircle,
-  Edit,
   Save,
   X,
   PlusCircle,
-  Trash2,
   TrendingDown,
-  RefreshCw,
-  Clock,
-  Layers,
-  ArrowUpDown
 } from "lucide-react";
 import { dbHelper } from "@/lib/dbHelper";
 
@@ -46,17 +40,17 @@ function computeStatus(qty: number, threshold: number): StockStatus {
 const STATUS_CONFIG: Record<StockStatus, { label: string; color: string; icon: React.ReactNode }> = {
   in_stock: {
     label: "In Stock",
-    color: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
+    color: "text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/30",
     icon: <CheckCircle className="h-3.5 w-3.5" />,
   },
   low_stock: {
     label: "Low Stock Alert",
-    color: "text-amber-400 bg-amber-500/10 border-amber-500/20",
+    color: "text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/30",
     icon: <TrendingDown className="h-3.5 w-3.5" />,
   },
   out_of_stock: {
     label: "Out of Stock",
-    color: "text-rose-400 bg-rose-500/10 border-rose-500/20",
+    color: "text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-500/10 border-rose-200 dark:border-rose-500/30",
     icon: <XCircle className="h-3.5 w-3.5" />,
   },
 };
@@ -211,76 +205,76 @@ export default function AdminInventoryControl() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="font-display text-2xl font-bold text-white flex items-center gap-2">
-            <Package className="h-6 w-6 text-nex-blueLight" />
+          <h1 className="font-display text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <Package className="h-6 w-6 text-indigo-600 dark:text-cyan-400" />
             Inventory &amp; Alert Management
           </h1>
-          <p className="text-xs text-nex-mist mt-0.5">
+          <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
             Real-time stock monitoring derived from authoritative product and variant SKU quantities. Alerts resolve automatically upon restocking.
           </p>
         </div>
 
-        <div className="flex items-center gap-2 text-xs text-white/90">
-          <span className="text-nex-mist font-semibold">Low-Stock Threshold:</span>
+        <div className="flex items-center gap-2 text-xs text-slate-700 dark:text-slate-200">
+          <span className="font-semibold text-slate-500 dark:text-slate-400">Low-Stock Threshold:</span>
           <input
             type="number"
             min={1}
             max={100}
             value={threshold}
             onChange={(e) => setThreshold(Math.max(1, Number(e.target.value)))}
-            className="w-16 rounded-xl bg-nex-black border border-white/20 px-3 py-1.5 text-center text-white font-bold focus:outline-none"
+            className="w-16 rounded-xl futuristic-input px-3 py-1.5 text-center font-bold"
           />
-          <span className="text-nex-mist">units</span>
+          <span className="text-slate-500 dark:text-slate-400">units</span>
         </div>
       </div>
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: "Total Tracked SKUs", value: totalItems, color: "text-white" },
-          { label: "Healthy In Stock", value: inStockCount, color: "text-emerald-400" },
-          { label: "Low Stock Alerts", value: lowStockCount, color: "text-amber-400" },
-          { label: "Out of Stock SKUs", value: outOfStockCount, color: "text-rose-400" },
+          { label: "Total Tracked SKUs", value: totalItems, color: "text-slate-900 dark:text-white" },
+          { label: "Healthy In Stock", value: inStockCount, color: "text-emerald-600 dark:text-emerald-400" },
+          { label: "Low Stock Alerts", value: lowStockCount, color: "text-amber-600 dark:text-amber-400" },
+          { label: "Out of Stock SKUs", value: outOfStockCount, color: "text-rose-600 dark:text-rose-400" },
         ].map((card) => (
-          <div key={card.label} className="glass-panel bg-nex-ink/80 border border-white/5 rounded-2xl p-4 flex flex-col gap-1">
-            <span className="text-[10px] text-nex-mist font-bold uppercase tracking-wider">{card.label}</span>
-            <span className={`text-2xl font-display font-bold ${card.color}`}>{card.value}</span>
+          <div key={card.label} className="futuristic-card rounded-2xl p-4 flex flex-col gap-1 shadow-sm">
+            <span className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">{card.label}</span>
+            <span className={`text-2xl font-display font-extrabold ${card.color}`}>{card.value}</span>
           </div>
         ))}
       </div>
 
       {/* Alert Banner */}
       {activeAlertsCount > 0 ? (
-        <div className="flex items-center justify-between rounded-2xl border border-amber-500/30 bg-amber-500/10 px-5 py-3 text-xs text-amber-200">
+        <div className="flex items-center justify-between rounded-2xl border border-amber-200 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/10 px-5 py-3 text-xs text-amber-800 dark:text-amber-200 shadow-sm">
           <div className="flex items-center gap-2.5">
-            <AlertTriangle className="h-5 w-5 shrink-0 text-amber-400" />
+            <AlertTriangle className="h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
             <span>
               <strong>{activeAlertsCount} active inventory alert(s)</strong> require replenishment attention ({outOfStockCount} out of stock, {lowStockCount} below threshold).
             </span>
           </div>
           <button
             onClick={() => { setActiveTab("alerts"); setStatusFilter("all"); }}
-            className="rounded-lg bg-amber-500/20 px-3 py-1 font-bold text-amber-300 hover:bg-amber-500/30 text-[11px]"
+            className="rounded-xl bg-amber-200/80 dark:bg-amber-500/20 px-3 py-1 font-bold text-amber-900 dark:text-amber-300 hover:bg-amber-300 dark:hover:bg-amber-500/30 text-[11px] transition-colors"
           >
             Filter Alerts
           </button>
         </div>
       ) : (
-        <div className="flex items-center gap-2.5 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 px-5 py-3 text-xs text-emerald-300">
-          <CheckCircle className="h-4 w-4 text-emerald-400 shrink-0" />
+        <div className="flex items-center gap-2.5 rounded-2xl border border-emerald-200 dark:border-emerald-500/20 bg-emerald-50 dark:bg-emerald-500/5 px-5 py-3 text-xs text-emerald-800 dark:text-emerald-300 shadow-sm">
+          <CheckCircle className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
           <span>All hardware catalog SKUs and variants are above the minimum stock threshold.</span>
         </div>
       )}
 
       {/* View Switcher & Filters */}
-      <div className="glass-panel p-4 rounded-2xl border border-white/5 bg-nex-ink flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
+      <div className="futuristic-card p-4 rounded-2xl flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between shadow-sm">
         <div className="flex items-center gap-2">
           <button
             onClick={() => setActiveTab("alerts")}
             className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
               activeTab === "alerts"
-                ? "bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-glow-amber"
-                : "bg-white/5 text-nex-mist hover:text-white"
+                ? "bg-amber-500 text-white shadow-sm font-extrabold"
+                : "futuristic-card text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
             }`}
           >
             Active Stock Alerts ({activeAlertsCount})
@@ -289,8 +283,8 @@ export default function AdminInventoryControl() {
             onClick={() => setActiveTab("all")}
             className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
               activeTab === "all"
-                ? "bg-nex-blue text-white shadow-glow-blue"
-                : "bg-white/5 text-nex-mist hover:text-white"
+                ? "bg-indigo-600 text-white shadow-sm font-extrabold"
+                : "futuristic-card text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
             }`}
           >
             All Inventory Items ({totalItems})
@@ -299,20 +293,20 @@ export default function AdminInventoryControl() {
 
         <div className="flex items-center gap-2 flex-1 max-w-md">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-nex-mist" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
             <input
               type="text"
               placeholder="Search by SKU, product name, or variant..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full rounded-xl bg-nex-black border border-white/10 pl-8 pr-3 py-2 text-xs text-white focus:outline-none"
+              className="futuristic-input w-full pl-8 pr-3 py-2 text-xs"
             />
           </div>
 
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as any)}
-            className="rounded-xl bg-nex-black border border-white/10 px-3 py-2 text-xs text-white focus:outline-none font-bold"
+            className="futuristic-input px-3 py-2 text-xs font-bold w-36"
           >
             <option value="all">All Levels</option>
             <option value="out_of_stock">Out of Stock</option>
@@ -324,16 +318,16 @@ export default function AdminInventoryControl() {
 
       {/* Inventory Table */}
       {filteredItems.length === 0 ? (
-        <div className="text-center py-16 glass-panel rounded-2xl border border-white/5 bg-nex-ink space-y-2">
-          <Package className="h-8 w-8 text-nex-mist mx-auto" />
-          <p className="text-xs text-white font-semibold">No inventory items match the current filter.</p>
+        <div className="text-center py-16 futuristic-card rounded-2xl space-y-2">
+          <Package className="h-8 w-8 text-slate-400 mx-auto" />
+          <p className="text-xs text-slate-900 dark:text-white font-semibold">No inventory items match the current filter.</p>
         </div>
       ) : (
-        <div className="glass-panel rounded-2xl border border-white/5 bg-nex-ink overflow-hidden">
+        <div className="futuristic-card rounded-2xl overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
-            <table className="w-full text-xs text-left text-white border-collapse">
+            <table className="w-full text-xs text-left border-collapse">
               <thead>
-                <tr className="border-b border-white/10 bg-white/[0.02] text-nex-mist font-bold uppercase tracking-wider text-[10px]">
+                <tr className="border-b border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/[0.02] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider text-[10px]">
                   <th className="py-3 px-4">SKU / Item Key</th>
                   <th className="py-3 px-4">Product &amp; Configuration</th>
                   <th className="py-3 px-4">Category</th>
@@ -344,7 +338,7 @@ export default function AdminInventoryControl() {
                   <th className="py-3 px-4 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/[0.03]">
+              <tbody className="divide-y divide-slate-200 dark:divide-white/[0.03] text-slate-800 dark:text-white/90">
                 {filteredItems.map((item) => {
                   const cfg = STATUS_CONFIG[item.status];
                   const isEditing = editingKey === item.itemKey;
@@ -352,20 +346,20 @@ export default function AdminInventoryControl() {
                   return (
                     <tr
                       key={item.itemKey}
-                      className={`hover:bg-white/[0.02] transition-colors ${
-                        item.status === "out_of_stock" ? "bg-rose-500/[0.02]" : ""
+                      className={`hover:bg-slate-50 dark:hover:bg-white/[0.02] transition-colors ${
+                        item.status === "out_of_stock" ? "bg-rose-50/50 dark:bg-rose-500/[0.02]" : ""
                       }`}
                     >
                       {/* SKU */}
-                      <td className="py-3.5 px-4 font-mono font-bold text-nex-blueLight">
+                      <td className="py-3.5 px-4 font-mono font-bold text-indigo-600 dark:text-cyan-400">
                         {item.sku}
                       </td>
 
                       {/* Product Name */}
                       <td className="py-3.5 px-4">
-                        <div className="font-bold text-white">{item.productTitle}</div>
+                        <div className="font-bold text-slate-900 dark:text-white">{item.productTitle}</div>
                         {item.variantName && (
-                          <div className="text-[10px] text-nex-blueLight font-semibold mt-0.5">
+                          <div className="text-[10px] text-indigo-600 dark:text-cyan-400 font-semibold mt-0.5">
                             Config: {item.variantName}
                           </div>
                         )}
@@ -373,7 +367,7 @@ export default function AdminInventoryControl() {
 
                       {/* Category */}
                       <td className="py-3.5 px-4">
-                        <span className="capitalize text-nex-mist">{item.category.replace(/_/g, " ")}</span>
+                        <span className="capitalize text-slate-600 dark:text-slate-400">{item.category.replace(/_/g, " ")}</span>
                       </td>
 
                       {/* Stock Qty (Inline editable) */}
@@ -385,19 +379,19 @@ export default function AdminInventoryControl() {
                               min={0}
                               value={editQty}
                               onChange={(e) => setEditQty(Math.max(0, Number(e.target.value)))}
-                              className="w-16 rounded-lg bg-black border border-nex-blue px-2 py-1 text-xs text-white font-bold focus:outline-none"
+                              className="w-16 rounded-lg futuristic-input px-2 py-1 text-xs font-bold"
                               autoFocus
                             />
                             <button
                               onClick={() => handleSaveStock(item, editQty)}
-                              className="h-6 w-6 rounded-md bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 flex items-center justify-center"
+                              className="h-6 w-6 rounded-md bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/30 flex items-center justify-center"
                               title="Save quantity"
                             >
                               <Save className="h-3 w-3" />
                             </button>
                             <button
                               onClick={() => setEditingKey(null)}
-                              className="h-6 w-6 rounded-md bg-white/10 text-white/60 hover:bg-white/20 flex items-center justify-center"
+                              className="h-6 w-6 rounded-md bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-white/60 hover:bg-slate-300 dark:hover:bg-white/20 flex items-center justify-center"
                               title="Cancel"
                             >
                               <X className="h-3 w-3" />
@@ -406,7 +400,7 @@ export default function AdminInventoryControl() {
                         ) : (
                           <button
                             onClick={() => { setEditingKey(item.itemKey); setEditQty(item.stock); }}
-                            className="font-mono font-bold text-sm text-white hover:text-nex-blueLight underline decoration-dotted"
+                            className="font-mono font-bold text-sm text-slate-900 dark:text-white hover:text-indigo-600 dark:hover:text-cyan-400 underline decoration-dotted"
                             title="Click to edit quantity inline"
                           >
                             {item.stock}
@@ -415,7 +409,7 @@ export default function AdminInventoryControl() {
                       </td>
 
                       {/* Threshold */}
-                      <td className="py-3.5 px-4 text-nex-mist font-mono">
+                      <td className="py-3.5 px-4 text-slate-500 dark:text-slate-400 font-mono">
                         {item.threshold} units
                       </td>
 
@@ -427,7 +421,7 @@ export default function AdminInventoryControl() {
                       </td>
 
                       {/* Price */}
-                      <td className="py-3.5 px-4 font-semibold text-white">
+                      <td className="py-3.5 px-4 font-semibold text-slate-900 dark:text-white">
                         ₹{item.price.toLocaleString("en-IN")}
                       </td>
 
@@ -435,7 +429,7 @@ export default function AdminInventoryControl() {
                       <td className="py-3.5 px-4 text-right">
                         <button
                           onClick={() => { setModalItem(item); setAddQty(10); setIsModalOpen(true); }}
-                          className="inline-flex items-center gap-1.5 rounded-xl border border-nex-blue/30 bg-nex-blue/10 px-3 py-1.5 text-[11px] font-bold text-nex-blueLight hover:bg-nex-blue/20 transition-all"
+                          className="futuristic-btn-secondary !py-1.5 !px-3 text-[11px] inline-flex items-center gap-1.5"
                         >
                           <PlusCircle className="h-3.5 w-3.5" />
                           <span>Restock</span>
@@ -453,34 +447,34 @@ export default function AdminInventoryControl() {
       {/* Restock Modal */}
       {isModalOpen && modalItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/85 backdrop-blur-sm" onClick={() => setIsModalOpen(false)} />
-          <div className="glass-panel relative w-full max-w-md rounded-2xl border border-white/10 bg-nex-ink p-6 shadow-glow-blue z-10 space-y-4">
-            <div className="flex items-center justify-between border-b border-white/10 pb-3">
+          <div className="absolute inset-0 bg-slate-950/70 dark:bg-black/85 backdrop-blur-sm" onClick={() => setIsModalOpen(false)} />
+          <div className="futuristic-card relative w-full max-w-md rounded-2xl bg-white dark:bg-[#0B0F1E] border border-slate-200 dark:border-white/10 p-6 shadow-2xl z-10 space-y-4 text-slate-900 dark:text-white">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-white/10 pb-3">
               <div>
-                <span className="text-[10px] font-mono text-nex-blueLight font-bold uppercase">{modalItem.sku}</span>
-                <h3 className="font-display text-base font-bold text-white">Restock Hardware Units</h3>
+                <span className="text-[10px] font-mono text-indigo-600 dark:text-cyan-400 font-bold uppercase">{modalItem.sku}</span>
+                <h3 className="font-display text-base font-bold text-slate-900 dark:text-white">Restock Hardware Units</h3>
               </div>
-              <button onClick={() => setIsModalOpen(false)} className="text-white/50 hover:text-white">
+              <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-700 dark:hover:text-white">
                 <X className="h-5 w-5" />
               </button>
             </div>
 
             <div className="space-y-1 text-xs">
-              <div className="text-white font-bold">{modalItem.productTitle}</div>
-              {modalItem.variantName && <div className="text-nex-mist text-[11px]">Variant: {modalItem.variantName}</div>}
-              <div className="text-nex-mist text-[11px]">Current on-hand inventory: <strong className="text-white">{modalItem.stock} units</strong></div>
+              <div className="text-slate-900 dark:text-white font-bold">{modalItem.productTitle}</div>
+              {modalItem.variantName && <div className="text-slate-500 dark:text-slate-400 text-[11px]">Variant: {modalItem.variantName}</div>}
+              <div className="text-slate-500 dark:text-slate-400 text-[11px]">Current on-hand inventory: <strong className="text-slate-900 dark:text-white">{modalItem.stock} units</strong></div>
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-white/90">Add Additional Stock Units:</label>
+              <label className="text-xs font-bold text-slate-800 dark:text-white/90">Add Additional Stock Units:</label>
               <input
                 type="number"
                 min={1}
                 value={addQty}
                 onChange={(e) => setAddQty(Math.max(1, Number(e.target.value)))}
-                className="w-full rounded-xl bg-nex-black border border-white/10 px-3.5 py-2.5 text-xs text-white font-bold focus:outline-none"
+                className="futuristic-input w-full font-bold"
               />
-              <span className="text-[10px] text-nex-mist">
+              <span className="text-[10px] text-slate-500 dark:text-slate-400">
                 New resulting inventory will be: <strong>{modalItem.stock + Math.max(0, Number(addQty))} units</strong>
               </span>
             </div>
@@ -489,14 +483,14 @@ export default function AdminInventoryControl() {
               <button
                 type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="btn-secondary !py-2 !px-4"
+                className="futuristic-btn-secondary !py-2 !px-4"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={handleRestockSubmit}
-                className="btn-primary !py-2 !px-5 font-bold"
+                className="futuristic-btn-primary !py-2 !px-5 font-bold"
               >
                 Confirm Restock
               </button>

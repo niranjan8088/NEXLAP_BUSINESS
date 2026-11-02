@@ -6,6 +6,8 @@ import Image from "next/image";
 import { useRouter, usePathname } from "next/navigation";
 import CustomerHeader from "@/components/CustomerHeader";
 import { useCartStore } from "@/lib/cartStore";
+import { dbHelper } from "@/lib/dbHelper";
+import { getSafeImageSrc } from "@/lib/utils";
 import {
   Heart,
   ShoppingCart,
@@ -58,7 +60,7 @@ interface Product {
   inStock?: boolean;
   stockStatus?: string;
   image?: string;
-  images?: string[];
+  images?: any[];
   specs?: Record<string, any>;
   attributes?: Record<string, any>;
   variants?: Variant[];
@@ -74,6 +76,28 @@ interface Product {
   sellerRating?: number;
   offers?: any[];
   condition?: string;
+}
+
+function extractImageUrls(product: any): string[] {
+  const urls: string[] = [];
+  if (Array.isArray(product?.images)) {
+    for (const item of product.images) {
+      const safe = getSafeImageSrc(item, "");
+      if (safe && !urls.includes(safe)) {
+        urls.push(safe);
+      }
+    }
+  }
+  if (product?.image) {
+    const mainSafe = getSafeImageSrc(product.image, "");
+    if (mainSafe && !urls.includes(mainSafe)) {
+      urls.unshift(mainSafe);
+    }
+  }
+  if (urls.length === 0) {
+    urls.push("/images/poster-products.png");
+  }
+  return urls;
 }
 
 export default function ProductDetailPage({
@@ -138,6 +162,16 @@ export default function ProductDetailPage({
 
   // Similar Products
   const [similarProducts, setSimilarProducts] = useState<Product[]>([]);
+  const [storeConfig, setStoreConfig] = useState<any>(null);
+
+  useEffect(() => {
+    fetch("/api/public/settings")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data) setStoreConfig(data);
+      })
+      .catch(() => {});
+  }, []);
 
   const addItemToCart = useCartStore((s) => s.addItem);
   const openCart = useCartStore((s) => s.openCart);
@@ -210,16 +244,57 @@ export default function ProductDetailPage({
     async function loadProduct() {
       try {
         setLoading(true);
+        setError("");
         const res = await fetch(`/api/public/products/${productId}`);
-        const data = await res.json();
+        const data = await res.json().catch(() => ({}));
 
-        if (!res.ok || !data.product) {
-          setError(data.error || "Product not found or currently unavailable.");
+        let prod: Product | null = null;
+        if (res.ok && data?.product) {
+          prod = data.product;
+        }
+
+        // Client-side fallback if server doesn't have it yet (e.g. newly created in admin)
+        if (!prod) {
+          try {
+            const clientList = await dbHelper.products.list();
+            const localMatch = (clientList || []).find(
+              (p: any) =>
+                (p.id === productId || p.slug === productId || p.sku === productId) &&
+                p.status !== "deleted" &&
+                p.status !== "hide"
+            );
+            if (localMatch) {
+              const { costPrice, supplierPrice, internalNotes, supplier_id, ...safe } = localMatch;
+              const stockQty = Number(safe.stock ?? 10);
+              const lowThreshold = Number(safe.lowStockThreshold ?? 5);
+              let stockStatus = "In Stock";
+              if (stockQty <= 0) stockStatus = "Out of Stock";
+              else if (stockQty <= lowThreshold) stockStatus = `Only ${stockQty} left`;
+
+              prod = {
+                ...safe,
+                stockStatus,
+                inStock: stockQty > 0,
+              };
+
+              // Immediately sync back to server mock_db.json
+              fetch("/api/system/sync-mock", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ key: "products", data: [localMatch] }),
+              }).catch(() => {});
+            }
+          } catch (localErr) {
+            console.error("Local fallback lookup error:", localErr);
+          }
+        }
+
+        if (!prod) {
+          setError(data?.error || "Product not found or currently unavailable.");
           setLoading(false);
           return;
         }
 
-        const prod: Product = data.product;
         const configuredVariants = Array.isArray(prod.variants) ? prod.variants : [];
         const activeVariants = configuredVariants.filter((variant) => variant.active !== false);
         const customerProduct: Product = {
@@ -230,10 +305,8 @@ export default function ProductDetailPage({
         setProduct(customerProduct);
 
         // Images set
-        const imagesList = Array.isArray(customerProduct.images) && customerProduct.images.length > 0
-          ? customerProduct.images
-          : [customerProduct.image || "/images/poster-products.png"];
-        setSelectedImage(imagesList[0]);
+        const imagesList = extractImageUrls(customerProduct);
+        setSelectedImage(imagesList[0] || "/images/poster-products.png");
 
         // Variants initialization
         if (activeVariants.length > 0) {
@@ -316,15 +389,30 @@ export default function ProductDetailPage({
   // Pincode Check
   const handlePincodeCheck = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!pincode || pincode.trim().length < 6) {
-      setPincodeStatus("Please enter a valid 6-digit pincode.");
+    if (!pincode || pincode.trim().length !== 6 || !/^\d{6}$/.test(pincode.trim())) {
+      setPincodeStatus("Please enter a valid 6-digit Indian pincode.");
       return;
     }
     const clean = pincode.trim();
-    if (clean.startsWith("56") || clean.startsWith("57") || clean.startsWith("58")) {
-      setPincodeStatus("⚡ Express Delivery Available (1–2 Days in Karnataka)");
+    const delivery = storeConfig?.deliveryWarranty;
+    const originPin = delivery?.defaultPickupPincode || "572102";
+    const minDays = delivery?.deliveryEstimateMinDays || 3;
+    const maxDays = delivery?.deliveryEstimateMaxDays || 10;
+    const expressPrefixes = delivery?.serviceabilityRules?.expressPincodePrefixes || [
+      "572",
+      "560",
+      "561",
+      "562",
+      "570",
+      "571",
+    ];
+
+    const isExpress = expressPrefixes.some((prefix: string) => clean.startsWith(prefix));
+
+    if (isExpress) {
+      setPincodeStatus(`⚡ Express Delivery Available (1–2 Days from Tumkur Hub ${originPin})`);
     } else {
-      setPincodeStatus("✓ Standard Delivery Available (3–5 Business Days)");
+      setPincodeStatus(`✓ Standard Delivery Available (${minDays}–${maxDays} Business Days from Hub ${originPin})`);
     }
   };
 
@@ -465,7 +553,7 @@ export default function ProductDetailPage({
       id: product.id,
       title: `${product.title}${variantTitle}`,
       price: finalPrice,
-      image: selectedImage || product.image || "/images/poster-products.png",
+      image: getSafeImageSrc(selectedImage || product.image, "/images/poster-products.png"),
       category: product.category,
       variantId: selectedVariant?.id,
       variantSku: selectedVariant?.sku,
@@ -496,7 +584,7 @@ export default function ProductDetailPage({
       id: product.id,
       title: `${product.title}${variantTitle}`,
       price: finalPrice,
-      image: selectedImage || product.image || "/images/poster-products.png",
+      image: getSafeImageSrc(selectedImage || product.image, "/images/poster-products.png"),
       category: product.category,
       variantId: selectedVariant?.id,
       variantSku: selectedVariant?.sku,
@@ -521,25 +609,25 @@ export default function ProductDetailPage({
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#F5F7FB]">
+      <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#070B1A] text-slate-900 dark:text-slate-100">
         {!isCustomerRoute && <CustomerHeader />}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="animate-pulse space-y-8">
-            <div className="h-4 bg-slate-200 rounded w-1/4"></div>
+            <div className="h-4 skeleton rounded w-1/4"></div>
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
               <div className="lg:col-span-6 space-y-4">
-                <div className="h-96 bg-slate-200 rounded-2xl"></div>
+                <div className="h-96 skeleton rounded-2xl"></div>
                 <div className="flex space-x-3">
-                  <div className="h-20 w-20 bg-slate-200 rounded-xl"></div>
-                  <div className="h-20 w-20 bg-slate-200 rounded-xl"></div>
-                  <div className="h-20 w-20 bg-slate-200 rounded-xl"></div>
+                  <div className="h-20 w-20 skeleton rounded-xl"></div>
+                  <div className="h-20 w-20 skeleton rounded-xl"></div>
+                  <div className="h-20 w-20 skeleton rounded-xl"></div>
                 </div>
               </div>
               <div className="lg:col-span-6 space-y-6">
-                <div className="h-8 bg-slate-200 rounded w-3/4"></div>
-                <div className="h-6 bg-slate-200 rounded w-1/2"></div>
-                <div className="h-12 bg-slate-200 rounded w-1/3"></div>
-                <div className="h-24 bg-slate-200 rounded-xl"></div>
+                <div className="h-8 skeleton rounded w-3/4"></div>
+                <div className="h-6 skeleton rounded w-1/2"></div>
+                <div className="h-12 skeleton rounded w-1/3"></div>
+                <div className="h-24 skeleton rounded-xl"></div>
               </div>
             </div>
           </div>
@@ -550,17 +638,17 @@ export default function ProductDetailPage({
 
   if (error || !product) {
     return (
-      <div className="min-h-screen bg-[#F5F7FB]">
+      <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#070B1A] text-slate-900 dark:text-slate-100">
         {!isCustomerRoute && <CustomerHeader />}
         <div className="max-w-3xl mx-auto px-4 py-20 text-center">
-          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto text-red-600 mb-4">
+          <div className="w-16 h-16 bg-rose-500/10 border border-rose-500/20 rounded-full flex items-center justify-center mx-auto text-rose-500 mb-4">
             <AlertCircle className="w-8 h-8" />
           </div>
-          <h1 className="text-2xl font-bold text-slate-900 mb-2">Product Unavailable</h1>
-          <p className="text-slate-600 mb-6">{error || "The product you are looking for could not be found."}</p>
+          <h1 className="heading-h2 mb-2">Product Unavailable</h1>
+          <p className="text-readable-secondary mb-6">{error || "The product you are looking for could not be found."}</p>
           <Link
             href="/products"
-            className="inline-flex items-center px-6 py-3 bg-[#2563EB] text-white font-semibold rounded-xl hover:bg-blue-700 transition"
+            className="futuristic-btn-primary"
           >
             Continue Shopping
           </Link>
@@ -578,37 +666,56 @@ export default function ProductDetailPage({
     : selectedVariant?.stock ?? product.stock ?? 10;
 
   // Gallery list
-  const galleryImages = Array.isArray(product.images) && product.images.length > 0
-    ? product.images
-    : [product.image || "/images/poster-products.png"];
+  const galleryImages = extractImageUrls(product);
 
   // Specs map
   const specMap: Record<string, any> = product.specs || product.attributes || {};
   const isLaptop = product.category.toLowerCase().includes("laptop");
   const isSsd = product.category.toLowerCase().includes("storage") || product.category.toLowerCase().includes("ssd");
 
+  const deliveryCfg = storeConfig?.deliveryWarranty;
+  const categoryOverride = deliveryCfg?.categoryOverrides?.find(
+    (o: any) => o.category === product.category
+  );
+
+  const effectiveWarranty =
+    product.warrantyDuration ||
+    product.warrantyText ||
+    categoryOverride?.warrantyText ||
+    (categoryOverride?.warrantyDays ? `${categoryOverride.warrantyDays}-Day Warranty` : null) ||
+    deliveryCfg?.defaultWarrantyTitle ||
+    `${deliveryCfg?.defaultWarrantyDays || 90}-Day Standard Warranty`;
+
+  const effectiveReplacement =
+    product.returnPolicyText ||
+    (categoryOverride?.replacementDays ? `${categoryOverride.replacementDays}-Day Replacement` : null) ||
+    deliveryCfg?.replacementPolicyTitle ||
+    `${deliveryCfg?.replacementPolicyDays || 7}-Day Replacement Guarantee`;
+
+  const originHub = deliveryCfg?.defaultPickupPincode || "572102";
+
   return (
-    <div className="min-h-screen bg-[#F5F7FB] text-slate-900 pb-20">
+    <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#070B1A] text-slate-900 dark:text-slate-100 pb-20 transition-colors duration-200">
       {!isCustomerRoute && <CustomerHeader />}
 
       {/* BREADCRUMB */}
       <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-        <div className="flex items-center space-x-2 text-xs sm:text-sm text-slate-500 overflow-x-auto whitespace-nowrap">
-          <Link href="/customer" className="hover:text-[#2563EB] transition">Home</Link>
+        <div className="flex items-center space-x-2 text-xs sm:text-sm text-slate-500 dark:text-slate-400 overflow-x-auto whitespace-nowrap">
+          <Link href="/customer" className="hover:text-indigo-600 dark:hover:text-cyan-400 transition">Home</Link>
           <ChevronRight className="w-3.5 h-3.5 flex-shrink-0 text-slate-400" />
-          <Link href="/products" className="hover:text-[#2563EB] transition">Products</Link>
+          <Link href="/products" className="hover:text-indigo-600 dark:hover:text-cyan-400 transition">Products</Link>
           <ChevronRight className="w-3.5 h-3.5 flex-shrink-0 text-slate-400" />
-          <Link href={`/products?category=${encodeURIComponent(product.category)}`} className="hover:text-[#2563EB] transition capitalize">
+          <Link href={`/products?category=${encodeURIComponent(product.category)}`} className="hover:text-indigo-600 dark:hover:text-cyan-400 transition capitalize">
             {product.category}
           </Link>
           {product.brand && (
             <>
               <ChevronRight className="w-3.5 h-3.5 flex-shrink-0 text-slate-400" />
-              <span className="text-slate-600 font-medium">{product.brand}</span>
+              <span className="text-slate-600 dark:text-slate-300 font-medium">{product.brand}</span>
             </>
           )}
           <ChevronRight className="w-3.5 h-3.5 flex-shrink-0 text-slate-400" />
-          <span className="text-slate-900 font-medium truncate max-w-[200px] sm:max-w-xs">{product.title}</span>
+          <span className="text-slate-900 dark:text-slate-100 font-bold truncate max-w-[200px] sm:max-w-xs">{product.title}</span>
         </div>
       </nav>
 
@@ -617,10 +724,10 @@ export default function ProductDetailPage({
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
 
           {/* LEFT: GALLERY */}
-          <div className="lg:col-span-6 bg-white p-4 sm:p-6 rounded-2xl border border-slate-200/80 shadow-sm sticky top-24">
-            <div className="relative aspect-square w-full bg-slate-50 rounded-xl overflow-hidden mb-4 group flex items-center justify-center border border-slate-100">
+          <div className="lg:col-span-6 futuristic-card p-4 sm:p-6 sticky top-24">
+            <div className="relative aspect-square w-full bg-slate-50 dark:bg-white/[0.03] rounded-xl overflow-hidden mb-4 group flex items-center justify-center border border-slate-100 dark:border-white/5">
               <Image
-                src={selectedImage || "/images/poster-products.png"}
+                src={getSafeImageSrc(selectedImage, "/images/poster-products.png")}
                 alt={product.title || product.name || "Product"}
                 fill
                 priority
@@ -634,17 +741,17 @@ export default function ProductDetailPage({
                 aria-label="Toggle Wishlist"
                 className={`absolute top-4 right-4 p-3 rounded-full shadow-md transition-all z-10 ${
                   isWishlisted
-                    ? "bg-red-50 text-red-500 scale-110"
-                    : "bg-white/90 text-slate-400 hover:text-red-500 hover:bg-white"
+                    ? "bg-rose-50 text-rose-500 scale-110"
+                    : "bg-white/90 dark:bg-[#070B1A]/90 text-slate-400 hover:text-rose-500 hover:bg-white"
                 }`}
               >
-                <Heart className={`w-5 h-5 ${isWishlisted ? "fill-red-500" : ""}`} />
+                <Heart className={`w-5 h-5 ${isWishlisted ? "fill-rose-500" : ""}`} />
               </button>
 
               {/* Zoom Lightbox Trigger */}
               <button
                 onClick={() => setIsZoomOpen(true)}
-                className="absolute bottom-4 right-4 p-2.5 bg-white/90 rounded-xl shadow text-slate-600 hover:text-[#2563EB] transition opacity-0 group-hover:opacity-100"
+                className="absolute bottom-4 right-4 p-2.5 bg-white/90 dark:bg-[#070B1A]/90 rounded-xl shadow text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-cyan-400 transition opacity-0 group-hover:opacity-100"
               >
                 <ZoomIn className="w-5 h-5" />
               </button>
@@ -653,18 +760,18 @@ export default function ProductDetailPage({
             {/* Gallery Thumbnails */}
             {galleryImages.length > 1 && (
               <div className="flex space-x-3 overflow-x-auto pb-2 scrollbar-none">
-                {galleryImages.map((img, idx) => (
+                {galleryImages.map((imgUrl, idx) => (
                   <button
                     key={idx}
-                    onClick={() => setSelectedImage(img)}
-                    className={`relative w-16 h-16 sm:w-20 sm:h-20 rounded-xl border-2 flex-shrink-0 overflow-hidden bg-slate-50 p-1 transition ${
-                      selectedImage === img
-                        ? "border-[#2563EB] ring-2 ring-blue-100"
-                        : "border-slate-200 opacity-70 hover:opacity-100"
+                    onClick={() => setSelectedImage(imgUrl)}
+                    className={`relative w-16 h-16 sm:w-20 sm:h-20 rounded-xl border-2 flex-shrink-0 overflow-hidden bg-slate-50 dark:bg-white/[0.03] p-1 transition ${
+                      selectedImage === imgUrl
+                        ? "border-indigo-600 dark:border-cyan-400 ring-2 ring-indigo-500/20"
+                        : "border-slate-200 dark:border-white/10 opacity-70 hover:opacity-100"
                     }`}
                   >
                     <Image
-                      src={img}
+                      src={getSafeImageSrc(imgUrl, "/images/poster-products.png")}
                       alt={`Thumbnail ${idx + 1}`}
                       fill
                       className="object-contain p-1"
@@ -677,28 +784,28 @@ export default function ProductDetailPage({
 
           {/* RIGHT: PURCHASE PANEL */}
           <div className="lg:col-span-6 space-y-6">
-            <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-5">
+            <div className="futuristic-card p-6 space-y-5">
               {/* Brand & Stock Pill */}
               <div className="flex items-center justify-between">
-                <span className="px-3 py-1 bg-blue-50 text-[#2563EB] text-xs font-bold uppercase tracking-wider rounded-md">
+                <span className="px-3 py-1 bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 text-xs font-bold uppercase tracking-wider rounded-md border border-indigo-200 dark:border-indigo-800/40">
                   {product.brand || "NexLapTech Original"}
                 </span>
                 <span
                   className={`text-xs font-semibold px-2.5 py-1 rounded-full flex items-center space-x-1 ${
                     displayStock > 0
-                      ? "bg-emerald-50 text-emerald-700"
-                      : "bg-red-50 text-red-600"
+                      ? "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/40"
+                      : "bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800/40"
                   }`}
                 >
                   <span className={`w-1.5 h-1.5 rounded-full ${
-                    displayStock > 0 ? "bg-emerald-500 animate-pulse" : "bg-red-500"
+                    displayStock > 0 ? "bg-emerald-500 animate-pulse" : "bg-rose-500"
                   }`}></span>
                   <span>{displayStock > 0 ? `${displayStock} In Stock` : "Out of Stock"}</span>
                 </span>
               </div>
 
               {/* Title */}
-              <h1 className="text-xl sm:text-2xl font-bold text-slate-900 leading-tight">
+              <h1 className="heading-h2">
                 {product.title}
               </h1>
 
@@ -708,11 +815,11 @@ export default function ProductDetailPage({
                   <span>{averageRating}</span>
                   <Star className="w-3 h-3 fill-white" />
                 </div>
-                <span className="text-slate-500 font-medium">
-                  {totalReviewsCount} Ratings & Verified Reviews
+                <span className="text-slate-500 dark:text-slate-400 font-medium">
+                  {totalReviewsCount} Ratings &amp; Verified Reviews
                 </span>
-                <span className="text-slate-300">•</span>
-                <span className="text-emerald-600 text-xs font-semibold flex items-center">
+                <span className="text-slate-300 dark:text-slate-600">•</span>
+                <span className="text-emerald-600 dark:text-emerald-400 text-xs font-semibold flex items-center">
                   <ShieldCheck className="w-3.5 h-3.5 mr-1" />
                   NexLapTech Assured
                 </span>
@@ -757,7 +864,7 @@ export default function ProductDetailPage({
                             if (isAvailable) {
                               setSelectedVariant(variant);
                               setQuantity(1);
-                              setSelectedImage(variant.image || product.image || "/images/poster-products.png");
+                              setSelectedImage(getSafeImageSrc(variant.image || product.image, "/images/poster-products.png"));
                             }
                           }}
                           disabled={!isAvailable}
@@ -918,6 +1025,9 @@ export default function ProductDetailPage({
                     {pincodeStatus}
                   </p>
                 )}
+                <p className="text-[11px] text-slate-500">
+                  Dispatched from Central Hub: <strong className="text-slate-800">{originHub}</strong> (Tumkur, Karnataka) • Handling: {deliveryCfg?.handlingTimeDays || 1} day
+                </p>
               </div>
 
               {/* SELLER & ASK SELLER */}
@@ -971,7 +1081,7 @@ export default function ProductDetailPage({
                 </div>
                 <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 text-xs">
                   <span className="text-slate-400 block font-semibold">Warranty</span>
-                  <span className="font-bold text-slate-900">{product.warrantyDuration || "1 Year Warranty"}</span>
+                  <span className="font-bold text-slate-900">{effectiveWarranty}</span>
                 </div>
               </>
             ) : isSsd ? (
@@ -998,7 +1108,7 @@ export default function ProductDetailPage({
                 </div>
                 <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 text-xs">
                   <span className="text-slate-400 block font-semibold">Warranty</span>
-                  <span className="font-bold text-slate-900">{product.warrantyDuration || "5 Years Brand Warranty"}</span>
+                  <span className="font-bold text-slate-900">{effectiveWarranty}</span>
                 </div>
               </>
             ) : (
@@ -1017,11 +1127,11 @@ export default function ProductDetailPage({
                 </div>
                 <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 text-xs">
                   <span className="text-slate-400 block font-semibold">Warranty</span>
-                  <span className="font-bold text-slate-900">{product.warrantyDuration || "1 Year"}</span>
+                  <span className="font-bold text-slate-900">{effectiveWarranty}</span>
                 </div>
                 <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 text-xs">
                   <span className="text-slate-400 block font-semibold">Return Policy</span>
-                  <span className="font-bold text-slate-900">{product.returnPolicyText || "7-Day Replacement"}</span>
+                  <span className="font-bold text-slate-900">{effectiveReplacement}</span>
                 </div>
                 <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 text-xs">
                   <span className="text-slate-400 block font-semibold">GST Invoice</span>
@@ -1233,7 +1343,7 @@ export default function ProductDetailPage({
                 >
                   <div className="relative aspect-square w-full bg-slate-50 rounded-lg overflow-hidden mb-3 p-2">
                     <Image
-                      src={sim.image || "/images/poster-products.png"}
+                      src={getSafeImageSrc(sim.image, "/images/poster-products.png")}
                       alt={sim.title || sim.name || "Similar product"}
                       fill
                       className="object-contain p-2 group-hover:scale-105 transition"
@@ -1265,7 +1375,7 @@ export default function ProductDetailPage({
           </button>
           <div className="relative max-w-4xl max-h-[85vh] w-full h-full flex items-center justify-center p-4">
             <Image
-              src={selectedImage || "/images/poster-products.png"}
+              src={getSafeImageSrc(selectedImage, "/images/poster-products.png")}
               alt="Zoomed product view"
               fill
               className="object-contain"

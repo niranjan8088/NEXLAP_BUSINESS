@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -29,6 +29,7 @@ import { useCartStore } from "@/lib/cartStore";
 import GlobalSearchModal from "@/components/GlobalSearchModal";
 import HeroParallax from "@/components/HeroParallax";
 import { motion } from "framer-motion";
+import { CustomerDashboardLayoutConfig } from "@/lib/types/settings";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -193,6 +194,7 @@ export default function CustomerDashboardPage() {
     services: { active: 0 },
     certificates: { count: 0 },
   });
+  const [dashboardConfig, setDashboardConfig] = useState<CustomerDashboardLayoutConfig | null>(null);
 
   const cartAddItem = useCartStore((s) => s.addItem);
   const cartOpenFn = useCartStore((s) => s.openCart);
@@ -201,7 +203,7 @@ export default function CustomerDashboardPage() {
     setLoading(true);
     try {
       // Run all fetches in parallel
-      const [profRes, ordRes, bookRes, msgRes, prodRes, offerRes, certRes] = await Promise.all([
+      const [profRes, ordRes, bookRes, msgRes, prodRes, offerRes, certRes, settingsRes] = await Promise.all([
         safeJsonFetch("/api/customer/profile"),
         safeJsonFetch("/api/customer/orders"),
         safeJsonFetch("/api/customer/bookings"),
@@ -209,7 +211,12 @@ export default function CustomerDashboardPage() {
         safeJsonFetch("/api/public/products"),
         safeJsonFetch("/api/offers"),
         safeJsonFetch("/api/certificates"),
+        safeJsonFetch("/api/public/settings"),
       ]);
+
+      if (settingsRes.ok && settingsRes.data?.customerDashboard) {
+        setDashboardConfig(settingsRes.data.customerDashboard);
+      }
 
       // Profile
       if (profRes.ok && profRes.data?.profile) {
@@ -328,9 +335,10 @@ export default function CustomerDashboardPage() {
 
   const firstName = profile?.full_name ? profile.full_name.split(" ")[0] : "there";
 
-  // KPI card data
-  const KPI_CARDS = [
-    {
+  // Dynamic Admin-Configurable KPI Cards
+  const ALL_KPI_MAP: Record<string, { id: string; label: string; value: number; sub: string; subColor: string; icon: any; iconBg: string; iconColor: string; link: string; defaultOrder: number }> = {
+    orders: {
+      id: "orders",
       label: "My Orders",
       value: stats.orders.total,
       sub: stats.orders.active > 0 ? `${stats.orders.active} active` : "All delivered",
@@ -339,8 +347,10 @@ export default function CustomerDashboardPage() {
       iconBg: "bg-[#EEF6FF] dark:bg-[#1a2744]",
       iconColor: "text-[#2563EB] dark:text-[#60A5FA]",
       link: "/customer/orders",
+      defaultOrder: 1,
     },
-    {
+    bookings: {
+      id: "bookings",
       label: "Bookings",
       value: stats.bookings.total,
       sub: stats.bookings.upcoming > 0 ? `${stats.bookings.upcoming} upcoming` : "No upcoming",
@@ -349,8 +359,10 @@ export default function CustomerDashboardPage() {
       iconBg: "bg-[#F5F3FF] dark:bg-[#1e1638]",
       iconColor: "text-[#7C3AED] dark:text-[#A78BFA]",
       link: "/customer/bookings",
+      defaultOrder: 2,
     },
-    {
+    messages: {
+      id: "messages",
       label: "Messages",
       value: stats.messages.unread,
       sub: stats.messages.unread > 0 ? "Unread messages" : "All read",
@@ -359,8 +371,10 @@ export default function CustomerDashboardPage() {
       iconBg: "bg-[#FFFBEB] dark:bg-[#422006]/50",
       iconColor: "text-[#D97706] dark:text-[#FBBF24]",
       link: "/customer/messages",
+      defaultOrder: 3,
     },
-    {
+    certificates: {
+      id: "certificates",
       label: "Certificates",
       value: stats.certificates.count,
       sub: "Verified & earned",
@@ -369,8 +383,32 @@ export default function CustomerDashboardPage() {
       iconBg: "bg-[#F0FDF4] dark:bg-[#052e16]/50",
       iconColor: "text-[#16A34A] dark:text-[#34D399]",
       link: "/customer/certificates",
+      defaultOrder: 4,
     },
-  ];
+  };
+
+  const kpiCards = useMemo(() => {
+    if (!dashboardConfig?.kpiCards) {
+      return Object.values(ALL_KPI_MAP);
+    }
+    const cardsList = Array.isArray(dashboardConfig.kpiCards)
+      ? dashboardConfig.kpiCards
+      : Object.values(dashboardConfig.kpiCards);
+
+    if (cardsList.length === 0) {
+      return Object.values(ALL_KPI_MAP);
+    }
+    return cardsList
+      .filter((c: any) => c.enabled !== false && ALL_KPI_MAP[c.id])
+      .sort((a: any, b: any) => (a.order || 0) - (b.order || 0))
+      .map((c: any) => {
+        const base = ALL_KPI_MAP[c.id];
+        return {
+          ...base,
+          label: c.label || base.label,
+        };
+      });
+  }, [dashboardConfig, stats]);
 
   return (
     <div className="space-y-8 pb-8">
@@ -385,11 +423,11 @@ export default function CustomerDashboardPage() {
 
       {/* ── 2. KPI STATS (REAL BUSINESS INSIGHTS) ─────────────────────────── */}
       <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {KPI_CARDS.map((card, i) => {
+        {kpiCards.map((card, i) => {
           const IconComp = card.icon;
           return (
             <motion.div
-              key={card.label}
+              key={card.id || card.label}
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, delay: i * 0.07 }}
@@ -424,10 +462,10 @@ export default function CustomerDashboardPage() {
         <div className="flex items-center justify-between">
           <div>
             <h2 className="font-display text-lg font-extrabold text-[#0F172A] dark:text-[#F8FAFC]">
-              Everything You Need For Your Tech
+              {dashboardConfig?.headline || "Everything You Need For Your Tech"}
             </h2>
             <p className="text-xs text-[#64748B] dark:text-[#94A3B8] font-medium mt-0.5">
-              Browse products, request custom builds, or book repair services in seconds.
+              {dashboardConfig?.subheadline || "Browse products, request custom builds, or book repair services in seconds."}
             </p>
           </div>
         </div>
@@ -572,86 +610,87 @@ export default function CustomerDashboardPage() {
       )}
 
       {/* ── 5. RECENT ACTIVITY ──────────────────────────────────────────── */}
-
-      <section className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="font-display text-base font-bold text-[#111827] dark:text-[#F8FAFC] flex items-center gap-2">
-            <TrendingUp className="h-4.5 w-4.5 text-[#2563EB] dark:text-[#60A5FA]" />
-            Recent Activity
-          </h2>
-          <Link href="/customer/orders" className="text-xs font-bold text-[#2563EB] dark:text-[#60A5FA] hover:underline flex items-center gap-1">
-            View All <ChevronRight className="h-3.5 w-3.5" />
-          </Link>
-        </div>
-
-        {loading ? (
-          <div className="space-y-3">
-            {[...Array(3)].map((_, i) => (
-              <div key={i} className="horizon-card p-4 flex items-center gap-4">
-                <div className="h-10 w-10 skeleton rounded-xl shrink-0" />
-                <div className="flex-1 space-y-2">
-                  <div className="h-3.5 w-40 skeleton rounded" />
-                  <div className="h-3 w-24 skeleton rounded" />
-                </div>
-                <div className="h-5 w-16 skeleton rounded-full" />
-              </div>
-            ))}
-          </div>
-        ) : recentActivities.length === 0 ? (
-          <div className="horizon-card p-10 text-center space-y-4">
-            <div className="h-14 w-14 rounded-2xl bg-[#EEF6FF] dark:bg-[#1a2744] flex items-center justify-center mx-auto">
-              <Package className="h-7 w-7 text-[#2563EB] dark:text-[#60A5FA]" />
-            </div>
-            <div>
-              <h3 className="font-display font-bold text-sm text-[#111827] dark:text-[#F8FAFC]">No activity yet</h3>
-              <p className="text-xs text-[#64748B] dark:text-[#94A3B8] max-w-sm mx-auto mt-1">
-                Place your first order or book a service to get started.
-              </p>
-            </div>
-            <Link href="/customer/shop" className="btn-primary inline-flex !px-5 !py-2.5">
-              <ShoppingBag className="h-3.5 w-3.5" />
-              Explore Store
+      {dashboardConfig?.showRecentActivity !== false && (
+        <section className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="font-display text-base font-bold text-[#111827] dark:text-[#F8FAFC] flex items-center gap-2">
+              <TrendingUp className="h-4.5 w-4.5 text-[#2563EB] dark:text-[#60A5FA]" />
+              Recent Activity
+            </h2>
+            <Link href="/customer/orders" className="text-xs font-bold text-[#2563EB] dark:text-[#60A5FA] hover:underline flex items-center gap-1">
+              View All <ChevronRight className="h-3.5 w-3.5" />
             </Link>
           </div>
-        ) : (
-          <div className="rounded-2xl border border-[#E2E8F0] dark:border-[#263247] bg-white dark:bg-[#111827] divide-y divide-[#E2E8F0] dark:divide-[#263247] overflow-hidden shadow-sm">
-            {recentActivities.map((act) => (
-              <Link key={act.id} href={act.link}>
-                <div className="p-4 flex items-center justify-between gap-4 hover:bg-[#F8FAFC] dark:hover:bg-[#1a2744]/30 transition-colors cursor-pointer">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2.5 rounded-xl bg-[#EEF6FF] dark:bg-[#1a2744] text-[#2563EB] dark:text-[#60A5FA] shrink-0">
-                      {act.type === "order" ? (
-                        <Package className="h-4.5 w-4.5" />
-                      ) : act.type === "booking" ? (
-                        <Calendar className="h-4.5 w-4.5" />
-                      ) : (
-                        <MessageSquare className="h-4.5 w-4.5" />
-                      )}
-                    </div>
-                    <div>
-                      <h4 className="font-display text-xs font-bold text-[#111827] dark:text-[#F8FAFC]">{act.title}</h4>
-                      <p className="text-[11px] text-[#64748B] dark:text-[#94A3B8] font-medium mt-0.5">{act.subtitle}</p>
-                    </div>
-                  </div>
 
-                  <div className="flex items-center gap-3 shrink-0">
-                    <div className="text-right">
-                      <StatusBadge status={act.status} />
-                      <p className="text-[10px] text-[#94A3B8] mt-1">
-                        {new Date(act.date).toLocaleDateString("en-IN", { month: "short", day: "numeric" })}
-                      </p>
-                    </div>
-                    <ArrowRight className="h-4 w-4 text-[#94A3B8]" />
+          {loading ? (
+            <div className="space-y-3">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="horizon-card p-4 flex items-center gap-4">
+                  <div className="h-10 w-10 skeleton rounded-xl shrink-0" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-3.5 w-40 skeleton rounded" />
+                    <div className="h-3 w-24 skeleton rounded" />
                   </div>
+                  <div className="h-5 w-16 skeleton rounded-full" />
                 </div>
+              ))}
+            </div>
+          ) : recentActivities.length === 0 ? (
+            <div className="horizon-card p-10 text-center space-y-4">
+              <div className="h-14 w-14 rounded-2xl bg-[#EEF6FF] dark:bg-[#1a2744] flex items-center justify-center mx-auto">
+                <Package className="h-7 w-7 text-[#2563EB] dark:text-[#60A5FA]" />
+              </div>
+              <div>
+                <h3 className="font-display font-bold text-sm text-[#111827] dark:text-[#F8FAFC]">No activity yet</h3>
+                <p className="text-xs text-[#64748B] dark:text-[#94A3B8] max-w-sm mx-auto mt-1">
+                  Place your first order or book a service to get started.
+                </p>
+              </div>
+              <Link href="/customer/shop" className="btn-primary inline-flex !px-5 !py-2.5">
+                <ShoppingBag className="h-3.5 w-3.5" />
+                Explore Store
               </Link>
-            ))}
-          </div>
-        )}
-      </section>
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-[#E2E8F0] dark:border-[#263247] bg-white dark:bg-[#111827] divide-y divide-[#E2E8F0] dark:divide-[#263247] overflow-hidden shadow-sm">
+              {recentActivities.map((act) => (
+                <Link key={act.id} href={act.link}>
+                  <div className="p-4 flex items-center justify-between gap-4 hover:bg-[#F8FAFC] dark:hover:bg-[#1a2744]/30 transition-colors cursor-pointer">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2.5 rounded-xl bg-[#EEF6FF] dark:bg-[#1a2744] text-[#2563EB] dark:text-[#60A5FA] shrink-0">
+                        {act.type === "order" ? (
+                          <Package className="h-4.5 w-4.5" />
+                        ) : act.type === "booking" ? (
+                          <Calendar className="h-4.5 w-4.5" />
+                        ) : (
+                          <MessageSquare className="h-4.5 w-4.5" />
+                        )}
+                      </div>
+                      <div>
+                        <h4 className="font-display text-xs font-bold text-[#111827] dark:text-[#F8FAFC]">{act.title}</h4>
+                        <p className="text-[11px] text-[#64748B] dark:text-[#94A3B8] font-medium mt-0.5">{act.subtitle}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3 shrink-0">
+                      <div className="text-right">
+                        <StatusBadge status={act.status} />
+                        <p className="text-[10px] text-[#94A3B8] mt-1">
+                          {new Date(act.date).toLocaleDateString("en-IN", { month: "short", day: "numeric" })}
+                        </p>
+                      </div>
+                      <ArrowRight className="h-4 w-4 text-[#94A3B8]" />
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
 
       {/* ── 6. FEATURED PRODUCTS ────────────────────────────────────────── */}
-      {featuredProducts.length > 0 && (
+      {dashboardConfig?.showFeaturedHardware !== false && featuredProducts.length > 0 && (
         <section className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="font-display text-base font-bold text-[#111827] dark:text-[#F8FAFC] flex items-center gap-2">

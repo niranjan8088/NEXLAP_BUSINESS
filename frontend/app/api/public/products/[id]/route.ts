@@ -9,7 +9,7 @@ export async function GET(
     const { id } = await params;
     const allProducts = await dbHelper.products.list();
     
-    const prod = allProducts.find(
+    let prod = allProducts.find(
       (p: any) =>
         (p.id === id || p.slug === id || p.sku === id) &&
         p.status !== "deleted" &&
@@ -17,6 +17,18 @@ export async function GET(
         p.approval_status !== "pending" &&
         p.approval_status !== "rejected"
     );
+
+    // Fallback: case-insensitive ID/SKU or variant match
+    if (!prod) {
+      prod = allProducts.find((p: any) =>
+        p.status !== "deleted" &&
+        p.status !== "hide" &&
+        ((p.id && p.id.toLowerCase() === id.toLowerCase()) ||
+         (p.slug && p.slug.toLowerCase() === id.toLowerCase()) ||
+         (p.sku && p.sku.toLowerCase() === id.toLowerCase()) ||
+         (Array.isArray(p.variants) && p.variants.some((v: any) => v.id === id || (v.sku && v.sku.toLowerCase() === id.toLowerCase()))))
+      );
+    }
 
     if (!prod) {
       return NextResponse.json({ error: "Product not found or unavailable." }, { status: 404 });

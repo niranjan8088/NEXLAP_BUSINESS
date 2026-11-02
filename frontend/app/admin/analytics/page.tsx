@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { BarChart3, TrendingUp, Users, DollarSign, Award, Laptop, Star, Clock, AlertCircle, ShoppingBag, Package } from "lucide-react";
+import { BarChart3, Users, DollarSign, Star, Package } from "lucide-react";
 import { dbHelper } from "@/lib/dbHelper";
 
 export default function AdminAnalyticsPage() {
@@ -96,7 +96,7 @@ export default function AdminAnalyticsPage() {
 
       // Normalize val between 5% and 100% for bar visualization
       last7Days.forEach((item) => {
-        item.val = item.count > 0 ? Math.max(15, Math.round((item.count / maxDayOrders) * 100)) : 4;
+        item.val = item.count > 0 ? Math.max(15, Math.round((item.count / maxDayOrders) * 100)) : 6;
       });
 
       setWeeklyData(last7Days);
@@ -139,10 +139,10 @@ export default function AdminAnalyticsPage() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="font-display text-2xl font-bold text-white flex items-center gap-2">
-            <BarChart3 className="h-6 w-6 text-cyan-400" /> Executive Analytics
+          <h1 className="font-display text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <BarChart3 className="h-6 w-6 text-indigo-600 dark:text-cyan-400" /> Executive Analytics
           </h1>
-          <p className="text-xs text-nex-mist mt-0.5">Authoritative metrics calculated from real database orders, services, and inventory records.</p>
+          <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">Authoritative metrics calculated from real database orders, services, and inventory records.</p>
         </div>
       </div>
 
@@ -150,76 +150,64 @@ export default function AdminAnalyticsPage() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         
         {/* Monthly Revenue */}
-        <div className="glass-card p-5 border-cyan-500/10 flex items-center gap-4 relative overflow-hidden">
-          <div className="absolute right-0 bottom-0 opacity-[0.02] text-cyan-400 transform translate-x-2 translate-y-2">
-            <DollarSign size={80} />
-          </div>
-          <div className="h-10 w-10 bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 rounded-xl flex items-center justify-center shrink-0">
+        <div className="futuristic-card p-5 rounded-2xl flex items-center gap-4 relative overflow-hidden shadow-sm">
+          <div className="h-10 w-10 bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/30 text-indigo-600 dark:text-cyan-400 rounded-xl flex items-center justify-center shrink-0">
             <DollarSign className="h-5 w-5" />
           </div>
           <div>
-            <span className="text-[9px] uppercase font-bold text-nex-mist tracking-widest">Monthly Revenue</span>
-            <h3 className="font-display text-base font-black text-white mt-0.5">
+            <span className="text-[9px] uppercase font-bold text-slate-500 dark:text-slate-400 tracking-wider">Monthly Revenue</span>
+            <h3 className="font-display text-base font-black text-slate-900 dark:text-white mt-0.5">
               ₹{stats.monthlyRevenue.toLocaleString("en-IN")}
             </h3>
-            <span className="text-[8px] text-nex-mist block mt-0.5">
+            <span className="text-[9px] text-slate-500 dark:text-slate-400 block mt-0.5">
               Total: ₹{stats.totalRevenue.toLocaleString("en-IN")}
             </span>
           </div>
         </div>
 
         {/* Valid Orders & Products Sold */}
-        <div className="glass-card p-5 border-cyan-500/10 flex items-center gap-4 relative overflow-hidden">
-          <div className="absolute right-0 bottom-0 opacity-[0.02] text-blue-500 transform translate-x-2 translate-y-2">
-            <Package size={80} />
-          </div>
-          <div className="h-10 w-10 bg-blue-500/10 border border-blue-500/30 text-blue-400 rounded-xl flex items-center justify-center shrink-0">
+        <div className="futuristic-card p-5 rounded-2xl flex items-center gap-4 relative overflow-hidden shadow-sm">
+          <div className="h-10 w-10 bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/30 text-blue-600 dark:text-blue-400 rounded-xl flex items-center justify-center shrink-0">
             <Package className="h-5 w-5" />
           </div>
           <div>
-            <span className="text-[9px] uppercase font-bold text-nex-mist tracking-widest">Products Sold</span>
-            <h3 className="font-display text-base font-black text-white mt-0.5">
+            <span className="text-[9px] uppercase font-bold text-slate-500 dark:text-slate-400 tracking-wider">Products Sold</span>
+            <h3 className="font-display text-base font-black text-slate-900 dark:text-white mt-0.5">
               {stats.productsSold} units
             </h3>
-            <span className="text-[8px] text-cyan-400 font-bold block mt-0.5">
+            <span className="text-[9px] text-indigo-600 dark:text-cyan-400 font-bold block mt-0.5">
               {stats.totalOrders} confirmed orders
             </span>
           </div>
         </div>
 
         {/* Registered Customers */}
-        <div className="glass-card p-5 border-cyan-500/10 flex items-center gap-4 relative overflow-hidden">
-          <div className="absolute right-0 bottom-0 opacity-[0.02] text-cyan-400 transform translate-x-2 translate-y-2">
-            <Users size={80} />
-          </div>
-          <div className="h-10 w-10 bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 rounded-xl flex items-center justify-center shrink-0">
+        <div className="futuristic-card p-5 rounded-2xl flex items-center gap-4 relative overflow-hidden shadow-sm">
+          <div className="h-10 w-10 bg-cyan-50 dark:bg-cyan-500/10 border border-cyan-200 dark:border-cyan-500/30 text-cyan-600 dark:text-cyan-400 rounded-xl flex items-center justify-center shrink-0">
             <Users className="h-5 w-5" />
           </div>
           <div>
-            <span className="text-[9px] uppercase font-bold text-nex-mist tracking-widest">Registered Clients</span>
-            <h3 className="font-display text-base font-black text-white mt-0.5">
+            <span className="text-[9px] uppercase font-bold text-slate-500 dark:text-slate-400 tracking-wider">Registered Clients</span>
+            <h3 className="font-display text-base font-black text-slate-900 dark:text-white mt-0.5">
               {stats.registeredCustomers} active
             </h3>
-            <span className="text-[8px] text-nex-mist block mt-0.5">
+            <span className="text-[9px] text-slate-500 dark:text-slate-400 block mt-0.5">
               {stats.completedBookings} services completed
             </span>
           </div>
         </div>
 
         {/* Avg Rating */}
-        <div className="glass-card p-5 border-cyan-500/10 flex items-center gap-4 relative overflow-hidden">
-          <div className="absolute right-0 bottom-0 opacity-[0.02] text-yellow-500 transform translate-x-2 translate-y-2">
-            <Star size={80} />
-          </div>
-          <div className="h-10 w-10 bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 rounded-xl flex items-center justify-center shrink-0">
-            <Star className="h-5 w-5 fill-yellow-400 text-yellow-400" />
+        <div className="futuristic-card p-5 rounded-2xl flex items-center gap-4 relative overflow-hidden shadow-sm">
+          <div className="h-10 w-10 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 text-amber-600 dark:text-amber-400 rounded-xl flex items-center justify-center shrink-0">
+            <Star className="h-5 w-5 fill-amber-500 text-amber-500" />
           </div>
           <div>
-            <span className="text-[9px] uppercase font-bold text-nex-mist tracking-widest">Customer Satisfaction</span>
-            <h3 className="font-display text-base font-black text-white mt-0.5">
+            <span className="text-[9px] uppercase font-bold text-slate-500 dark:text-slate-400 tracking-wider">Customer Satisfaction</span>
+            <h3 className="font-display text-base font-black text-slate-900 dark:text-white mt-0.5">
               {stats.reviewCount > 0 ? `${stats.avgRating} / 5.0` : "No ratings yet"}
             </h3>
-            <span className="text-[8px] text-yellow-400 font-bold block mt-0.5">
+            <span className="text-[9px] text-amber-600 dark:text-amber-400 font-bold block mt-0.5">
               {stats.pendingReviews} reviews pending moderation
             </span>
           </div>
@@ -231,42 +219,42 @@ export default function AdminAnalyticsPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         
         {/* Sales Chart (SVG Visualization) */}
-        <div className="glass-card p-6 border-cyan-500/10 md:col-span-2 space-y-4">
+        <div className="futuristic-card p-6 rounded-2xl md:col-span-2 space-y-4 shadow-sm">
           <div className="flex justify-between items-center">
             <div>
-              <h3 className="font-bold text-white text-sm">7-Day Order Volume</h3>
-              <p className="text-[10px] text-nex-mist">Real orders created per day</p>
+              <h3 className="font-bold text-slate-900 dark:text-white text-sm">7-Day Order Volume</h3>
+              <p className="text-[10px] text-slate-500 dark:text-slate-400">Real orders created per day</p>
             </div>
-            <span className="text-[9px] bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 px-2 py-0.5 rounded font-black">DATABASE VERIFIED</span>
+            <span className="text-[9px] bg-indigo-50 dark:bg-cyan-500/10 border border-indigo-200 dark:border-cyan-500/30 text-indigo-700 dark:text-cyan-400 px-2 py-0.5 rounded-full font-extrabold">DATABASE VERIFIED</span>
           </div>
           
-          <div className="h-52 w-full flex items-end justify-between pt-6 border-b border-white/10 relative">
+          <div className="h-52 w-full flex items-end justify-between pt-6 border-b border-slate-200 dark:border-white/10 relative">
             
             {/* Grid Lines */}
-            <div className="absolute inset-x-0 bottom-10 h-px bg-white/5" />
-            <div className="absolute inset-x-0 bottom-24 h-px bg-white/5" />
-            <div className="absolute inset-x-0 bottom-36 h-px bg-white/5" />
+            <div className="absolute inset-x-0 bottom-10 h-px bg-slate-100 dark:bg-white/5" />
+            <div className="absolute inset-x-0 bottom-24 h-px bg-slate-100 dark:bg-white/5" />
+            <div className="absolute inset-x-0 bottom-36 h-px bg-slate-100 dark:bg-white/5" />
 
             {/* Custom Bar Graphs */}
             {weeklyData.length > 0 ? (
               weeklyData.map((bar, idx) => (
                 <div key={idx} className="flex flex-col items-center flex-1 space-y-2">
-                  <span className="text-[8px] font-mono text-cyan-400">
+                  <span className="text-[9px] font-mono text-indigo-600 dark:text-cyan-400 font-bold">
                     {bar.count > 0 ? bar.count : ""}
                   </span>
                   <div className="w-8 relative flex flex-col justify-end h-36">
                     <div 
                       className={`w-full rounded-t-lg transition-all duration-700 ${
-                        bar.count > 0 ? "bg-cyan-500 shadow-[0_0_12px_rgba(0,242,254,0.3)]" : "bg-white/5"
+                        bar.count > 0 ? "bg-indigo-600 dark:bg-cyan-400 shadow-sm" : "bg-slate-100 dark:bg-white/5"
                       }`} 
                       style={{ height: `${bar.val}%` }} 
                     />
                   </div>
-                  <span className="text-[9px] font-bold text-nex-mist">{bar.label}</span>
+                  <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400">{bar.label}</span>
                 </div>
               ))
             ) : (
-              <div className="w-full h-full flex items-center justify-center text-xs text-nex-mist">
+              <div className="w-full h-full flex items-center justify-center text-xs text-slate-500 dark:text-slate-400">
                 Loading weekly metrics...
               </div>
             )}
@@ -274,39 +262,39 @@ export default function AdminAnalyticsPage() {
         </div>
 
         {/* Live Status Indicators */}
-        <div className="glass-card p-6 border-cyan-500/10 space-y-4 flex flex-col justify-between">
+        <div className="futuristic-card p-6 rounded-2xl space-y-4 flex flex-col justify-between shadow-sm">
           <div>
-            <h3 className="font-bold text-white text-sm mb-4">Pending Work Queue</h3>
+            <h3 className="font-bold text-slate-900 dark:text-white text-sm mb-4">Pending Work Queue</h3>
             <div className="space-y-3 text-xs">
               
-              <div className="flex justify-between items-center bg-white/[0.01] border border-white/5 p-3 rounded-xl">
+              <div className="flex justify-between items-center bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/5 p-3 rounded-xl">
                 <div className="flex items-center gap-2">
-                  <span className="h-2.5 w-2.5 rounded-full bg-cyan-400" />
-                  <span className="font-medium text-white">Pending Service Bookings</span>
+                  <span className="h-2.5 w-2.5 rounded-full bg-cyan-500" />
+                  <span className="font-medium text-slate-800 dark:text-slate-200">Pending Service Bookings</span>
                 </div>
-                <span className="font-bold text-cyan-400">{stats.pendingBookings} items</span>
+                <span className="font-bold text-indigo-600 dark:text-cyan-400">{stats.pendingBookings} items</span>
               </div>
 
-              <div className="flex justify-between items-center bg-white/[0.01] border border-white/5 p-3 rounded-xl">
+              <div className="flex justify-between items-center bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/5 p-3 rounded-xl">
                 <div className="flex items-center gap-2">
-                  <span className="h-2.5 w-2.5 rounded-full bg-yellow-500" />
-                  <span className="font-medium text-white">Pending Feedback Reviews</span>
+                  <span className="h-2.5 w-2.5 rounded-full bg-amber-500" />
+                  <span className="font-medium text-slate-800 dark:text-slate-200">Pending Feedback Reviews</span>
                 </div>
-                <span className="font-bold text-yellow-400">{stats.pendingReviews} items</span>
+                <span className="font-bold text-amber-600 dark:text-amber-400">{stats.pendingReviews} items</span>
               </div>
 
-              <div className="flex justify-between items-center bg-white/[0.01] border border-white/5 p-3 rounded-xl">
+              <div className="flex justify-between items-center bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/5 p-3 rounded-xl">
                 <div className="flex items-center gap-2">
-                  <span className="h-2.5 w-2.5 rounded-full bg-red-500" />
-                  <span className="font-medium text-white">Unread Notifications</span>
+                  <span className="h-2.5 w-2.5 rounded-full bg-rose-500" />
+                  <span className="font-medium text-slate-800 dark:text-slate-200">Unread Notifications</span>
                 </div>
-                <span className="font-bold text-red-400">{stats.unreadNotifications} counts</span>
+                <span className="font-bold text-rose-600 dark:text-rose-400">{stats.unreadNotifications} counts</span>
               </div>
 
             </div>
           </div>
 
-          <div className="pt-4 border-t border-white/5 text-[9px] text-nex-mist text-center">
+          <div className="pt-4 border-t border-slate-200 dark:border-white/5 text-[10px] text-slate-500 dark:text-slate-400 text-center font-medium">
             System sync status: Operational · Database Connected
           </div>
         </div>

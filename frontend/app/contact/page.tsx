@@ -126,23 +126,23 @@ Trusted · Reliable · Affordable`;
     <>
       <Navbar />
 
-      <main className="relative min-h-screen bg-nex-black pt-28 pb-16 overflow-hidden">
+      <main className="relative min-h-screen bg-[#F8FAFC] dark:bg-[#070B1A] text-[#0F172A] dark:text-[#F8FAFC] pt-28 pb-16 overflow-hidden">
         {/* Glow decoration */}
-        <div className="pointer-events-none absolute -top-40 left-1/4 h-[500px] w-[500px] rounded-full bg-nex-blue/10 blur-[120px]" />
-        <div className="pointer-events-none absolute bottom-40 right-1/4 h-[500px] w-[500px] rounded-full bg-nex-blueLight/10 blur-[120px]" />
+        <div className="pointer-events-none absolute -top-40 left-1/4 h-[500px] w-[500px] rounded-full bg-cyan-500/10 blur-[120px]" />
+        <div className="pointer-events-none absolute bottom-40 right-1/4 h-[500px] w-[500px] rounded-full bg-indigo-500/10 blur-[120px]" />
 
         <div className="relative z-10 mx-auto max-w-7xl px-5 sm:px-8">
           
           {/* Header Section */}
           <div className="text-center max-w-3xl mx-auto mb-16">
-            <span className="section-eyebrow">
-              <span className="h-1.5 w-1.5 rounded-full bg-nex-blueLight shadow-glow-blue" />
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20 mb-3">
+              <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 shadow-glow-blue" />
               Direct Support Channels
             </span>
-            <h1 className="font-display text-4xl font-bold tracking-tight text-white sm:text-6xl">
-              Contact &amp; <span className="text-gradient-blue">Support.</span>
+            <h1 className="heading-h1">
+              Contact &amp; <span className="bg-gradient-to-r from-cyan-500 to-indigo-500 bg-clip-text text-transparent">Support.</span>
             </h1>
-            <p className="mt-4 text-base text-nex-mist leading-relaxed">
+            <p className="mt-4 text-base text-readable-secondary leading-relaxed">
               Reach out to our customer care team, visit one of our physical service centers, or download our company profile to learn about our B2B corporate capabilities.
             </p>
           </div>
@@ -151,48 +151,48 @@ Trusted · Reliable · Affordable`;
             {/* Left Column: Branch Details & Contact links */}
             <div className="lg:col-span-5 space-y-6">
               {/* Core contacts card */}
-              <div className="glass-card p-6 bg-nex-ink border border-white/5 rounded-2xl">
-                <h3 className="font-display text-sm font-bold text-white mb-5 flex items-center gap-2">
-                  <Building className="h-4.5 w-4.5 text-nex-blueLight" /> NexLapTech Support Desk
+              <div className="futuristic-card p-6 rounded-2xl shadow-xl">
+                <h3 className="font-display text-sm font-bold text-slate-900 dark:text-white mb-5 flex items-center gap-2">
+                  <Building className="h-4.5 w-4.5 text-cyan-600 dark:text-cyan-400" /> NexLapTech Support Desk
                 </h3>
                 
                 <div className="space-y-4 text-xs">
                   {/* Phone */}
                   <div className="flex items-start gap-3">
-                    <Phone className="h-4 w-4 text-nex-blueLight shrink-0 mt-0.5" />
+                    <Phone className="h-4 w-4 text-cyan-600 dark:text-cyan-400 shrink-0 mt-0.5" />
                     <div>
-                      <h4 className="font-semibold text-white/90">Phone Lines</h4>
-                      <p className="text-nex-mist mt-1">
-                        <a href="tel:+918088979706" className="hover:text-white transition-colors">8088979706</a> / <a href="tel:+918904760125" className="hover:text-white transition-colors">8904760125</a>
+                      <h4 className="font-semibold text-slate-900 dark:text-white">Phone Lines</h4>
+                      <p className="text-readable-secondary mt-1">
+                        <a href="tel:+918088979706" className="hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors">8088979706</a> / <a href="tel:+918904760125" className="hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors">8904760125</a>
                       </p>
                     </div>
                   </div>
 
                   {/* Email */}
                   <div className="flex items-start gap-3">
-                    <Mail className="h-4 w-4 text-nex-blueLight shrink-0 mt-0.5" />
+                    <Mail className="h-4 w-4 text-cyan-600 dark:text-cyan-400 shrink-0 mt-0.5" />
                     <div>
-                      <h4 className="font-semibold text-white/90">Email Support</h4>
-                      <p className="text-nex-mist mt-1">
-                        <a href={`mailto:${business.email}`} className="hover:text-white transition-colors">{business.email}</a>
+                      <h4 className="font-semibold text-slate-900 dark:text-white">Email Support</h4>
+                      <p className="text-readable-secondary mt-1">
+                        <a href={`mailto:${business.email}`} className="hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors">{business.email}</a>
                       </p>
                     </div>
                   </div>
 
                   {/* Hours */}
                   <div className="flex items-start gap-3">
-                    <Clock className="h-4 w-4 text-nex-blueLight shrink-0 mt-0.5" />
+                    <Clock className="h-4 w-4 text-cyan-600 dark:text-cyan-400 shrink-0 mt-0.5" />
                     <div>
-                      <h4 className="font-semibold text-white/90">Business Hours</h4>
-                      <p className="text-nex-mist mt-1">Mon - Sat: 9:30 AM - 8:30 PM<br />Sun: 10:00 AM - 5:00 PM</p>
+                      <h4 className="font-semibold text-slate-900 dark:text-white">Business Hours</h4>
+                      <p className="text-readable-secondary mt-1">Mon - Sat: 9:30 AM - 8:30 PM<br />Sun: 10:00 AM - 5:00 PM</p>
                     </div>
                   </div>
                 </div>
 
-                <div className="mt-8 pt-6 border-t border-white/[0.04]">
+                <div className="mt-8 pt-6 border-t border-slate-200 dark:border-white/10">
                   <button
                     onClick={handleDownloadProfile}
-                    className="w-full btn-primary flex items-center justify-center gap-2 text-xs"
+                    className="w-full futuristic-btn-primary flex items-center justify-center gap-2 text-xs py-3 rounded-xl font-bold"
                   >
                     <Download className="h-4 w-4" /> Download Company Profile
                   </button>
@@ -200,37 +200,37 @@ Trusted · Reliable · Affordable`;
               </div>
 
               {/* Branch Addresses */}
-              <div className="glass-card p-6 bg-nex-ink border border-white/5 rounded-2xl space-y-6">
-                <h3 className="font-display text-sm font-bold text-white">Our Service Centers</h3>
+              <div className="futuristic-card p-6 rounded-2xl space-y-6 shadow-xl">
+                <h3 className="font-display text-sm font-bold text-slate-900 dark:text-white">Our Service Centers</h3>
 
                 {/* Bengaluru */}
                 <div className="space-y-1.5 text-xs">
-                  <h4 className="font-bold text-white/90 flex items-center gap-1.5">
-                    <MapPin className="h-3.5 w-3.5 text-nex-blueLight" /> Bengaluru Branch (Head Office)
+                  <h4 className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                    <MapPin className="h-3.5 w-3.5 text-cyan-600 dark:text-cyan-400" /> Bengaluru Branch (Head Office)
                   </h4>
-                  <p className="text-nex-mist leading-relaxed pl-5">
+                  <p className="text-readable-secondary leading-relaxed pl-5">
                     Padmanabhanagar, Bengaluru, Karnataka
                   </p>
                 </div>
 
                 {/* Tumkur */}
                 <div className="space-y-1.5 text-xs">
-                  <h4 className="font-bold text-white/90 flex items-center gap-1.5">
-                    <MapPin className="h-3.5 w-3.5 text-nex-blueLight" /> Tumkur Branch
+                  <h4 className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                    <MapPin className="h-3.5 w-3.5 text-cyan-600 dark:text-cyan-400" /> Tumkur Branch
                   </h4>
-                  <p className="text-nex-mist leading-relaxed pl-5">
+                  <p className="text-readable-secondary leading-relaxed pl-5">
                     Upparahalli, Tumkur – 572101
                   </p>
                 </div>
 
                 {/* Hiriyur */}
                 <div className="space-y-1.5 text-xs">
-                  <h4 className="font-bold text-white/90 flex items-center gap-1.5">
-                    <MapPin className="h-3.5 w-3.5 text-white/40" /> Hiriyur Branch
+                  <h4 className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                    <MapPin className="h-3.5 w-3.5 text-slate-400 dark:text-white/40" /> Hiriyur Branch
                   </h4>
-                  <p className="text-nex-mist leading-relaxed pl-5 italic flex items-center gap-1">
+                  <p className="text-readable-secondary leading-relaxed pl-5 italic flex items-center gap-1">
                     Opening Soon in Hiriyur, Karnataka
-                    <span className="rounded-full bg-nex-blue/20 px-2 py-0.5 text-[9px] text-nex-blueLight font-semibold">Soon</span>
+                    <span className="rounded-full bg-cyan-500/20 px-2 py-0.5 text-[9px] text-cyan-600 dark:text-cyan-400 font-semibold">Soon</span>
                   </p>
                 </div>
               </div>
@@ -239,23 +239,23 @@ Trusted · Reliable · Affordable`;
             {/* Right Column: Contact Form and Maps */}
             <div className="lg:col-span-7 space-y-6">
               {/* Premium Contact Form Card */}
-              <div className="glass-card p-6 md:p-8 bg-nex-ink border border-white/5 rounded-2xl shadow-glow-blue">
-                <h3 className="font-display text-sm font-bold text-white mb-5 flex items-center gap-2">
-                  <Mail className="h-4.5 w-4.5 text-nex-blueLight" /> Send Us a Message
+              <div className="futuristic-card p-6 md:p-8 rounded-2xl shadow-xl">
+                <h3 className="font-display text-sm font-bold text-slate-900 dark:text-white mb-5 flex items-center gap-2">
+                  <Mail className="h-4.5 w-4.5 text-cyan-600 dark:text-cyan-400" /> Send Us a Message
                 </h3>
 
                 {success ? (
                   <div className="text-center py-6 space-y-4">
-                    <CheckCircle2 className="h-12 w-12 text-green-400 mx-auto animate-bounce" />
+                    <CheckCircle2 className="h-12 w-12 text-emerald-500 mx-auto animate-bounce" />
                     <div>
-                      <h4 className="font-display text-base font-bold text-white">Message Sent Successfully!</h4>
-                      <p className="text-xs text-nex-mist mt-1 leading-relaxed">
+                      <h4 className="font-display text-base font-bold text-slate-900 dark:text-white">Message Sent Successfully!</h4>
+                      <p className="text-xs text-readable-secondary mt-1 leading-relaxed">
                         Thank you for reaching out. We have logged your request and our support desk will contact you shortly.
                       </p>
                     </div>
                     <button
                       onClick={() => setSuccess(false)}
-                      className="text-xs text-nex-blueLight hover:underline font-bold"
+                      className="text-xs text-cyan-600 dark:text-cyan-400 hover:underline font-bold"
                     >
                       Send another message
                     </button>
@@ -263,7 +263,7 @@ Trusted · Reliable · Affordable`;
                 ) : (
                   <form onSubmit={handleContactSubmit} className="space-y-4">
                     {errorMsg && (
-                      <div className="rounded-xl bg-red-500/10 border border-red-500/20 p-3.5 text-xs text-red-400">
+                      <div className="rounded-xl bg-red-500/10 border border-red-500/20 p-3.5 text-xs text-red-600 dark:text-red-400">
                         {errorMsg}
                       </div>
                     )}
@@ -271,7 +271,7 @@ Trusted · Reliable · Affordable`;
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       {/* Name */}
                       <div className="space-y-1">
-                        <label htmlFor="contact-name" className="text-xs font-semibold text-white/80">Name *</label>
+                        <label htmlFor="contact-name" className="text-xs font-semibold text-slate-700 dark:text-slate-300">Name *</label>
                         <input
                           id="contact-name"
                           type="text"
@@ -279,20 +279,20 @@ Trusted · Reliable · Affordable`;
                           value={name}
                           onChange={(e) => setName(e.target.value)}
                           placeholder="e.g. Ramesh Kumar"
-                          className="w-full rounded-xl bg-white/[0.04] border border-white/[0.08] px-3.5 py-2.5 text-xs text-white focus:border-nex-blue/50 focus:outline-none"
+                          className="futuristic-input w-full rounded-xl px-3.5 py-2.5 text-xs"
                         />
                       </div>
 
                       {/* Phone */}
                       <div className="space-y-1">
-                        <label htmlFor="contact-phone" className="text-xs font-semibold text-white/80">Phone Number</label>
+                        <label htmlFor="contact-phone" className="text-xs font-semibold text-slate-700 dark:text-slate-300">Phone Number</label>
                         <input
                           id="contact-phone"
                           type="tel"
                           value={phone}
                           onChange={(e) => setPhone(e.target.value)}
                           placeholder="e.g. 9876543210"
-                          className="w-full rounded-xl bg-white/[0.04] border border-white/[0.08] px-3.5 py-2.5 text-xs text-white focus:border-nex-blue/50 focus:outline-none"
+                          className="futuristic-input w-full rounded-xl px-3.5 py-2.5 text-xs"
                         />
                       </div>
                     </div>
@@ -300,7 +300,7 @@ Trusted · Reliable · Affordable`;
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       {/* Email */}
                       <div className="space-y-1">
-                        <label htmlFor="contact-email" className="text-xs font-semibold text-white/80">Email Address *</label>
+                        <label htmlFor="contact-email" className="text-xs font-semibold text-slate-700 dark:text-slate-300">Email Address *</label>
                         <input
                           id="contact-email"
                           type="email"
@@ -308,27 +308,27 @@ Trusted · Reliable · Affordable`;
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
                           placeholder="e.g. ramesh@gmail.com"
-                          className="w-full rounded-xl bg-white/[0.04] border border-white/[0.08] px-3.5 py-2.5 text-xs text-white focus:border-nex-blue/50 focus:outline-none"
+                          className="futuristic-input w-full rounded-xl px-3.5 py-2.5 text-xs"
                         />
                       </div>
 
                       {/* Subject */}
                       <div className="space-y-1">
-                        <label htmlFor="contact-subject" className="text-xs font-semibold text-white/80">Subject</label>
+                        <label htmlFor="contact-subject" className="text-xs font-semibold text-slate-700 dark:text-slate-300">Subject</label>
                         <input
                           id="contact-subject"
                           type="text"
                           value={subject}
                           onChange={(e) => setSubject(e.target.value)}
                           placeholder="e.g. Corporate Service Contract"
-                          className="w-full rounded-xl bg-white/[0.04] border border-white/[0.08] px-3.5 py-2.5 text-xs text-white focus:border-nex-blue/50 focus:outline-none"
+                          className="futuristic-input w-full rounded-xl px-3.5 py-2.5 text-xs"
                         />
                       </div>
                     </div>
 
                     {/* Message */}
                     <div className="space-y-1">
-                      <label htmlFor="contact-msg" className="text-xs font-semibold text-white/80">Your Message *</label>
+                      <label htmlFor="contact-msg" className="text-xs font-semibold text-slate-700 dark:text-slate-300">Your Message *</label>
                       <textarea
                         id="contact-msg"
                         required
@@ -336,7 +336,7 @@ Trusted · Reliable · Affordable`;
                         onChange={(e) => setMessage(e.target.value)}
                         placeholder="Tell us what you need help with..."
                         rows={4}
-                        className="w-full rounded-xl bg-white/[0.04] border border-white/[0.08] px-3.5 py-2.5 text-xs text-white focus:border-nex-blue/50 focus:outline-none resize-none"
+                        className="futuristic-input w-full rounded-xl px-3.5 py-2.5 text-xs resize-none"
                       />
                     </div>
 
@@ -344,7 +344,7 @@ Trusted · Reliable · Affordable`;
                       <button
                         type="submit"
                         disabled={loading}
-                        className="w-full btn-primary flex items-center justify-center gap-2 text-xs font-bold"
+                        className="w-full futuristic-btn-primary flex items-center justify-center gap-2 text-xs font-bold py-3.5 rounded-xl"
                       >
                         {loading ? "Sending Message..." : (
                           <>

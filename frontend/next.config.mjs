@@ -1,8 +1,14 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  reactStrictMode: true,
+  reactStrictMode: false,
   experimental: {
-    optimizePackageImports: ["lucide-react", "framer-motion"],
+    optimizePackageImports: [
+      "lucide-react",
+      "framer-motion",
+      "@supabase/supabase-js",
+      "gsap",
+      "three",
+    ],
   },
   images: {
     unoptimized: true,

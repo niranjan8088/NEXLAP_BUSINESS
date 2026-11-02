@@ -2,6 +2,32 @@ import { createClient } from "@supabase/supabase-js";
 import { products as initialProducts, services as initialServices } from "./data";
 import { broadcastServerEvent } from "./realtimeServer";
 import { DEFAULT_FILTER_DEFINITIONS } from "./filterEngine";
+import { DEFAULT_STORE_SETTINGS, DEFAULT_CUSTOMER_PREFERENCES } from "./data/defaultSettings";
+import type { StoreSettings, CustomerPreferences, SettingsAuditLogEntry } from "./types/settings";
+
+function deepMergeSettings<T extends Record<string, any>>(target: T, source: Partial<T>): T {
+  const result: any = { ...target };
+  if (!source || typeof source !== "object") return result;
+
+  for (const key of Object.keys(source)) {
+    const val = (source as any)[key];
+    if (val === undefined) continue;
+
+    if (
+      val !== null &&
+      typeof val === "object" &&
+      !Array.isArray(val) &&
+      typeof target[key] === "object" &&
+      target[key] !== null &&
+      !Array.isArray(target[key])
+    ) {
+      result[key] = deepMergeSettings(target[key], val);
+    } else {
+      result[key] = val;
+    }
+  }
+  return result as T;
+}
 
 // In-Memory Query Cache with TTL and Mutation Invalidation
 const queryCache = new Map<string, { data: any; expiry: number }>();
@@ -40,6 +66,20 @@ if (typeof window !== "undefined") {
   window.addEventListener("nexbyte-data-changed", (e: any) => {
     if (e.detail?.table) invalidateQueryCache(e.detail.table);
   });
+  // Auto-sync client localStorage mock data (such as products) to the server
+  try {
+    const savedProducts = localStorage.getItem("nexbyte_products");
+    if (savedProducts) {
+      const parsed = JSON.parse(savedProducts);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        fetch("/api/system/sync-mock", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ key: "products", data: parsed }),
+        }).catch(() => {});
+      }
+    }
+  } catch {}
 }
 
 function notifyDataChange(table: string, action: string, data?: any) {
@@ -113,6 +153,20 @@ if (!globalRef.__nexbyteMockDb) {
       global_theme_policy: "personal", // 'personal' | 'forced'
       forced_theme: "day",
     },
+    storeSettings: JSON.parse(JSON.stringify(DEFAULT_STORE_SETTINGS)),
+    customerPreferencesMap: {},
+    settingsAuditLog: [
+      {
+        id: "audit-init",
+        timestamp: new Date().toISOString(),
+        adminEmail: "admin@nexbyte.com",
+        adminName: "System Init",
+        category: "System",
+        action: "INIT",
+        details: "Store settings initialized with enterprise defaults.",
+        changedFields: ["all"],
+      },
+    ],
     users: [
       { id: "cust-1", email: "customer@nexbyte.com", full_name: "Ramesh Kumar", phone: "9876543210", role: "customer" },
       { id: "admin-1", email: "admin@nexbyte.com", full_name: "Admin Officer", phone: "8088979706", role: "admin" }
@@ -627,6 +681,57 @@ function safeParse<T>(value: string | null | undefined, fallback: T): T {
   }
 }
 
+function getPersistentDbPath(): string | null {
+  if (typeof window !== "undefined") return null;
+  try {
+    const p = eval("require")("path");
+    const f = eval("require")("fs");
+    let targetDir = f.existsSync(p.join(process.cwd(), "nexbyte", "frontend"))
+      ? p.join(process.cwd(), "nexbyte", "frontend", "data")
+      : p.join(process.cwd(), "data");
+    if (!f.existsSync(targetDir)) {
+      try {
+        f.mkdirSync(targetDir, { recursive: true });
+      } catch {}
+    }
+    return p.join(targetDir, "mock_db.json");
+  } catch {
+    return null;
+  }
+}
+
+function loadPersistedDb(): Record<string, any> | null {
+  const filePath = getPersistentDbPath();
+  if (!filePath) return null;
+  try {
+    const f = eval("require")("fs");
+    if (f.existsSync(filePath)) {
+      const content = f.readFileSync(filePath, "utf8");
+      return JSON.parse(content);
+    }
+  } catch {}
+  return null;
+}
+
+function savePersistedDb(db: Record<string, any>) {
+  const filePath = getPersistentDbPath();
+  if (!filePath) return;
+  try {
+    const f = eval("require")("fs");
+    f.writeFileSync(filePath, JSON.stringify(db, null, 2), "utf8");
+  } catch {}
+}
+
+const ensureDiskDbLoaded = () => {
+  if (typeof window === "undefined" && !globalRef.__nexbyteDbDiskLoaded) {
+    globalRef.__nexbyteDbDiskLoaded = true;
+    const fromDisk = loadPersistedDb();
+    if (fromDisk && typeof fromDisk === "object") {
+      globalRef.__nexbyteMockDb = { ...globalRef.__nexbyteMockDb, ...fromDisk };
+    }
+  }
+};
+
 const getMockData = (key: string): any[] => {
   if (typeof window !== "undefined") {
     const saved = localStorage.getItem(`nexbyte_${key}`);
@@ -638,13 +743,31 @@ const getMockData = (key: string): any[] => {
     localStorage.setItem(`nexbyte_${key}`, JSON.stringify(defaultData));
     return defaultData;
   }
+  // Server-side: ensure persistent disk db is synced
+  ensureDiskDbLoaded();
   return globalRef.__nexbyteMockDb?.[key] || [];
 };
 
 const saveMockData = (key: string, data: any[] | Record<string, any>) => {
+  if (!globalRef.__nexbyteMockDb) {
+    globalRef.__nexbyteMockDb = {};
+  }
+  ensureDiskDbLoaded();
   globalRef.__nexbyteMockDb[key] = data;
   if (typeof window !== "undefined") {
-    localStorage.setItem(`nexbyte_${key}`, JSON.stringify(data));
+    try {
+      localStorage.setItem(`nexbyte_${key}`, JSON.stringify(data));
+    } catch {}
+    // Background sync to server disk persistent store so server APIs (like /api/public/products/[id]) have it
+    try {
+      fetch("/api/system/sync-mock", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key, data }),
+      }).catch(() => {});
+    } catch {}
+  } else {
+    savePersistedDb(globalRef.__nexbyteMockDb);
   }
 };
 
@@ -659,6 +782,8 @@ const getMockObject = (key: string): Record<string, any> => {
     localStorage.setItem(`nexbyte_${key}`, JSON.stringify(defaultObj));
     return defaultObj;
   }
+  // Server-side: ensure persistent disk db is synced
+  ensureDiskDbLoaded();
   return globalRef.__nexbyteMockDb?.[key] || {};
 };
 
@@ -2863,34 +2988,98 @@ export const dbHelper = {
   // --- PROFILES SECTION ---
   profiles: {
     async getById(id: string) {
+      if (!id) return null;
+      const cleanId = String(id).trim();
+      const lower = cleanId.toLowerCase();
+
+      // 1. Supabase Postgres if configured
       if (supabase) {
-        const { data } = await supabase.from("profiles").select("*").eq("id", id).single();
-        if (data) return data;
-        const { data: userData } = await supabase.from("users").select("*").eq("id", id).single();
-        return userData || null;
+        try {
+          const { data, error } = await supabase.from("profiles").select("*").or(`id.eq.${cleanId},email.ilike.${lower}`).single();
+          if (data && !error) return data;
+          const { data: userData, error: userError } = await supabase.from("users").select("*").or(`id.eq.${cleanId},email.ilike.${lower}`).single();
+          if (userData && !userError) return userData;
+        } catch (e) {}
       }
-      const users = getMockData("users");
+
+      // 2. Persistent Local Storage
       const profiles = getMockData("profiles");
-      const found = profiles.find((p: any) => p.id === id) || users.find((u: any) => u.id === id || u.email === id);
-      return found || null;
+      const users = getMockData("users");
+
+      const foundInProfiles = profiles.find(
+        (p: any) => p && (String(p.id) === cleanId || p.email?.toLowerCase() === lower)
+      );
+      if (foundInProfiles) return foundInProfiles;
+
+      const foundInUsers = users.find(
+        (u: any) => u && (String(u.id) === cleanId || u.email?.toLowerCase() === lower)
+      );
+      if (foundInUsers) return foundInUsers;
+
+      return null;
     },
+
     async update(id: string, updates: any) {
-      const payload = { ...updates, updated_at: new Date().toISOString() };
+      if (!id) throw new Error("Customer ID is required.");
+      const cleanId = String(id).trim();
+      const lower = cleanId.toLowerCase();
+      const now = new Date().toISOString();
+      const payload = { ...updates, updated_at: now };
+
+      // 1. Supabase Postgres if configured
       if (supabase) {
-        const { data } = await supabase.from("profiles").update(payload).eq("id", id).select().single();
-        if (data) {
-          notifyDataChange("profiles", "update", data);
-          return data;
-        }
-        const { data: userData } = await supabase.from("users").update(payload).eq("id", id).select().single();
-        notifyDataChange("users", "update", userData);
-        return userData;
+        try {
+          const { data, error } = await supabase
+            .from("profiles")
+            .upsert({ id: cleanId, ...payload })
+            .select()
+            .single();
+          if (data && !error) {
+            notifyDataChange("profiles", "update", data);
+            return data;
+          }
+        } catch (e) {}
       }
-      const list = getMockData("users");
-      const updated = list.map((u: any) => (u.id === id || u.email === id ? { ...u, ...payload } : u));
-      saveMockData("users", updated);
-      notifyDataChange("users", "update", updated.find((u: any) => u.id === id || u.email === id));
-      return updated.find((u: any) => u.id === id || u.email === id);
+
+      // 2. Persistent Local Storage
+      const profiles = getMockData("profiles");
+      const users = getMockData("users");
+
+      let updatedRecord: any = null;
+
+      // Update or create in profiles
+      const profIdx = profiles.findIndex(
+        (p: any) => p && (String(p.id) === cleanId || p.email?.toLowerCase() === lower)
+      );
+      if (profIdx >= 0) {
+        profiles[profIdx] = { ...profiles[profIdx], ...payload };
+        updatedRecord = profiles[profIdx];
+      } else {
+        const newProf = {
+          id: cleanId,
+          email: updates.email || (cleanId.includes("@") ? cleanId : `${cleanId}@customer.nexbyte.com`),
+          role: "user",
+          created_at: now,
+          ...payload,
+        };
+        profiles.push(newProf);
+        updatedRecord = newProf;
+      }
+      saveMockData("profiles", profiles);
+
+      // Also sync to users table to prevent discrepancy
+      const userIdx = users.findIndex(
+        (u: any) => u && (String(u.id) === cleanId || u.email?.toLowerCase() === lower)
+      );
+      if (userIdx >= 0) {
+        users[userIdx] = { ...users[userIdx], ...payload };
+      } else {
+        users.push(updatedRecord);
+      }
+      saveMockData("users", users);
+
+      notifyDataChange("profiles", "update", updatedRecord);
+      return updatedRecord;
     }
   },
 
@@ -3591,60 +3780,318 @@ export const dbHelper = {
     },
   },
 
-  systemSettings: {
-    async get() {
+  storeSettings: {
+    async get(): Promise<StoreSettings> {
       if (supabase) {
         try {
-          const { data } = await supabase.from("system_settings").select("*").single();
-          if (data) {
-            return {
-              policy: data.global_theme_policy || "personal",
-              forcedTheme: data.forced_theme === "night" ? "night" : "day",
-            };
+          const { data, error } = await supabase.from("store_settings").select("*").eq("id", "global").single();
+          if (data && !error && data.settings) {
+            return deepMergeSettings(DEFAULT_STORE_SETTINGS, data.settings);
           }
         } catch (e) {}
       }
-      const mock = globalRef.__nexbyteMockDb.systemSettings || {
-        global_theme_policy: "personal",
-        forced_theme: "day",
-      };
-      return {
-        policy: mock.global_theme_policy || "personal",
-        forcedTheme: mock.forced_theme === "night" ? "night" : "day",
-      };
+      const mock = getMockObject("store_settings");
+      if (mock && typeof mock === "object" && Object.keys(mock).length > 0 && mock.appearance) {
+        return deepMergeSettings(DEFAULT_STORE_SETTINGS, mock);
+      }
+      if (globalRef.__nexbyteMockDb?.storeSettings) {
+        return deepMergeSettings(DEFAULT_STORE_SETTINGS, globalRef.__nexbyteMockDb.storeSettings);
+      }
+      return JSON.parse(JSON.stringify(DEFAULT_STORE_SETTINGS));
     },
 
-    async update(policy: string, forcedTheme?: string) {
-      if (!globalRef.__nexbyteMockDb.systemSettings) {
-        globalRef.__nexbyteMockDb.systemSettings = {
-          global_theme_policy: "personal",
-          forced_theme: "day",
+    async update(partial: Partial<StoreSettings>, adminUser?: { email: string; name: string }): Promise<StoreSettings> {
+      const current = await this.get();
+      const updated: StoreSettings = deepMergeSettings(current, partial);
+      updated.version = (current.version || 1) + 1;
+      updated.updatedAt = new Date().toISOString();
+      if (adminUser) {
+        updated.updatedBy = {
+          email: adminUser.email || "admin@nexbyte.com",
+          name: adminUser.name || "Admin Officer",
         };
-      }
-      globalRef.__nexbyteMockDb.systemSettings.global_theme_policy = policy;
-      if (forcedTheme) {
-        globalRef.__nexbyteMockDb.systemSettings.forced_theme = forcedTheme;
       }
 
       if (supabase) {
         try {
+          await supabase.from("store_settings").upsert({
+            id: "global",
+            settings: updated,
+            updated_at: updated.updatedAt,
+          });
           await supabase.from("system_settings").upsert({
             id: "global",
-            global_theme_policy: policy,
-            forced_theme: forcedTheme === "night" ? "night" : "day",
-            updated_at: new Date().toISOString(),
+            global_theme_policy: updated.appearance.customerThemePolicy,
+            forced_theme: updated.appearance.forcedTheme === "night" ? "night" : "day",
+            updated_at: updated.updatedAt,
           });
         } catch (e) {}
       }
 
-      notifyDataChange("system_settings", "UPDATE", {
-        policy,
-        forcedTheme: forcedTheme === "night" ? "night" : "day",
+      saveMockData("store_settings", updated);
+      if (globalRef.__nexbyteMockDb) {
+        globalRef.__nexbyteMockDb.storeSettings = updated;
+        if (!globalRef.__nexbyteMockDb.systemSettings) {
+          globalRef.__nexbyteMockDb.systemSettings = {};
+        }
+        globalRef.__nexbyteMockDb.systemSettings.global_theme_policy = updated.appearance.customerThemePolicy;
+        globalRef.__nexbyteMockDb.systemSettings.forced_theme = updated.appearance.forcedTheme;
+      }
+
+      const changedCategories = Object.keys(partial).filter(
+        (k) => !["id", "version", "updatedAt", "updatedBy"].includes(k)
+      );
+      await this.addAuditLog({
+        adminEmail: adminUser?.email || "admin@nexbyte.com",
+        adminName: adminUser?.name || "Admin Officer",
+        category: changedCategories.join(", ") || "General Store Settings",
+        action: "UPDATE",
+        details: `Saved settings version ${updated.version} (${changedCategories.join(", ") || "Configuration updated"})`,
+        changedFields: changedCategories,
       });
 
+      notifyDataChange("store_settings", "UPDATE", updated);
+      notifyDataChange("system_settings", "UPDATE", {
+        policy: updated.appearance.customerThemePolicy,
+        forcedTheme: updated.appearance.forcedTheme,
+      });
+
+      return updated;
+    },
+
+    async reset(adminUser?: { email: string; name: string }): Promise<StoreSettings> {
+      const fresh: StoreSettings = JSON.parse(JSON.stringify(DEFAULT_STORE_SETTINGS));
+      fresh.updatedAt = new Date().toISOString();
+      if (adminUser) {
+        fresh.updatedBy = { email: adminUser.email, name: adminUser.name };
+      }
+      return await this.update(fresh, adminUser);
+    },
+
+    async publish(adminUser?: { email: string; name: string }, summary: string = "Published configuration to live website"): Promise<{ success: boolean; version: number; settings: StoreSettings }> {
+      const current = await this.get();
+      const newVersion = (current.version || 1) + 1;
+      const now = new Date().toISOString();
+      const admin = {
+        email: adminUser?.email || "admin@nexbyte.com",
+        name: adminUser?.name || "Admin Officer",
+      };
+
+      const snapshot = {
+        version: newVersion,
+        publishedAt: now,
+        publishedBy: admin,
+        summary,
+        snapshot: JSON.parse(JSON.stringify(current)),
+      };
+
+      const updatedHistory = [snapshot, ...(current.versionHistory || [])].slice(0, 25);
+
+      const publishedSettings: StoreSettings = {
+        ...current,
+        version: newVersion,
+        updatedAt: now,
+        updatedBy: admin,
+        publishWorkflow: {
+          status: "published",
+          publishedVersion: newVersion,
+          draftVersion: newVersion,
+          lastPublishedAt: now,
+          lastPublishedBy: admin,
+        },
+        versionHistory: updatedHistory,
+      };
+
+      const result = await this.update(publishedSettings, adminUser);
+
+      await this.addAuditLog({
+        adminEmail: admin.email,
+        adminName: admin.name,
+        category: "Publish Workflow",
+        action: "PUBLISH",
+        details: `Published store settings version ${newVersion}. Summary: ${summary}`,
+        changedFields: ["publishWorkflow", "versionHistory"],
+      });
+
+      return { success: true, version: newVersion, settings: result };
+    },
+
+    async rollback(targetVersion: number, adminUser?: { email: string; name: string }): Promise<StoreSettings> {
+      const current = await this.get();
+      const history = current.versionHistory || [];
+      const match = history.find((h: any) => h.version === targetVersion);
+      if (!match || !match.snapshot) {
+        throw new Error(`Cannot rollback to version ${targetVersion}: snapshot not found.`);
+      }
+
+      const restored: StoreSettings = deepMergeSettings(DEFAULT_STORE_SETTINGS, match.snapshot);
+      restored.version = (current.version || 1) + 1;
+      restored.updatedAt = new Date().toISOString();
+      restored.publishWorkflow = {
+        status: "published",
+        publishedVersion: restored.version,
+        draftVersion: restored.version,
+        lastPublishedAt: restored.updatedAt,
+        lastPublishedBy: {
+          email: adminUser?.email || "admin@nexbyte.com",
+          name: adminUser?.name || "Admin Officer",
+        },
+      };
+
+      const rollbackSnapshot = {
+        version: restored.version,
+        publishedAt: restored.updatedAt,
+        publishedBy: restored.publishWorkflow.lastPublishedBy!,
+        summary: `Rollback to version ${targetVersion}`,
+        snapshot: JSON.parse(JSON.stringify(restored)),
+      };
+      restored.versionHistory = [rollbackSnapshot, ...history].slice(0, 25);
+
+      const result = await this.update(restored, adminUser);
+
+      await this.addAuditLog({
+        adminEmail: adminUser?.email || "admin@nexbyte.com",
+        adminName: adminUser?.name || "Admin Officer",
+        category: "Publish Workflow",
+        action: "ROLLBACK",
+        details: `Restored store configuration from version ${targetVersion} to active version ${restored.version}`,
+        changedFields: ["versionHistory", "publishWorkflow"],
+      });
+
+      return result;
+    },
+
+    async getVersions(): Promise<any[]> {
+      const current = await this.get();
+      return current.versionHistory || [];
+    },
+
+    async getAuditLog(limit: number = 30): Promise<SettingsAuditLogEntry[]> {
+      if (supabase) {
+        try {
+          const { data } = await supabase
+            .from("settings_audit_log")
+            .select("*")
+            .order("timestamp", { ascending: false })
+            .limit(limit);
+          if (data && data.length > 0) return data;
+        } catch (e) {}
+      }
+      const list: SettingsAuditLogEntry[] =
+        getMockData("settings_audit_log") || globalRef.__nexbyteMockDb?.settingsAuditLog || [];
+      return list.slice(0, limit);
+    },
+
+    async addAuditLog(entry: Omit<SettingsAuditLogEntry, "id" | "timestamp">): Promise<SettingsAuditLogEntry> {
+      const newEntry: SettingsAuditLogEntry = {
+        id: `audit-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+        timestamp: new Date().toISOString(),
+        ...entry,
+      };
+      if (supabase) {
+        try {
+          await supabase.from("settings_audit_log").insert([newEntry]);
+        } catch (e) {}
+      }
+      const list: SettingsAuditLogEntry[] =
+        getMockData("settings_audit_log") || globalRef.__nexbyteMockDb?.settingsAuditLog || [];
+      list.unshift(newEntry);
+      saveMockData("settings_audit_log", list.slice(0, 100));
+      if (globalRef.__nexbyteMockDb) {
+        globalRef.__nexbyteMockDb.settingsAuditLog = list.slice(0, 100);
+      }
+      return newEntry;
+    },
+  },
+
+  customerPreferences: {
+    async get(customerId: string): Promise<CustomerPreferences> {
+      if (!customerId) {
+        return { ...DEFAULT_CUSTOMER_PREFERENCES, customerId: "guest" };
+      }
+      if (supabase) {
+        try {
+          const { data } = await supabase
+            .from("customer_preferences")
+            .select("*")
+            .eq("customer_id", customerId)
+            .single();
+          if (data && data.preferences) {
+            return {
+              ...DEFAULT_CUSTOMER_PREFERENCES,
+              ...data.preferences,
+              customerId,
+            };
+          }
+        } catch (e) {}
+      }
+      const map = getMockObject("customer_preferences_map");
+      if (map && map[customerId]) {
+        return {
+          ...DEFAULT_CUSTOMER_PREFERENCES,
+          ...map[customerId],
+          customerId,
+        };
+      }
       return {
-        policy,
-        forcedTheme: forcedTheme === "night" ? "night" : "day",
+        ...DEFAULT_CUSTOMER_PREFERENCES,
+        customerId,
+      };
+    },
+
+    async update(customerId: string, prefs: Partial<CustomerPreferences>): Promise<CustomerPreferences> {
+      const current = await this.get(customerId);
+      const updated: CustomerPreferences = {
+        ...current,
+        ...prefs,
+        customerId,
+        updatedAt: new Date().toISOString(),
+      };
+      if (supabase) {
+        try {
+          await supabase.from("customer_preferences").upsert({
+            customer_id: customerId,
+            preferences: updated,
+            updated_at: updated.updatedAt,
+          });
+        } catch (e) {}
+      }
+      const map = getMockObject("customer_preferences_map");
+      map[customerId] = updated;
+      saveMockData("customer_preferences_map", map);
+      if (globalRef.__nexbyteMockDb) {
+        if (!globalRef.__nexbyteMockDb.customerPreferencesMap) {
+          globalRef.__nexbyteMockDb.customerPreferencesMap = {};
+        }
+        globalRef.__nexbyteMockDb.customerPreferencesMap[customerId] = updated;
+      }
+      notifyDataChange("customer_preferences", "UPDATE", { customerId, preferences: updated });
+      return updated;
+    },
+  },
+
+  systemSettings: {
+    async get() {
+      const storeSet = await dbHelper.storeSettings.get();
+      return {
+        policy: storeSet.appearance.customerThemePolicy || "personal",
+        forcedTheme: storeSet.appearance.forcedTheme === "night" ? "night" : "day",
+        ...storeSet,
+      };
+    },
+
+    async update(policy: string, forcedTheme?: string) {
+      const current = await dbHelper.storeSettings.get();
+      const updated = await dbHelper.storeSettings.update({
+        appearance: {
+          ...current.appearance,
+          customerThemePolicy: policy === "forced" ? "forced" : "personal",
+          forcedTheme: forcedTheme === "night" ? "night" : "day",
+        },
+      });
+      return {
+        policy: updated.appearance.customerThemePolicy,
+        forcedTheme: updated.appearance.forcedTheme,
       };
     },
   },
@@ -3674,6 +4121,22 @@ export const dbHelper = {
       saveMockData("filterDefinitions", definitions);
       notifyDataChange("filter_definitions", "UPDATE", definitions);
       return definitions;
+    },
+  },
+
+  // --- CUSTOMER VISITS & TRAFFIC ANALYTICS SECTION ---
+  customerVisits: {
+    async record(payload: any) {
+      const { visitorAnalytics } = await import("@/lib/visitorAnalytics");
+      return await visitorAnalytics.recordVisit(payload);
+    },
+    async getAnalytics() {
+      const { visitorAnalytics } = await import("@/lib/visitorAnalytics");
+      return await visitorAnalytics.getAnalytics();
+    },
+    async reset() {
+      const { visitorAnalytics } = await import("@/lib/visitorAnalytics");
+      return await visitorAnalytics.resetVisits();
     },
   },
 };

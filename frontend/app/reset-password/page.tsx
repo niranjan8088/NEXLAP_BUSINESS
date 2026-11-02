@@ -63,29 +63,29 @@ function ResetPasswordForm() {
   };
 
   return (
-    <div className="glass-card border border-white/10 bg-nex-ink p-7 shadow-glow-blue sm:p-8">
+    <div className="futuristic-card p-7 shadow-xl sm:p-8 rounded-2xl">
       {errorMsg && (
-        <div className="mb-5 rounded-xl bg-red-500/10 border border-red-500/20 p-3.5 text-xs text-red-400 flex items-start gap-2.5">
-          <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-red-400" />
+        <div className="mb-5 rounded-xl bg-red-500/10 border border-red-500/20 p-3.5 text-xs text-red-600 dark:text-red-400 flex items-start gap-2.5">
+          <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-red-500" />
           <span>{errorMsg}</span>
         </div>
       )}
 
       {successMsg && (
-        <div className="mb-5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 p-3.5 text-xs text-emerald-400 flex items-start gap-2.5">
-          <CheckCircle2 className="h-4 w-4 shrink-0 mt-0.5 text-emerald-400" />
+        <div className="mb-5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 p-3.5 text-xs text-emerald-600 dark:text-emerald-400 flex items-start gap-2.5">
+          <CheckCircle2 className="h-4 w-4 shrink-0 mt-0.5 text-emerald-500" />
           <span>{successMsg}</span>
         </div>
       )}
 
       {!token ? (
         <div className="text-center py-4 space-y-3">
-          <KeyRound className="h-10 w-10 text-amber-400 mx-auto" />
-          <h3 className="text-sm font-bold text-white">Invalid Reset Link</h3>
-          <p className="text-xs text-nex-mist leading-relaxed">
+          <KeyRound className="h-10 w-10 text-amber-500 mx-auto" />
+          <h3 className="text-sm font-bold text-slate-900 dark:text-white">Invalid Reset Link</h3>
+          <p className="text-xs text-readable-secondary leading-relaxed">
             No valid security token was found in your password reset link. Please perform identity verification again.
           </p>
-          <Link href="/login" className="btn-primary inline-flex py-2.5 px-6 text-xs mt-2">
+          <Link href="/login" className="futuristic-btn-primary inline-flex py-2.5 px-6 text-xs mt-2 rounded-xl font-bold">
             Back to Sign In
           </Link>
         </div>
@@ -93,21 +93,21 @@ function ResetPasswordForm() {
         <form onSubmit={handleResetPassword} className="space-y-4">
           {/* New Password */}
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-white/80">New Password *</label>
+            <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">New Password *</label>
             <div className="relative">
-              <Lock className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-nex-mist" />
+              <Lock className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <input
                 type={showPassword ? "text" : "password"}
                 required
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 placeholder="Minimum 6 characters"
-                className="w-full rounded-xl bg-white/[0.04] border border-white/[0.08] pl-10 pr-12 py-3 text-xs text-white placeholder-white/20 focus:border-nex-blue/50 focus:outline-none focus:ring-1 focus:ring-nex-blue/30"
+                className="futuristic-input w-full rounded-xl pl-10 pr-12 py-3 text-xs"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-nex-mist hover:text-white transition-colors"
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
               >
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
@@ -116,31 +116,31 @@ function ResetPasswordForm() {
 
           {/* Confirm New Password */}
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-white/80">Confirm New Password *</label>
+            <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Confirm New Password *</label>
             <div className="relative">
-              <Lock className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-nex-mist" />
+              <Lock className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <input
                 type={showConfirmPassword ? "text" : "password"}
                 required
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="Re-enter your new password"
-                className={`w-full rounded-xl bg-white/[0.04] border pl-10 pr-12 py-3 text-xs text-white placeholder-white/20 focus:outline-none focus:ring-1 ${
+                className={`futuristic-input w-full rounded-xl pl-10 pr-12 py-3 text-xs ${
                   confirmPassword && confirmPassword !== newPassword
-                    ? "border-red-500/30 focus:border-red-500/50 focus:ring-red-500/30"
-                    : "border-white/[0.08] focus:border-nex-blue/50 focus:ring-nex-blue/30"
+                    ? "!border-red-500"
+                    : ""
                 }`}
               />
               <button
                 type="button"
                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-nex-mist hover:text-white transition-colors"
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
               >
                 {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>
             {confirmPassword && confirmPassword !== newPassword && (
-              <p className="text-[10px] text-red-400 mt-1">Passwords do not match.</p>
+              <p className="text-[10px] text-red-500 mt-1">Passwords do not match.</p>
             )}
           </div>
 
@@ -148,7 +148,7 @@ function ResetPasswordForm() {
             <button
               type="submit"
               disabled={loading}
-              className="btn-primary w-full py-3 text-xs font-bold flex items-center justify-center gap-2 shadow-glow-blue"
+              className="futuristic-btn-primary w-full py-3 text-xs font-bold flex items-center justify-center gap-2 rounded-xl"
             >
               {loading ? (
                 <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
@@ -168,32 +168,31 @@ function ResetPasswordForm() {
 
 export default function ResetPasswordPage() {
   return (
-    <div className="relative flex min-h-[100svh] w-full items-center justify-center bg-nex-black px-5 py-12 overflow-hidden">
-      <div className="pointer-events-none absolute inset-0 bg-hero-radial opacity-80" />
-      <div className="pointer-events-none absolute top-1/2 left-1/2 h-[500px] w-[500px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-nex-blue/15 blur-[120px]" />
+    <div className="relative flex min-h-[100svh] w-full items-center justify-center bg-[#F8FAFC] dark:bg-[#070B1A] text-[#0F172A] dark:text-[#F8FAFC] px-5 py-12 overflow-hidden transition-colors">
+      <div className="pointer-events-none absolute -top-40 left-1/4 h-[500px] w-[500px] rounded-full bg-cyan-500/10 blur-[120px]" />
+      <div className="pointer-events-none absolute bottom-40 right-1/4 h-[500px] w-[500px] rounded-full bg-indigo-500/10 blur-[120px]" />
 
       <div className="relative z-10 w-full max-w-md">
         {/* Branding Header */}
         <div className="mb-6 text-center">
           <Link href="/" className="inline-flex items-center gap-2.5 mb-4 group">
             <div className="relative h-10 w-10">
-              <div className="absolute inset-0 rounded-full bg-nex-blue/30 blur-md group-hover:bg-nex-blue/50 transition-colors" />
               <BrandLogo width={80} height={80} sizes="40px" priority className="relative h-full w-full" />
             </div>
-            <span className="font-display text-xl font-bold tracking-tight text-white">
-              NEX <span className="text-nex-blueLight">LAPTECH</span>
+            <span className="font-display text-xl font-bold tracking-tight text-slate-900 dark:text-white">
+              NEX <span className="text-cyan-600 dark:text-cyan-400">LAPTECH</span>
             </span>
           </Link>
-          <h1 className="font-display text-2xl font-bold tracking-tight text-white sm:text-3xl">
-            Reset Your <span className="text-gradient-blue">Password.</span>
+          <h1 className="heading-h1">
+            Reset Your <span className="bg-gradient-to-r from-cyan-500 to-indigo-500 bg-clip-text text-transparent">Password.</span>
           </h1>
-          <p className="mt-1 text-xs text-nex-mist">
+          <p className="mt-1 text-xs text-readable-secondary">
             Set a new secure password for your NexLapTech account.
           </p>
         </div>
 
         <Suspense fallback={
-          <div className="glass-card border border-white/10 bg-nex-ink p-8 text-center text-xs text-nex-mist">
+          <div className="futuristic-card p-8 text-center text-xs text-readable-secondary rounded-2xl">
             Loading reset interface...
           </div>
         }>
@@ -201,7 +200,7 @@ export default function ResetPasswordPage() {
         </Suspense>
 
         <div className="mt-6 text-center">
-          <Link href="/login" className="text-xs text-nex-mist hover:text-white hover:underline">
+          <Link href="/login" className="text-xs text-cyan-600 dark:text-cyan-400 hover:underline font-bold">
             ← Back to Sign In
           </Link>
         </div>

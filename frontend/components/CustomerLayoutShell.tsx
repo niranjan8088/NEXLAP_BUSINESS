@@ -16,7 +16,13 @@ import { useCartStore } from "@/lib/cartStore";
 
 function MobileBottomNav({ onMoreClick }: { onMoreClick: () => void }) {
   const pathname = usePathname() || "";
-  const cartItemCount = useCartStore((s) => s.getItemCount());
+  const [mounted, setMounted] = useState(false);
+  const rawCartItemCount = useCartStore((s) => s.getItemCount());
+  const cartItemCount = mounted ? rawCartItemCount : 0;
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const tabs = [
     { href: "/customer", label: "Home", icon: Home, exact: true },
@@ -32,7 +38,7 @@ function MobileBottomNav({ onMoreClick }: { onMoreClick: () => void }) {
   };
 
   return (
-    <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-[#080B12] border-t border-[#E2E8F0] dark:border-[#263247] flex items-center justify-around px-2 pb-safe shadow-lg">
+    <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-[#0B0718]/95 backdrop-blur-md border-t border-slate-200 dark:border-white/10 flex items-center justify-around px-2 pb-safe shadow-lg">
       {tabs.map((tab) => {
         const active = isActive(tab.href, tab.exact);
         const IconComp = tab.icon;
@@ -43,21 +49,21 @@ function MobileBottomNav({ onMoreClick }: { onMoreClick: () => void }) {
             className={cn(
               "flex flex-col items-center gap-1 py-3 px-3 min-w-0 flex-1 transition-colors relative",
               active
-                ? "text-[#2563EB] dark:text-[#60A5FA]"
-                : "text-[#94A3B8] dark:text-[#64748B]"
+                ? "text-cyan-600 dark:text-cyan-400"
+                : "text-slate-500 dark:text-slate-400"
             )}
           >
             <div className="relative">
               <IconComp className={cn("h-5 w-5 transition-transform", active && "scale-110")} />
               {tab.href === "/customer/shop" && cartItemCount > 0 && (
-                <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#2563EB] text-[8px] font-bold text-white">
+                <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-cyan-500 text-[8px] font-bold text-black">
                   {cartItemCount > 9 ? "9+" : cartItemCount}
                 </span>
               )}
             </div>
             <span className={cn("text-[10px] font-semibold truncate", active && "font-bold")}>{tab.label}</span>
             {active && (
-              <div className="absolute top-0 left-1/2 -translate-x-1/2 h-0.5 w-8 bg-[#2563EB] dark:bg-[#60A5FA] rounded-full" />
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 h-0.5 w-8 bg-cyan-500 rounded-full" />
             )}
           </Link>
         );
@@ -66,7 +72,7 @@ function MobileBottomNav({ onMoreClick }: { onMoreClick: () => void }) {
         type="button"
         onClick={onMoreClick}
         aria-label="More navigation options"
-        className="flex flex-col items-center gap-1 py-3 px-3 min-w-0 flex-1 transition-colors text-[#94A3B8] dark:text-[#64748B]"
+        className="flex flex-col items-center gap-1 py-3 px-3 min-w-0 flex-1 transition-colors text-slate-500 dark:text-slate-400"
       >
         <MoreHorizontal className="h-5 w-5" />
         <span className="text-[10px] font-semibold">More</span>
@@ -114,7 +120,7 @@ export default function CustomerLayoutShell({ children }: { children: React.Reac
   if (isAuthRoute) {
     return (
       <NotificationProvider>
-        <div className="min-h-screen bg-[#F8FAFC] text-[#0F172A] flex flex-col justify-center transition-colors duration-200">
+        <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#070B1A] text-[#0F172A] dark:text-[#F8FAFC] flex flex-col justify-center transition-colors duration-200">
           {children}
         </div>
       </NotificationProvider>
@@ -126,7 +132,7 @@ export default function CustomerLayoutShell({ children }: { children: React.Reac
 
   return (
     <NotificationProvider>
-      <div className="min-h-screen bg-[#F8FAFC] text-[#0F172A] flex flex-col transition-colors duration-200">
+      <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#070B1A] text-[#0F172A] dark:text-[#F8FAFC] flex flex-col transition-colors duration-200">
         {/* Desktop Sidebar — hidden on mobile, shown on lg+ */}
         <CustomerSidebar
           mobileOpen={mobileSidebarOpen}

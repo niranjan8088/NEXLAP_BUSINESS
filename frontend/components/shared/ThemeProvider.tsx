@@ -3,7 +3,6 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 
 export type ThemeId = "day" | "night";
-
 export type GlobalPolicy = "personal" | "forced";
 
 export interface ThemeConfig {
@@ -22,28 +21,31 @@ export const THEME_PRESETS: Record<ThemeId, ThemeConfig> = {
   day: {
     id: "day",
     name: "NexLapTech Light",
-    description: "Premium light storefront experience",
+    description: "Crisp, accessible high-clarity daylight theme",
     mode: "light",
-    primary: "#2563EB",
-    accent: "#0EA5E9",
+    primary: "#4338CA",
+    accent: "#0284C7",
     bg: "#F8FAFC",
     surface: "#FFFFFF",
     text: "#0F172A",
   },
   night: {
     id: "night",
-    name: "NexLapTech Light",
-    description: "Premium light storefront experience",
-    mode: "light",
-    primary: "#2563EB",
-    accent: "#0EA5E9",
-    bg: "#F8FAFC",
-    surface: "#FFFFFF",
-    text: "#0F172A",
+    name: "NexLapTech Obsidian Dark",
+    description: "Deep charcoal dark mode with luminous cobalt accents",
+    mode: "dark",
+    primary: "#38BDF8",
+    accent: "#22D3EE",
+    bg: "#070B1A",
+    surface: "#0B0718",
+    text: "#F8FAFC",
   },
 };
 
-const normalizeTheme = (value?: ThemeId | null): ThemeId => "day";
+const normalizeTheme = (value?: ThemeId | string | null): ThemeId => {
+  if (value === "night" || value === "dark") return "night";
+  return "day";
+};
 
 interface ThemeContextType {
   theme: ThemeId;
@@ -67,25 +69,29 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   // Computed effective active theme
   const effectiveThemeId: ThemeId =
-    globalPolicy === "forced" && THEME_PRESETS[forcedTheme]
+    globalPolicy === "forced"
       ? normalizeTheme(forcedTheme)
-      : THEME_PRESETS[userTheme]
-      ? normalizeTheme(userTheme)
-      : "day";
+      : normalizeTheme(userTheme);
 
   const activeThemeConfig = THEME_PRESETS[effectiveThemeId] || THEME_PRESETS["day"];
 
-  // Apply DOM attributes instantly
+  // Apply DOM attributes & CSS variables
   const applyThemeToDom = (themeId: ThemeId) => {
-    const target = "day";
+    const target = normalizeTheme(themeId);
     document.documentElement.setAttribute("data-theme", target);
-    document.documentElement.classList.add("light", "day");
-    document.documentElement.classList.remove("dark", "night");
+    if (target === "night") {
+      document.documentElement.classList.add("dark", "night");
+      document.documentElement.classList.remove("light", "day");
+    } else {
+      document.documentElement.classList.add("light", "day");
+      document.documentElement.classList.remove("dark", "night");
+    }
   };
 
-  // Helper to map legacy theme strings to day/night
   const mapLegacyTheme = (val: string | null): ThemeId => {
     if (!val) return "day";
+    const lower = val.toLowerCase();
+    if (lower.includes("night") || lower.includes("dark") || lower.includes("obsidian")) return "night";
     return "day";
   };
 
@@ -93,18 +99,21 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     setMounted(true);
     try {
-      const savedUser = localStorage.getItem("nexbyte_theme") || localStorage.getItem("nexbyte-theme") || localStorage.getItem("theme");
+      const savedUser =
+        localStorage.getItem("nexbyte_theme") ||
+        localStorage.getItem("nexbyte-theme") ||
+        localStorage.getItem("theme");
       if (savedUser) {
         setUserTheme(normalizeTheme(mapLegacyTheme(savedUser)));
       }
     } catch (e) {}
 
-    // Load admin global policy from server
+    // Load admin global policy and settings from server
     fetchSystemSettings();
 
     // Listen for custom theme broadcasts
     const handleBroadcast = (e: any) => {
-      if (e.detail?.table === "system_settings") {
+      if (e.detail?.table === "system_settings" || e.detail?.table === "store_settings") {
         fetchSystemSettings();
       }
     };
@@ -112,7 +121,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener("nexbyte-data-changed", handleBroadcast);
   }, []);
 
-  // Fetch admin global policy
+  // Fetch admin global policy and dynamic color tokens
   const fetchSystemSettings = async () => {
     try {
       const res = await fetch("/api/system/settings");
@@ -122,9 +131,26 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         if (data.forcedTheme) {
           setForcedThemeState(normalizeTheme(mapLegacyTheme(data.forcedTheme)));
         }
+
+        // Apply dynamic brand colors if present
+        if (data.appearance?.primaryColor) {
+          document.documentElement.style.setProperty("--color-primary", data.appearance.primaryColor);
+        }
+        if (data.appearance?.accentColor) {
+          document.documentElement.style.setProperty("--color-accent", data.appearance.accentColor);
+        }
+        if (data.appearance?.interfaceDensity) {
+          document.documentElement.setAttribute("data-density", data.appearance.interfaceDensity);
+        }
+        if (data.appearance?.cardRadius) {
+          document.documentElement.setAttribute("data-radius", data.appearance.cardRadius);
+        }
+        if (data.appearance?.fontScale) {
+          document.documentElement.setAttribute("data-font-scale", data.appearance.fontScale);
+        }
       }
     } catch (e) {
-      // ignore
+      // ignore network errors
     }
   };
 
@@ -149,7 +175,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   };
 
   const toggleTheme = () => {
-    setTheme("day");
+    const nextTheme = effectiveThemeId === "night" ? "day" : "night";
+    setTheme(nextTheme);
   };
 
   const setGlobalPolicy = async (policy: GlobalPolicy, forcedThemeId?: ThemeId) => {

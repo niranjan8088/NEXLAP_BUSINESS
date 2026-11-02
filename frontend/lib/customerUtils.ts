@@ -1,0 +1,2 @@
+export { getCustomerInitials } from "./utils";
+

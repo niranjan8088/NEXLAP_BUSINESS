@@ -29,9 +29,12 @@ import {
   Eye,
   EyeOff,
   ShoppingBag,
-  ExternalLink
+  ExternalLink,
+  SlidersHorizontal
 } from "lucide-react";
 import { useCartStore } from "@/lib/cartStore";
+import CustomerPreferencesSection from "@/components/customer/CustomerPreferencesSection";
+import { getCustomerInitials } from "@/lib/utils";
 
 export default function CustomerAccountPortal() {
   const searchParams = useSearchParams();
@@ -160,9 +163,11 @@ export default function CustomerAccountPortal() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to update profile.");
 
-      setProfile(data.profile || { ...profile, full_name: fullName, phone, gender, address, city, state, pincode, country });
+      const saved = data.profile || { ...profile, full_name: fullName, phone, gender, address, city, state, pincode, country };
+      setProfile(saved);
       setEditMode(false);
       setMessage({ type: "success", text: "Profile updated successfully." });
+      window.dispatchEvent(new CustomEvent("nexbyte-profile-update", { detail: { profile: saved } }));
     } catch (err: any) {
       setMessage({ type: "error", text: err.message || "Failed to save profile modifications." });
     } finally {
@@ -189,8 +194,10 @@ export default function CustomerAccountPortal() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Avatar upload failed.");
 
-      setProfile({ ...profile, avatar_url: data.avatarUrl });
+      const updated = { ...profile, avatar_url: data.avatarUrl };
+      setProfile(updated);
       setMessage({ type: "success", text: "Profile photo updated successfully." });
+      window.dispatchEvent(new CustomEvent("nexbyte-profile-update", { detail: { profile: updated } }));
     } catch (err: any) {
       setMessage({ type: "error", text: err.message || "Failed to upload profile picture." });
     } finally {
@@ -206,8 +213,10 @@ export default function CustomerAccountPortal() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to remove avatar.");
 
-      setProfile({ ...profile, avatar_url: "" });
+      const updated = { ...profile, avatar_url: "" };
+      setProfile(updated);
       setMessage({ type: "success", text: "Profile photo removed." });
+      window.dispatchEvent(new CustomEvent("nexbyte-profile-update", { detail: { profile: updated } }));
     } catch (err: any) {
       setMessage({ type: "error", text: err.message });
     } finally {
@@ -272,15 +281,6 @@ export default function CustomerAccountPortal() {
     }
   };
 
-  const getInitials = (name?: string) => {
-    if (!name) return "CU";
-    const parts = name.trim().split(" ");
-    if (parts.length >= 2) {
-      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-    }
-    return name.substring(0, 2).toUpperCase();
-  };
-
   return (
     <div className="min-h-[calc(100vh-10rem)] py-6 text-white relative">
       <div className="pointer-events-none absolute inset-0 bg-hero-radial opacity-60" />
@@ -302,10 +302,12 @@ export default function CustomerAccountPortal() {
                         fill
                         className="object-cover"
                       />
-                    ) : (
+                    ) : getCustomerInitials(profile?.full_name) ? (
                       <span className="text-2xl font-extrabold tracking-wider text-nex-blueLight">
-                        {getInitials(profile?.full_name)}
+                        {getCustomerInitials(profile?.full_name)}
                       </span>
+                    ) : (
+                      <User className="h-10 w-10 text-nex-blueLight" />
                     )}
                   </div>
                   <label
@@ -544,6 +546,7 @@ export default function CustomerAccountPortal() {
           <div className="flex border-b border-white/10 mb-8 overflow-x-auto no-scrollbar">
             {[
               { id: "profile", label: "My Profile", icon: User },
+              { id: "preferences", label: "Preferences", icon: SlidersHorizontal },
               { id: "orders", label: "My Orders", icon: Package, count: orders.length },
               { id: "bookings", label: "My Bookings", icon: Calendar, count: bookings.length },
               { id: "training", label: "My Training", icon: GraduationCap, count: training.length },
@@ -1023,6 +1026,13 @@ export default function CustomerAccountPortal() {
                   ))}
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Tab 9: Customer Preferences */}
+          {activeTab === "preferences" && (
+            <div className="space-y-6">
+              <CustomerPreferencesSection />
             </div>
           )}
 

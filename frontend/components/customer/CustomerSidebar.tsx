@@ -105,11 +105,15 @@ export default function CustomerSidebar({ mobileOpen, setMobileOpen }: CustomerS
   const [showSignOutModal, setShowSignOutModal] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
 
+  const [mounted, setMounted] = useState(false);
   const cartOpen = useCartStore((s) => s.openCart);
-  const cartItemCount = useCartStore((s) => s.getItemCount());
-  const unreadNotifications = useNotificationStore((s) => s.unreadCount);
+  const rawCartItemCount = useCartStore((s) => s.getItemCount());
+  const rawUnreadNotifications = useNotificationStore((s) => s.unreadCount);
+  const cartItemCount = mounted ? rawCartItemCount : 0;
+  const unreadNotifications = mounted ? rawUnreadNotifications : 0;
 
   useEffect(() => {
+    setMounted(true);
     try {
       const saved = localStorage.getItem("nexbyte_sidebar_collapsed");
       if (saved === "true") setCollapsed(true);

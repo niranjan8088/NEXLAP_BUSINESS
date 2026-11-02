@@ -17,6 +17,7 @@ import {
   Calendar,
 } from "lucide-react";
 import { safeJsonFetch } from "@/lib/apiHelper";
+import { getCustomerInitials } from "@/lib/utils";
 
 export default function CustomerProfilePage() {
   const [loading, setLoading] = useState(true);
@@ -97,9 +98,22 @@ export default function CustomerProfilePage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to update profile");
 
-      setProfile(data.profile || { ...profile, full_name: fullName, phone, date_of_birth: dob, gender, address, city, state, pincode, country });
+      const saved = data.profile || { ...profile, full_name: fullName, phone, date_of_birth: dob, gender, address, city, state, pincode, country };
+      setProfile(saved);
+      setFullName(saved.full_name || "");
+      setPhone(saved.phone || "");
+      setDob(saved.date_of_birth || "");
+      setGender(saved.gender || "Not Specified");
+      setAddress(saved.address || "");
+      setCity(saved.city || "");
+      setState(saved.state || "");
+      setPincode(saved.pincode || "");
+      setCountry(saved.country || "India");
       setEditMode(false);
       setMessage({ type: "success", text: "Profile updated successfully." });
+
+      // Immediately notify headers and layout of updated name and profile
+      window.dispatchEvent(new CustomEvent("nexbyte-profile-update", { detail: { profile: saved } }));
     } catch (err: any) {
       setMessage({ type: "error", text: err.message || "Failed to save profile modifications." });
     } finally {
@@ -126,10 +140,32 @@ export default function CustomerProfilePage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Avatar upload failed.");
 
-      setProfile({ ...profile, avatar_url: data.avatarUrl });
+      const updatedProf = { ...profile, avatar_url: data.avatarUrl };
+      setProfile(updatedProf);
       setMessage({ type: "success", text: "Profile photo updated successfully." });
+      window.dispatchEvent(new CustomEvent("nexbyte-profile-update", { detail: { profile: updatedProf } }));
     } catch (err: any) {
       setMessage({ type: "error", text: err.message || "Failed to upload photo." });
+    } finally {
+      setAvatarLoading(false);
+    }
+  };
+
+  const handleRemoveAvatar = async () => {
+    setAvatarLoading(true);
+    setMessage(null);
+
+    try {
+      const res = await fetch("/api/customer/avatar", { method: "DELETE" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to remove photo.");
+
+      const updatedProf = { ...profile, avatar_url: "" };
+      setProfile(updatedProf);
+      setMessage({ type: "success", text: "Profile photo removed." });
+      window.dispatchEvent(new CustomEvent("nexbyte-profile-update", { detail: { profile: updatedProf } }));
+    } catch (err: any) {
+      setMessage({ type: "error", text: err.message || "Failed to remove photo." });
     } finally {
       setAvatarLoading(false);
     }
@@ -169,13 +205,6 @@ export default function CustomerProfilePage() {
     }
   };
 
-  const getInitials = (name?: string) => {
-    if (!name) return "CU";
-    const parts = name.trim().split(" ");
-    if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-    return name.substring(0, 2).toUpperCase();
-  };
-
   return (
     <div className="space-y-6">
       {/* Alert Banner */}
@@ -200,11 +229,13 @@ export default function CustomerProfilePage() {
       <div className="rounded-3xl bg-white dark:bg-slate-900 border border-[#E6EAF0] dark:border-white/10 p-6 sm:p-8 shadow-sm flex flex-col md:flex-row items-center justify-between gap-6">
         <div className="flex items-center gap-5">
           <div className="relative group">
-            <div className="relative h-20 w-20 rounded-2xl overflow-hidden border-2 border-sky-600 bg-sky-50 text-sky-700 font-bold flex items-center justify-center text-xl shadow-sm">
+            <div className="relative h-20 w-20 rounded-2xl overflow-hidden border-2 border-sky-600 bg-sky-50 dark:bg-slate-800 text-sky-700 dark:text-sky-300 font-bold flex items-center justify-center text-xl shadow-sm">
               {profile?.avatar_url ? (
                 <Image src={profile.avatar_url} alt={profile?.full_name || "Customer"} fill className="object-cover" />
+              ) : getCustomerInitials(profile?.full_name) ? (
+                <span>{getCustomerInitials(profile?.full_name)}</span>
               ) : (
-                <span>{getInitials(profile?.full_name)}</span>
+                <User className="h-10 w-10 text-sky-600 dark:text-sky-400" />
               )}
             </div>
             <label
@@ -216,12 +247,23 @@ export default function CustomerProfilePage() {
               <input
                 id="avatar-upload"
                 type="file"
-                accept="image/jpeg,image/png,image/webp"
+                accept="image/jpeg,image/png,image/webp,image/gif"
                 className="hidden"
                 onChange={handleAvatarUpload}
                 disabled={avatarLoading}
               />
             </label>
+            {profile?.avatar_url && (
+              <button
+                type="button"
+                onClick={handleRemoveAvatar}
+                disabled={avatarLoading}
+                className="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full bg-rose-600 text-white shadow-md hover:scale-110 transition-transform"
+                title="Remove Profile Photo"
+              >
+                <Trash2 className="h-3 w-3" />
+              </button>
+            )}
           </div>
 
           <div>

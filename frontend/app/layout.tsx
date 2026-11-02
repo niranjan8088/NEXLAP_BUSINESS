@@ -5,12 +5,26 @@ import FloatingButtons from "@/components/FloatingButtons";
 import NotificationProvider from "@/components/NotificationProvider";
 import ClientModals from "@/components/ClientModals";
 import AppExperience from "@/components/AppExperience";
+import VisitorTracker from "@/components/VisitorTracker";
 
 import { Plus_Jakarta_Sans, Inter } from "next/font/google";
+import localFont from "next/font/local";
+
+const batmanForever = localFont({
+  src: [
+    {
+      path: "../public/fonts/batman/batmfa__.ttf",
+      weight: "100 900",
+      style: "normal",
+    },
+  ],
+  variable: "--font-batman",
+  display: "swap",
+});
 
 const plusJakartaSans = Plus_Jakarta_Sans({
   subsets: ["latin"],
-  variable: "--font-display",
+  variable: "--font-heading-fallback",
   weight: ["600", "700", "800"],
   display: "swap",
 });
@@ -152,7 +166,7 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${plusJakartaSans.variable} ${inter.variable}`} data-theme="day" suppressHydrationWarning>
+    <html lang="en" className={`${plusJakartaSans.variable} ${inter.variable} ${batmanForever.variable}`} data-theme="day" suppressHydrationWarning>
       <head>
         <style dangerouslySetInnerHTML={{ __html: `
           :root { --loader-bg: #0B1F4D; --brand-blue: #1E5BFF; --brand-cyan: #19C3F0; --loader-duration: 1.6s; }
@@ -182,7 +196,7 @@ export default function RootLayout({
                         root.classList.remove('nexlap-entry-active');
                         try { sessionStorage.setItem('nexlap-entry-seen', '1'); } catch (e) {}
                       }
-                    }, 2500);
+                    }, 450);
                   }
                 } catch (e) {}
               })();
@@ -199,10 +213,18 @@ export default function RootLayout({
             __html: `
               (function() {
                 try {
+                  var saved = localStorage.getItem('nexbyte_theme') || localStorage.getItem('nexbyte-theme') || localStorage.getItem('theme');
+                  var isDark = saved === 'night' || saved === 'dark';
                   var root = document.documentElement;
-                  root.setAttribute('data-theme', 'day');
-                  root.classList.add('light', 'day');
-                  root.classList.remove('dark', 'night');
+                  if (isDark) {
+                    root.setAttribute('data-theme', 'night');
+                    root.classList.add('dark', 'night');
+                    root.classList.remove('light', 'day');
+                  } else {
+                    root.setAttribute('data-theme', 'day');
+                    root.classList.add('light', 'day');
+                    root.classList.remove('dark', 'night');
+                  }
                 } catch (e) {}
               })();
             `,
@@ -226,8 +248,9 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="font-body antialiased bg-nex-bg text-nex-text min-h-screen">
+      <body className="font-body antialiased bg-[#F8FAFC] dark:bg-[#070B1A] text-[#0F172A] dark:text-[#F8FAFC] min-h-screen transition-colors duration-200">
         <ThemeProvider>
+          <VisitorTracker />
           <NotificationProvider>
             <AppExperience>{children}</AppExperience>
             <FloatingButtons />

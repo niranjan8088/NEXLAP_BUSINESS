@@ -9,6 +9,7 @@ import {
   Menu,
   X,
   Sun,
+  Moon,
   ShoppingBag,
   LogOut,
   User,
@@ -28,7 +29,9 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCartStore } from "@/lib/cartStore";
+import { useTheme } from "@/components/ThemeProvider";
 import GlobalSearchModal from "@/components/GlobalSearchModal";
+import AnnouncementBar from "@/components/AnnouncementBar";
 
 // Clean Primary Navigation
 const PRIMARY_NAV_LINKS = [
@@ -50,6 +53,8 @@ const SECONDARY_NAV_LINKS = [
 ];
 
 export default function Navbar() {
+  const { theme, toggleTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -57,6 +62,10 @@ export default function Navbar() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     const cookies = document.cookie.split(";").reduce((acc: Record<string, string>, c) => {
@@ -82,7 +91,8 @@ export default function Navbar() {
   };
 
   const cartOpen = useCartStore((s) => s.openCart);
-  const cartItemCount = useCartStore((s) => s.getItemCount());
+  const rawCartItemCount = useCartStore((s) => s.getItemCount());
+  const cartItemCount = mounted ? rawCartItemCount : 0;
 
   return (
     <>
@@ -91,11 +101,12 @@ export default function Navbar() {
         className={cn(
           "fixed top-0 z-40 w-full transition-all duration-300 ease-out",
           scrolled
-            ? "bg-white/95 dark:bg-black/95 backdrop-blur-xl border-b border-neutral-200 dark:border-neutral-800 py-2.5 shadow-sm"
-            : "bg-white/80 dark:bg-black/80 backdrop-blur-md border-b border-neutral-100 dark:border-neutral-900 py-3.5"
+            ? "bg-white/95 dark:bg-[#070B1A]/95 backdrop-blur-xl border-b border-slate-200/90 dark:border-white/10 shadow-sm"
+            : "bg-white/80 dark:bg-[#070B1A]/80 backdrop-blur-md border-b border-slate-200/50 dark:border-white/5"
         )}
       >
-        <nav className="mx-auto flex max-w-7xl items-center justify-between px-4 sm:px-6">
+        <AnnouncementBar />
+        <nav className="mx-auto flex max-w-7xl items-center justify-between px-4 sm:px-6 py-2.5">
           {/* Logo */}
           <Link
             href={isAuthenticated ? "/customer" : "/"}
@@ -124,8 +135,8 @@ export default function Navbar() {
                     className={cn(
                       "px-3.5 py-1.5 text-xs font-bold transition-all rounded-full block",
                       linkActive
-                        ? "bg-blue-700 text-white shadow-sm"
-                        : "text-neutral-700 dark:text-neutral-300 hover:text-black dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-900"
+                        ? "bg-indigo-600 dark:bg-cyan-500 text-white dark:text-slate-950 shadow-sm"
+                        : "text-slate-700 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-cyan-400 hover:bg-slate-100 dark:hover:bg-white/5"
                     )}
                   >
                     {link.label}
@@ -138,7 +149,7 @@ export default function Navbar() {
             <li className="relative">
               <button
                 onClick={() => setMoreMenuOpen(!moreMenuOpen)}
-                className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-neutral-700 dark:text-neutral-300 hover:text-black dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-900 rounded-full transition-all"
+                className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-slate-700 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-cyan-400 hover:bg-slate-100 dark:hover:bg-white/5 rounded-full transition-all"
               >
                 <span>More</span>
                 <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", moreMenuOpen && "rotate-180")} />
@@ -151,7 +162,7 @@ export default function Navbar() {
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 6, scale: 0.96 }}
                     transition={{ duration: 0.15 }}
-                    className="absolute left-0 mt-2 w-52 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-black p-2 shadow-xl z-50"
+                    className="absolute left-0 mt-2 w-52 rounded-2xl border border-slate-200 dark:border-white/10 bg-white/95 dark:bg-[#0B0718]/95 backdrop-blur-xl p-2 shadow-xl z-50"
                   >
                     {SECONDARY_NAV_LINKS.map((item) => {
                       const IconComponent = item.icon;
@@ -160,9 +171,9 @@ export default function Navbar() {
                           key={item.href}
                           href={item.href}
                           onClick={() => setMoreMenuOpen(false)}
-                          className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-semibold text-neutral-800 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
+                          className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-semibold text-slate-800 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors"
                         >
-                          <IconComponent className="h-4 w-4 text-black dark:text-white shrink-0" />
+                          <IconComponent className="h-4 w-4 text-indigo-600 dark:text-cyan-400 shrink-0" />
                           <span>{item.label}</span>
                         </Link>
                       );
@@ -179,9 +190,9 @@ export default function Navbar() {
             <button
               onClick={() => setSearchOpen(true)}
               aria-label="Smart Search"
-              className="flex items-center gap-2 rounded-full border border-neutral-200 dark:border-neutral-800 bg-neutral-100 dark:bg-neutral-900 px-3 py-1.5 text-xs font-medium text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-colors"
+              className="flex items-center gap-2 rounded-full border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/5 px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-white/10 transition-colors"
             >
-              <Search className="h-3.5 w-3.5 text-neutral-500 dark:text-neutral-400" />
+              <Search className="h-3.5 w-3.5 text-slate-400 dark:text-slate-400" />
               <span className="hidden sm:inline">Search products &amp; services...</span>
             </button>
 
@@ -189,11 +200,11 @@ export default function Navbar() {
             <button
               onClick={cartOpen}
               aria-label="Shopping Cart"
-              className="relative flex h-9 w-9 items-center justify-center rounded-full border border-neutral-200 dark:border-neutral-800 bg-neutral-100 dark:bg-neutral-900 text-black dark:text-white hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-colors"
+              className="relative flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/5 text-slate-800 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-white/10 transition-colors"
             >
               <ShoppingBag className="h-4 w-4" />
               {cartItemCount > 0 && (
-                <span className="absolute -top-1 -right-1 flex h-4.5 w-4.5 items-center justify-center rounded-full bg-black text-white dark:bg-white dark:text-black text-[9px] font-bold shadow-sm">
+                <span className="absolute -top-1 -right-1 flex h-4.5 w-4.5 items-center justify-center rounded-full bg-indigo-600 dark:bg-cyan-500 text-white dark:text-slate-950 text-[9px] font-bold shadow-sm">
                   {cartItemCount}
                 </span>
               )}
@@ -204,26 +215,31 @@ export default function Navbar() {
               <Link
                 href="/customer/notifications"
                 aria-label="Notifications"
-                className="hidden sm:flex h-9 w-9 items-center justify-center rounded-full border border-neutral-200 dark:border-neutral-800 bg-neutral-100 dark:bg-neutral-900 text-black dark:text-white hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-colors"
+                className="hidden sm:flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/5 text-slate-800 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-white/10 transition-colors"
               >
                 <Bell className="h-4 w-4" />
               </Link>
             )}
 
-            {/* Theme is fixed to light mode. */}
-            <div
-              role="status"
-              aria-label="Light theme active"
-              title="Light theme active"
-              className="flex h-9 w-9 items-center justify-center rounded-full border border-neutral-200 dark:border-neutral-800 bg-neutral-100 dark:bg-neutral-900 text-black dark:text-white hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-colors"
+            {/* Interactive Theme Toggle Switch */}
+            <button
+              onClick={toggleTheme}
+              type="button"
+              aria-label={theme === "night" ? "Switch to Daylight Theme" : "Switch to Obsidian Dark Theme"}
+              title={theme === "night" ? "Switch to Daylight Theme" : "Switch to Obsidian Dark Theme"}
+              className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/5 text-slate-800 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-white/10 transition-colors cursor-pointer"
             >
-              <Sun className="h-4 w-4 text-amber-500" />
-            </div>
+              {theme === "night" ? (
+                <Sun className="h-4 w-4 text-amber-400" />
+              ) : (
+                <Moon className="h-4 w-4 text-indigo-600" />
+              )}
+            </button>
 
             {/* Get Help CTA button */}
             <Link
               href="/contact"
-              className="hidden md:inline-flex items-center gap-1.5 rounded-full bg-blue-700 text-white font-bold text-xs px-4 py-2 shadow-sm hover:bg-blue-800 transition-all"
+              className="hidden md:inline-flex items-center gap-1.5 rounded-full bg-indigo-600 hover:bg-indigo-700 dark:bg-cyan-500 dark:hover:bg-cyan-400 text-white dark:text-slate-950 font-bold text-xs px-4 py-2 shadow-sm transition-all"
             >
               <HelpCircle className="h-3.5 w-3.5" /> Get Help
             </Link>
@@ -307,7 +323,7 @@ export default function Navbar() {
               animate={{ height: "auto", opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
               transition={{ duration: 0.25 }}
-              className="lg:hidden overflow-hidden border-t border-neutral-200 dark:border-neutral-800 bg-white dark:bg-black px-4 py-4 space-y-3"
+              className="lg:hidden overflow-hidden border-t border-slate-200 dark:border-white/10 bg-white/95 dark:bg-[#0B0718]/95 backdrop-blur-xl px-4 py-4 space-y-3"
             >
               <div className="grid grid-cols-2 gap-2 text-xs">
                 {PRIMARY_NAV_LINKS.map((link) => (
@@ -316,10 +332,10 @@ export default function Navbar() {
                     href={link.href}
                     onClick={() => setMobileMenuOpen(false)}
                     className={cn(
-                      "flex items-center gap-2 rounded-xl p-3 font-semibold",
+                      "flex items-center gap-2 rounded-xl p-3 font-semibold transition-colors",
                       isActive(link.href)
-                        ? "bg-black text-white dark:bg-white dark:text-black"
-                        : "bg-neutral-100 dark:bg-neutral-900 text-neutral-800 dark:text-neutral-200"
+                        ? "bg-indigo-600 dark:bg-cyan-500 text-white dark:text-slate-950 font-bold"
+                        : "bg-slate-100 dark:bg-white/5 text-slate-800 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-white/10"
                     )}
                   >
                     <link.icon className="h-4 w-4 shrink-0" />
@@ -328,17 +344,17 @@ export default function Navbar() {
                 ))}
               </div>
 
-              <div className="border-t border-neutral-200 dark:border-neutral-800 pt-3">
-                <span className="text-[10px] uppercase font-bold text-neutral-400 block mb-2">More Options</span>
+              <div className="border-t border-slate-200 dark:border-white/10 pt-3">
+                <span className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 block mb-2">More Options</span>
                 <div className="grid grid-cols-2 gap-2 text-xs">
                   {SECONDARY_NAV_LINKS.map((item) => (
                     <Link
                       key={item.href}
                       href={item.href}
                       onClick={() => setMobileMenuOpen(false)}
-                      className="flex items-center gap-2 rounded-xl bg-neutral-100 dark:bg-neutral-900 p-2.5 text-neutral-800 dark:text-neutral-200 font-medium"
+                      className="flex items-center gap-2 rounded-xl bg-slate-100 dark:bg-white/5 p-2.5 text-slate-800 dark:text-slate-200 font-medium hover:bg-slate-200 dark:hover:bg-white/10 transition-colors"
                     >
-                      <item.icon className="h-4 w-4 text-black dark:text-white shrink-0" />
+                      <item.icon className="h-4 w-4 text-indigo-600 dark:text-cyan-400 shrink-0" />
                       <span className="truncate">{item.label}</span>
                     </Link>
                   ))}
@@ -350,13 +366,13 @@ export default function Navbar() {
       </header>
 
       {/* MOBILE BOTTOM NAVIGATION BAR */}
-      <nav aria-label="Mobile Navigation" className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-black/95 backdrop-blur-xl border-t border-neutral-200 dark:border-neutral-800 px-2 py-1.5 shadow-lg">
+      <nav aria-label="Mobile Navigation" className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-[#070B1A]/95 backdrop-blur-xl border-t border-slate-200 dark:border-white/10 px-2 py-1.5 shadow-lg">
         <div className="grid grid-cols-5 items-center text-center">
           <Link
             href={isAuthenticated ? "/customer" : "/"}
             className={cn(
               "flex flex-col items-center gap-0.5 py-1 text-[10px] font-bold transition-colors",
-              isActive("/") ? "text-black dark:text-white" : "text-neutral-500 dark:text-neutral-400"
+              isActive("/") ? "text-indigo-600 dark:text-cyan-400" : "text-slate-500 dark:text-slate-400"
             )}
           >
             <Home className="h-5 w-5" />
@@ -367,7 +383,7 @@ export default function Navbar() {
             href="/products"
             className={cn(
               "flex flex-col items-center gap-0.5 py-1 text-[10px] font-bold transition-colors",
-              isActive("/products") ? "text-black dark:text-white" : "text-neutral-500 dark:text-neutral-400"
+              isActive("/products") ? "text-indigo-600 dark:text-cyan-400" : "text-slate-500 dark:text-slate-400"
             )}
           >
             <ShoppingBag className="h-5 w-5" />
@@ -378,7 +394,7 @@ export default function Navbar() {
             href="/services"
             className={cn(
               "flex flex-col items-center gap-0.5 py-1 text-[10px] font-bold transition-colors",
-              isActive("/services") ? "text-black dark:text-white" : "text-neutral-500 dark:text-neutral-400"
+              isActive("/services") ? "text-indigo-600 dark:text-cyan-400" : "text-slate-500 dark:text-slate-400"
             )}
           >
             <Wrench className="h-5 w-5" />
@@ -389,7 +405,7 @@ export default function Navbar() {
             href="/customer/requests"
             className={cn(
               "flex flex-col items-center gap-0.5 py-1 text-[10px] font-bold transition-colors",
-              isActive("/customer/requests") ? "text-black dark:text-white" : "text-neutral-500 dark:text-neutral-400"
+              isActive("/customer/requests") ? "text-indigo-600 dark:text-cyan-400" : "text-slate-500 dark:text-slate-400"
             )}
           >
             <Package className="h-5 w-5" />
@@ -400,7 +416,7 @@ export default function Navbar() {
             href={isAuthenticated ? "/customer/profile" : "/customer/signin"}
             className={cn(
               "flex flex-col items-center gap-0.5 py-1 text-[10px] font-bold transition-colors",
-              isActive("/customer/profile") || isActive("/customer/signin") ? "text-black dark:text-white" : "text-neutral-500 dark:text-neutral-400"
+              isActive("/customer/profile") || isActive("/customer/signin") ? "text-indigo-600 dark:text-cyan-400" : "text-slate-500 dark:text-slate-400"
             )}
           >
             <User className="h-5 w-5" />

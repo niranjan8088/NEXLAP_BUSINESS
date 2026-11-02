@@ -128,7 +128,7 @@ export default function AppExperience({ children }: { children: React.ReactNode 
     document.addEventListener("error", updateProgress, true);
     window.addEventListener("load", finishEntry, { once: true });
     updateProgress();
-    entrySafetyTimer.current = setTimeout(finishEntry, 1900);
+    entrySafetyTimer.current = setTimeout(finishEntry, 400);
 
     return () => {
       document.removeEventListener("readystatechange", updateProgress);
@@ -159,13 +159,12 @@ export default function AppExperience({ children }: { children: React.ReactNode 
     const finishPendingNavigation = () => {
       if (navigationProgressInterval.current) clearInterval(navigationProgressInterval.current);
       setNavigationProgress(100);
-      setPagePhase("entering");
+      setPagePhase("idle");
       if (navigationTimer.current) clearTimeout(navigationTimer.current);
       navigationTimer.current = setTimeout(() => {
         setNavigationVisible(false);
         setNavigationProgress(0);
-        setPagePhase("idle");
-      }, 220);
+      }, 150);
     };
 
     const handleClick = (event: MouseEvent) => {
@@ -184,42 +183,29 @@ export default function AppExperience({ children }: { children: React.ReactNode 
       if (destination.pathname === window.location.pathname && destination.search === window.location.search) return;
       if (destination.pathname === window.location.pathname && destination.hash) return;
 
+      // Instant top progress bar response without blacking out the screen
       setNavigationVisible(true);
-      setNavigationProgress(8);
-      setPagePhase("leaving");
+      setNavigationProgress(30);
       if (navigationProgressInterval.current) clearInterval(navigationProgressInterval.current);
-      let progress = 8;
+      let progress = 30;
       navigationProgressInterval.current = setInterval(() => {
-        if (progress >= 90) return;
-        progress = Math.min(90, progress + 8);
+        if (progress >= 85) return;
+        progress = Math.min(85, progress + 12);
         setNavigationProgress(progress);
-      }, 65);
+      }, 50);
       if (navigationFailsafe.current) clearTimeout(navigationFailsafe.current);
-      navigationFailsafe.current = setTimeout(finishPendingNavigation, 1800);
-    };
-
-    const prefetchLink = (event: Event) => {
-      const target = event.target;
-      if (!(target instanceof Element)) return;
-      const anchor = target.closest("a[href]");
-      if (!(anchor instanceof HTMLAnchorElement)) return;
-      const destination = new URL(anchor.href, window.location.href);
-      if (destination.origin === window.location.origin) router.prefetch(destination.pathname + destination.search);
+      navigationFailsafe.current = setTimeout(finishPendingNavigation, 1200);
     };
 
     document.addEventListener("click", handleClick, true);
-    document.addEventListener("pointerover", prefetchLink, true);
-    document.addEventListener("focusin", prefetchLink, true);
 
     return () => {
       document.removeEventListener("click", handleClick, true);
-      document.removeEventListener("pointerover", prefetchLink, true);
-      document.removeEventListener("focusin", prefetchLink, true);
       if (navigationProgressInterval.current) clearInterval(navigationProgressInterval.current);
       if (navigationTimer.current) clearTimeout(navigationTimer.current);
       if (navigationFailsafe.current) clearTimeout(navigationFailsafe.current);
     };
-  }, [router]);
+  }, []);
 
   return (
     <>

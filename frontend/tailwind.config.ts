@@ -32,6 +32,28 @@ const config: Config = {
           white: "var(--color-surface, #FFFFFF)",
           mist: "var(--color-text-secondary, #0B1F4D)",
         },
+        // Premium Futuristic Enterprise Design Palette
+        futuristic: {
+          midnight: "#070B1A",       // Deep midnight navy
+          deepViolet: "#0B0718",     // Deep black-violet
+          cardDark: "rgba(15, 23, 42, 0.75)",
+          borderDark: "rgba(255, 255, 255, 0.08)",
+          indigo: "#4338CA",         // Enterprise Indigo
+          cyan: "#22D3EE",           // Electric Cyan
+          violet: "#8B5CF6",         // Neon Violet
+          holoBlue: "#38BDF8",       // Holographic Blue
+          amber: "#F59E0B",          // Amber
+          // Text tokens
+          headingDark: "#F8FAFC",
+          bodyDark: "#CBD5E1",
+          secondaryDark: "#94A3B8",
+          mutedDark: "#A8B3C7",
+          linkDark: "#67E8F9",
+          headingLight: "#0F172A",
+          bodyLight: "#334155",
+          secondaryLight: "#475569",
+          borderLight: "#CBD5E1",
+        },
         blue: {
           50: "#f0f5ff",
           100: "#e0eaff",
@@ -58,8 +80,19 @@ const config: Config = {
         },
       },
       fontFamily: {
-        display: ["var(--font-display)", "sans-serif"],
-        body: ["var(--font-body)", "sans-serif"],
+        display: [
+          "BatmanForeverAlternate",
+          "Batman Forever",
+          "var(--font-display)",
+          "sans-serif",
+        ],
+        batman: [
+          "BatmanForeverAlternate",
+          "Batman Forever",
+          "sans-serif",
+        ],
+        body: ["var(--font-body)", "Plus Jakarta Sans", "sans-serif"],
+        sans: ["var(--font-body)", "Plus Jakarta Sans", "sans-serif"],
       },
       boxShadow: {
         "glow-blue": "0 0 20px var(--color-primary-glow, rgba(14,165,233,0.25)), 0 0 60px var(--color-primary-soft, rgba(14,165,233,0.15))",

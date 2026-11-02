@@ -66,6 +66,16 @@ function ProductsCatalogContent() {
   const [products, setProducts] = useState<Product[]>([]);
   const [filterDefinitions, setFilterDefinitions] = useState<FilterDefinition[]>([]);
   const [loading, setLoading] = useState(true);
+  const [productDisplayConfig, setProductDisplayConfig] = useState<any>(null);
+
+  useEffect(() => {
+    fetch("/api/public/settings")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.productDisplay) setProductDisplayConfig(data.productDisplay);
+      })
+      .catch(() => {});
+  }, []);
 
   // Favorites & Compare State
   const [wishlist, setWishlist] = useState<string[]>([]);
@@ -396,18 +406,18 @@ function ProductsCatalogContent() {
   };
 
   return (
-    <div className={cn("text-[#0F172A] flex flex-col transition-colors", !isCustomerPortal && "min-h-screen bg-[#F8FAFC]")}>
+    <div className={cn("text-slate-900 dark:text-slate-100 flex flex-col transition-colors duration-200", !isCustomerPortal && "min-h-screen bg-[#F8FAFC] dark:bg-[#070B1A]")}>
       {/* Header rendering */}
       {!isCustomerPortal && <Navbar />}
 
       <main className={cn("flex-1 py-4 max-w-7xl mx-auto w-full", !isCustomerPortal ? "pt-24 px-4 sm:px-6 lg:px-8" : "pt-2")}>
         
         {/* Breadcrumbs Banner */}
-        <div className="flex items-center gap-1.5 text-xs text-[#64748B] dark:text-[#94A3B8] mb-3 font-medium">
+        <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 mb-3 font-medium">
           {activeCategoryInfo.breadcrumb.map((crumb, idx) => (
             <div key={idx} className="flex items-center gap-1.5">
-              {idx > 0 && <span className="text-[#CBD5E1] dark:text-[#334B68]">/</span>}
-              <span className={idx === activeCategoryInfo.breadcrumb.length - 1 ? "text-[#2563EB] dark:text-[#60A5FA] font-bold" : ""}>
+              {idx > 0 && <span className="text-slate-300 dark:text-slate-600">/</span>}
+              <span className={idx === activeCategoryInfo.breadcrumb.length - 1 ? "text-indigo-600 dark:text-cyan-400 font-bold" : ""}>
                 {crumb}
               </span>
             </div>
@@ -417,11 +427,11 @@ function ProductsCatalogContent() {
         {/* Page Heading & Subheadline */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6">
           <div>
-            <h1 className="font-display text-2xl sm:text-3xl font-extrabold text-[#111827] dark:text-[#F8FAFC] tracking-tight">
+            <h1 className="heading-h2">
               {activeCategoryInfo.label}
             </h1>
-            <p className="text-xs text-[#64748B] dark:text-[#94A3B8] mt-1 font-medium">
-              Showing <span className="font-bold text-[#111827] dark:text-white">{totalResults > 0 ? (currentPage - 1) * pageSize + 1 : 0}–{Math.min(currentPage * pageSize, totalResults)}</span> of <span className="font-bold text-[#111827] dark:text-white">{totalResults}</span> verified products
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium">
+              Showing <span className="font-bold text-slate-900 dark:text-slate-100">{totalResults > 0 ? (currentPage - 1) * pageSize + 1 : 0}–{Math.min(currentPage * pageSize, totalResults)}</span> of <span className="font-bold text-slate-900 dark:text-slate-100">{totalResults}</span> verified products
             </p>
           </div>
 
@@ -807,11 +817,11 @@ function ProductsCatalogContent() {
                   return (
                     <div
                       key={prod.id}
-                      className="rounded-2xl border border-[#E2E8F0] dark:border-[#2A3B50] bg-white dark:bg-[#101B2B] p-4 shadow-[0_1px_3px_rgba(15,23,42,0.08),0_4px_12px_rgba(15,23,42,0.05)] hover:shadow-md transition-all duration-300 flex flex-col justify-between group relative hover:-translate-y-1 hover:border-[#2563EB]/40"
+                      className="futuristic-card p-4 transition-all duration-300 flex flex-col justify-between group relative hover:-translate-y-1 hover:border-cyan-500/40 dark:hover:border-cyan-400/40"
                     >
                       <div>
                         {/* Product Image & Badges */}
-                        <div className="relative aspect-square w-full rounded-xl overflow-hidden bg-[#F1F5F9] dark:bg-[#162438] p-4 flex items-center justify-center mb-3 border border-[#E2E8F0] dark:border-[#2A3B50]">
+                        <div className="relative aspect-square w-full rounded-xl overflow-hidden bg-slate-50 dark:bg-white/[0.03] p-4 flex items-center justify-center mb-3 border border-slate-100 dark:border-white/5">
                           <Link href={`/products/${prod.id}`} className="w-full h-full flex items-center justify-center">
                             <img
                               src={getSafeImageSrc(prod.image)}
@@ -824,7 +834,7 @@ function ProductsCatalogContent() {
 
                           {/* Discount Badge */}
                           {savePercent > 0 && (
-                            <span className="absolute top-2.5 left-2.5 rounded-full bg-[#2563EB] text-white px-2.5 py-0.5 text-[10px] font-bold shadow-sm pointer-events-none">
+                            <span className="absolute top-2.5 left-2.5 rounded-full bg-indigo-600 dark:bg-cyan-500 text-white dark:text-slate-950 px-2.5 py-0.5 text-[10px] font-bold shadow-sm pointer-events-none">
                               {savePercent}% OFF
                             </span>
                           )}
@@ -837,36 +847,50 @@ function ProductsCatalogContent() {
                               toggleWishlist(prod.id);
                             }}
                             aria-label={isFav ? `Remove ${prod.title} from wishlist` : `Add ${prod.title} to wishlist`}
-                            className="absolute top-2.5 right-2.5 z-10 h-8 w-8 rounded-full bg-white dark:bg-[#101B2B] border border-[#E2E8F0] dark:border-[#263247] flex items-center justify-center text-[#0F172A] dark:text-white shadow-sm hover:scale-110 transition-all cursor-pointer"
+                            className="absolute top-2.5 right-2.5 z-10 h-8 w-8 rounded-full bg-white/90 dark:bg-[#070B1A]/90 border border-slate-200 dark:border-white/10 flex items-center justify-center text-slate-700 dark:text-slate-200 shadow-sm hover:scale-110 transition-all cursor-pointer"
                           >
                             <Heart className={cn("h-4 w-4", isFav && "fill-rose-500 text-rose-500")} />
                           </button>
                         </div>
 
                         {/* Brand & SKU */}
-                        <div className="flex items-center justify-between text-[10px] text-[#64748B] dark:text-[#94A3B8] font-semibold mb-1">
-                          {prod.brand && <span className="uppercase tracking-wider text-[#2563EB] font-bold">{prod.brand}</span>}
-                          {prod.sku && <span className="bg-[#F1F5F9] dark:bg-[#162438] text-[#475569] dark:text-[#CFFAFE] border border-[#E2E8F0] dark:border-[#263247] px-2 py-0.5 rounded font-mono">SKU: {prod.sku}</span>}
+                        <div className="flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400 font-semibold mb-1">
+                          {prod.brand && <span className="uppercase tracking-wider text-indigo-600 dark:text-cyan-400 font-bold">{prod.brand}</span>}
+                          {productDisplayConfig?.showSku !== false && prod.sku && (
+                            <span className="bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-white/10 px-2 py-0.5 rounded font-mono">
+                              SKU: {prod.sku}
+                            </span>
+                          )}
                         </div>
 
                         {/* Product Title */}
-                        <Link href={`/products/${prod.id}`} className="hover:text-[#2563EB] dark:hover:text-[#60A5FA] transition-colors block">
-                          <h3 className="font-display text-sm font-bold text-[#0F172A] dark:text-white line-clamp-2 leading-tight">
+                        <Link href={`/products/${prod.id}`} className="hover:text-indigo-600 dark:hover:text-cyan-400 transition-colors block">
+                          <h3 className="font-display text-sm font-bold text-slate-900 dark:text-slate-100 line-clamp-2 leading-tight">
                             {prod.title}
                           </h3>
                         </Link>
 
                         {/* Rating & Reviews */}
-                        <div className="flex items-center gap-1.5 mt-1.5 text-xs">
-                          <div className="flex items-center gap-0.5 text-[#F59E0B] font-bold">
-                            <Star className="h-3.5 w-3.5 fill-[#F59E0B] text-[#F59E0B]" />
-                            <span>{specs.rating || 4.5}</span>
+                        {productDisplayConfig?.showRatings !== false && (
+                          <div className="flex items-center gap-1.5 mt-1.5 text-xs">
+                            <div className="flex items-center gap-0.5 text-amber-500 font-bold">
+                              <Star className="h-3.5 w-3.5 fill-amber-500 text-amber-500" />
+                              <span>{specs.rating || 4.5}</span>
+                            </div>
+                            <span className="text-slate-500 dark:text-slate-400 text-[11px]">({specs.reviewsCount || 12} reviews)</span>
                           </div>
-                          <span className="text-[#64748B] dark:text-[#94A3B8] text-[11px]">({specs.reviewsCount || 12} reviews)</span>
-                        </div>
+                        )}
+
+                        {/* Optional Warranty Badge on Card */}
+                        {productDisplayConfig?.showWarrantyBadge && (
+                          <div className="mt-1 flex items-center gap-1 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                            <ShieldCheck className="h-3 w-3" />
+                            <span>{prod.warranty || "Warranty Backed"}</span>
+                          </div>
+                        )}
 
                         {/* DYNAMIC STRUCTURED SPECIFICATION HIGHLIGHTS */}
-                        <div className="mt-2.5 space-y-1 text-[11px] text-[#475569] dark:text-[#CBD5E1] bg-[#F1F5F9] dark:bg-[#162438] p-2.5 rounded-xl border border-[#E2E8F0] dark:border-[#2A3B50]">
+                        <div className="mt-2.5 space-y-1 text-[11px] text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-white/[0.03] p-2.5 rounded-xl border border-slate-100 dark:border-white/5">
                           {specs.processor && <div className="truncate">⚡ <strong>CPU:</strong> {specs.processor} {specs.processorGen}</div>}
                           {specs.ramCapacity && <div className="truncate">🧠 <strong>RAM:</strong> {specs.ramCapacity} {specs.ramType}</div>}
                           {specs.ssdCapacity && <div className="truncate">💾 <strong>Storage:</strong> {specs.ssdCapacity} {specs.storageType}</div>}
@@ -876,15 +900,15 @@ function ProductsCatalogContent() {
                       </div>
 
                       {/* Pricing & Actions */}
-                      <div className="mt-4 pt-3 border-t border-[#E2E8F0] dark:border-[#2A3B50] flex items-center justify-between">
+                      <div className="mt-4 pt-3 border-t border-slate-100 dark:border-white/10 flex items-center justify-between">
                         <div>
-                          <span className="text-[10px] text-[#64748B] dark:text-[#94A3B8] uppercase font-bold block">Selling Price</span>
+                          <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-bold block">Selling Price</span>
                           <div className="flex items-baseline gap-1.5">
-                            <span className="font-display text-base font-extrabold text-[#0F172A] dark:text-white">
+                            <span className="font-display text-base font-extrabold text-slate-900 dark:text-slate-50">
                               ₹{effectivePrice.toLocaleString("en-IN")}
                             </span>
                             {hasCompareAt && (
-                              <span className="text-xs text-[#64748B] dark:text-[#94A3B8] line-through">
+                              <span className="text-xs text-slate-400 dark:text-slate-500 line-through">
                                 ₹{effectiveComparePrice.toLocaleString("en-IN")}
                               </span>
                             )}
@@ -894,23 +918,23 @@ function ProductsCatalogContent() {
                         <div className="flex items-center gap-1.5">
                           <Link
                             href={`/products/${prod.id}`}
-                            className="rounded-xl border border-[#E2E8F0] dark:border-[#2A3B50] bg-white dark:bg-[#162438] px-3 py-2 text-xs font-bold text-[#0F172A] dark:text-white hover:bg-[#F1F5F9] dark:hover:bg-[#1f3048] cursor-pointer shadow-xs"
+                            className="futuristic-btn-secondary px-3 py-1.5 text-xs"
                           >
                             Details
                           </Link>
 
-                          <button
-                            disabled={isOutOfStock}
-                            onClick={() => addToCart(prod)}
-                            className={cn(
-                              "rounded-xl px-3.5 py-2 text-xs font-bold shadow-xs transition-all flex items-center gap-1",
-                              isOutOfStock
-                                ? "bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed"
-                                : "bg-[#2563EB] hover:bg-[#1D4ED8] text-white"
-                            )}
-                          >
-                            <ShoppingBag className="h-3.5 w-3.5" /> +Cart
-                          </button>
+                          {productDisplayConfig?.showQuickAddToCart !== false && (
+                            <button
+                              disabled={isOutOfStock}
+                              onClick={() => addToCart(prod)}
+                              className={cn(
+                                "futuristic-btn-primary px-3 py-1.5 text-xs flex items-center gap-1",
+                                isOutOfStock && "opacity-50 cursor-not-allowed"
+                              )}
+                            >
+                              <ShoppingBag className="h-3.5 w-3.5" /> +Cart
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>

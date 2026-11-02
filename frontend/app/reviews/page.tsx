@@ -138,7 +138,7 @@ export default function CustomerReviewsPage() {
     <>
       <Navbar />
 
-      <main className="relative min-h-screen bg-slate-50 dark:bg-slate-950 pt-24 pb-16 px-4 sm:px-6 lg:px-8">
+      <main className="relative min-h-screen bg-[#F8FAFC] dark:bg-[#070B1A] text-[#0F172A] dark:text-[#F8FAFC] pt-24 pb-16 px-4 sm:px-6 lg:px-8 transition-colors">
         <div className="mx-auto max-w-6xl space-y-8">
           
           {/* Header Banner */}
@@ -146,16 +146,16 @@ export default function CustomerReviewsPage() {
             <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 border border-amber-500/20 px-3 py-1 text-xs font-bold text-amber-600 dark:text-amber-400">
               <Star className="h-3.5 w-3.5 fill-amber-400" /> Verified Customer Reviews
             </span>
-            <h1 className="font-display text-3xl sm:text-5xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+            <h1 className="heading-h1">
               Customer Feedback &amp; Hardware Ratings
             </h1>
-            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 font-medium">
+            <p className="text-xs sm:text-sm text-readable-secondary font-medium">
               Read real performance reviews from verified buyers across India.
             </p>
           </div>
 
           {/* Rating Summary Box */}
-          <div className="rounded-3xl border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900 p-6 sm:p-8 shadow-sm grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
+          <div className="futuristic-card p-6 sm:p-8 shadow-xl grid grid-cols-1 md:grid-cols-3 gap-6 items-center rounded-3xl">
             <div className="text-center md:border-r border-slate-200 dark:border-white/10 pr-0 md:pr-6 space-y-1">
               <div className="font-display text-5xl font-extrabold text-slate-900 dark:text-white">{avgRating}</div>
               <div className="flex justify-center gap-1 text-amber-400">
@@ -163,7 +163,7 @@ export default function CustomerReviewsPage() {
                   <Star key={s} className="h-5 w-5 fill-amber-400" />
                 ))}
               </div>
-              <p className="text-xs text-slate-500 font-semibold pt-1">Based on {reviews.length} published reviews</p>
+              <p className="text-xs text-readable-secondary font-semibold pt-1">Based on {reviews.length} published reviews</p>
             </div>
 
             <div className="space-y-1.5 text-xs">
@@ -176,7 +176,7 @@ export default function CustomerReviewsPage() {
                     <div className="flex-1 h-2 rounded-full bg-slate-100 dark:bg-white/10 overflow-hidden">
                       <div className="h-full bg-amber-400 rounded-full" style={{ width: `${pct}%` }} />
                     </div>
-                    <span className="w-10 text-right text-slate-400 font-semibold">{pct}%</span>
+                    <span className="w-10 text-right text-readable-muted font-semibold">{pct}%</span>
                   </div>
                 );
               })}
@@ -184,10 +184,10 @@ export default function CustomerReviewsPage() {
 
             <div className="text-center space-y-3">
               <h3 className="font-display text-sm font-bold text-slate-900 dark:text-white">Bought from NEXLAPTECH?</h3>
-              <p className="text-xs text-slate-500">Share your hardware experience with other buyers.</p>
+              <p className="text-xs text-readable-secondary">Share your hardware experience with other buyers.</p>
               <button
                 onClick={() => { setLoadError(""); setShowWriteModal(true); }}
-                className="btn-primary !py-2.5 !px-6 text-xs inline-flex items-center gap-1.5 shadow-md"
+                className="futuristic-btn-primary py-2.5 px-6 text-xs inline-flex items-center gap-1.5 shadow-md font-bold rounded-xl"
               >
                 <PlusCircle className="h-4 w-4" /> Write a Review
               </button>
@@ -197,7 +197,7 @@ export default function CustomerReviewsPage() {
           {/* Filter Pills */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Filter className="h-4 w-4 text-nex-blue" />
+              <Filter className="h-4 w-4 text-cyan-600 dark:text-cyan-400" />
               <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Filter Ratings:</span>
             </div>
             <div className="flex flex-wrap gap-1.5 text-xs">
@@ -207,8 +207,8 @@ export default function CustomerReviewsPage() {
                   onClick={() => setFilterRating(val as any)}
                   className={`px-3 py-1 rounded-full font-bold transition-all border ${
                     filterRating === val
-                      ? "bg-nex-blue text-white border-nex-blue shadow-sm"
-                      : "bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-white/10 hover:bg-slate-100"
+                      ? "bg-cyan-600 text-white border-cyan-600 shadow-sm"
+                      : "bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/5"
                   }`}
                 >
                   {val === "all" ? "All Reviews" : `${val} ★ Stars`}
@@ -220,16 +220,16 @@ export default function CustomerReviewsPage() {
           {/* Reviews Grid */}
           <div className="space-y-4">
             {loadError && <p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">{loadError}</p>}
-            {loading && <p role="status" className="py-8 text-center text-sm text-slate-500">Loading published reviews...</p>}
+            {loading && <p role="status" className="py-8 text-center text-sm text-readable-secondary">Loading published reviews...</p>}
             {!loading && !filteredReviews.length && (
-              <p className="rounded-xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-500">
+              <p className="futuristic-card p-8 text-center text-sm text-readable-secondary rounded-2xl">
                 No published reviews match this rating yet.
               </p>
             )}
             {filteredReviews.map((rev) => (
               <div
                 key={rev.id}
-                className="rounded-3xl border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900 p-6 shadow-sm space-y-3"
+                className="futuristic-card p-6 shadow-md space-y-3 rounded-2xl"
               >
                 <div className="flex items-start justify-between gap-4">
                   <div>
@@ -242,8 +242,8 @@ export default function CustomerReviewsPage() {
                       <span className="font-bold text-xs text-slate-900 dark:text-white">{rev.title}</span>
                     </div>
 
-                    <div className="flex items-center gap-2 text-[11px] text-slate-400 font-semibold">
-                      <span className="text-slate-700 dark:text-slate-200 font-bold">{rev.reviewerName}</span>
+                    <div className="flex items-center gap-2 text-[11px] text-readable-secondary font-semibold">
+                      <span className="text-slate-900 dark:text-white font-bold">{rev.reviewerName}</span>
                       <span>•</span>
                       <span>{rev.date}</span>
                       {rev.verifiedPurchase && (
@@ -254,26 +254,26 @@ export default function CustomerReviewsPage() {
                     </div>
                   </div>
 
-                  <span className="rounded-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 px-3 py-1 text-[10px] font-bold text-slate-600 dark:text-slate-300">
+                  <span className="rounded-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 px-3 py-1 text-[10px] font-bold text-slate-700 dark:text-slate-300">
                     {rev.productCategory}
                   </span>
                 </div>
 
-                <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed font-medium">
+                <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed font-medium">
                   &quot;{rev.comment}&quot;
                 </p>
 
-                <div className="pt-2 border-t border-slate-100 dark:border-white/5 flex items-center justify-between text-xs text-slate-400">
-                  <span className="text-[11px] font-medium text-nex-blue dark:text-nex-blueLight">
+                <div className="pt-2 border-t border-slate-200 dark:border-white/5 flex items-center justify-between text-xs text-readable-secondary">
+                  <span className="text-[11px] font-medium text-cyan-600 dark:text-cyan-400">
                     Product: {rev.productTitle}
                   </span>
 
                   <button
                     onClick={() => handleHelpful(rev.id)}
                     disabled={votingId !== null}
-                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-50 dark:bg-white/5 hover:bg-slate-100 text-slate-600 dark:text-slate-300 font-semibold text-[11px] transition-colors disabled:opacity-50"
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 font-semibold text-[11px] transition-colors disabled:opacity-50"
                   >
-                    <ThumbsUp className="h-3.5 w-3.5 text-sky-500" />
+                    <ThumbsUp className="h-3.5 w-3.5 text-cyan-500" />
                     <span>Helpful ({rev.helpfulCount})</span>
                   </button>
                 </div>
@@ -289,7 +289,7 @@ export default function CustomerReviewsPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm" onClick={() => setShowWriteModal(false)} />
 
-          <div className="relative w-full max-w-lg rounded-3xl border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900 p-6 shadow-2xl z-10 text-slate-900 dark:text-white space-y-4">
+          <div className="relative w-full max-w-lg rounded-3xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0B0718] p-6 shadow-2xl z-10 text-slate-900 dark:text-white space-y-4">
             <button
               onClick={() => setShowWriteModal(false)}
               className="absolute right-4 top-4 text-slate-400 hover:text-slate-700 dark:hover:text-white"
@@ -297,7 +297,7 @@ export default function CustomerReviewsPage() {
               <X className="h-5 w-5" />
             </button>
 
-            <h3 className="font-display text-base font-bold">Write a Hardware Performance Review</h3>
+            <h3 className="heading-h3">Write a Hardware Performance Review</h3>
 
             {successMsg ? (
               <div className="rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 p-4 text-xs text-emerald-800 dark:text-emerald-300 font-bold text-center space-y-2">
@@ -311,12 +311,12 @@ export default function CustomerReviewsPage() {
                   <label className="space-y-1 text-xs font-bold text-slate-700 dark:text-slate-300">
                     Your Name *
                     <input required value={reviewerName} onChange={(e) => setReviewerName(e.target.value)} maxLength={100}
-                      className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none" />
+                      className="futuristic-input w-full rounded-xl px-3.5 py-2.5 text-xs" />
                   </label>
                   <label className="space-y-1 text-xs font-bold text-slate-700 dark:text-slate-300">
                     City *
                     <input required value={reviewerCity} onChange={(e) => setReviewerCity(e.target.value)} maxLength={100}
-                      className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none" />
+                      className="futuristic-input w-full rounded-xl px-3.5 py-2.5 text-xs" />
                   </label>
                 </div>
                 <div className="space-y-1">
@@ -324,7 +324,7 @@ export default function CustomerReviewsPage() {
                   <select
                     value={newReviewProduct}
                     onChange={(e) => setNewReviewProduct(e.target.value)}
-                    className="w-full rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-white/10 px-3.5 py-2.5 text-xs text-slate-900 dark:text-white focus:outline-none"
+                    className="futuristic-input w-full rounded-xl px-3.5 py-2.5 text-xs bg-slate-50 dark:bg-[#0B0718]"
                   >
                     <option value="Samsung 980 PRO 1TB NVMe SSD">Samsung 980 PRO 1TB NVMe SSD</option>
                     <option value="Lenovo ThinkPad T490 (Refurbished)">Lenovo ThinkPad T490 (Refurbished)</option>
@@ -343,7 +343,7 @@ export default function CustomerReviewsPage() {
                         type="button"
                         onClick={() => setNewReviewRating(star)}
                         className={`p-2 rounded-xl border transition-all ${
-                          newReviewRating >= star ? "bg-amber-500/10 border-amber-500 text-amber-500" : "border-slate-200 text-slate-400"
+                          newReviewRating >= star ? "bg-amber-500/10 border-amber-500 text-amber-500" : "border-slate-200 dark:border-white/10 text-slate-400"
                         }`}
                       >
                         <Star className={`h-5 w-5 ${newReviewRating >= star ? "fill-amber-400" : ""}`} />
@@ -360,7 +360,7 @@ export default function CustomerReviewsPage() {
                     value={newReviewTitle}
                     onChange={(e) => setNewReviewTitle(e.target.value)}
                     placeholder="e.g. Blazing fast read speed and smooth performance"
-                    className="w-full rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-white/10 px-3.5 py-2.5 text-xs text-slate-900 dark:text-white focus:outline-none"
+                    className="futuristic-input w-full rounded-xl px-3.5 py-2.5 text-xs"
                   />
                 </div>
 
@@ -372,15 +372,15 @@ export default function CustomerReviewsPage() {
                     value={newReviewComment}
                     onChange={(e) => setNewReviewComment(e.target.value)}
                     placeholder="Share boot time, benchmark speeds, build quality, battery life..."
-                    className="w-full rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-white/10 px-3.5 py-2.5 text-xs text-slate-900 dark:text-white focus:outline-none resize-none"
+                    className="futuristic-input w-full rounded-xl px-3.5 py-2.5 text-xs resize-none"
                   />
                 </div>
 
                 <div className="flex justify-end gap-2 pt-2">
-                  <button type="button" onClick={() => setShowWriteModal(false)} className="btn-secondary !py-2 !px-4 text-xs">
+                  <button type="button" onClick={() => setShowWriteModal(false)} className="futuristic-btn-secondary py-2 px-4 text-xs rounded-xl font-bold">
                     Cancel
                   </button>
-                  <button type="submit" className="btn-primary !py-2 !px-5 text-xs flex items-center gap-1.5 shadow-md">
+                  <button type="submit" className="futuristic-btn-primary py-2 px-5 text-xs flex items-center gap-1.5 shadow-md rounded-xl font-bold">
                     <PlusCircle className="h-4 w-4" /> Submit Review
                   </button>
                 </div>

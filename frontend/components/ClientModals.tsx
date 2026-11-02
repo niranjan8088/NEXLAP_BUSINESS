@@ -1,13 +1,20 @@
 "use client";
 
-import dynamic from "next/dynamic";
-
-const BookServiceReviewModal = dynamic(() => import("@/components/BookServiceReviewModal"), { ssr: false });
-const UnifiedBookingModal = dynamic(() => import("@/components/UnifiedBookingModal"), { ssr: false });
-const EnrollmentModal = dynamic(() => import("@/components/EnrollmentModal"), { ssr: false });
-const CartDrawer = dynamic(() => import("@/components/CartDrawer"), { ssr: false });
+import { useEffect, useState } from "react";
+import BookServiceReviewModal from "@/components/BookServiceReviewModal";
+import UnifiedBookingModal from "@/components/UnifiedBookingModal";
+import EnrollmentModal from "@/components/EnrollmentModal";
+import CartDrawer from "@/components/CartDrawer";
 
 export default function ClientModals() {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) return null;
+
   return (
     <>
       <BookServiceReviewModal />

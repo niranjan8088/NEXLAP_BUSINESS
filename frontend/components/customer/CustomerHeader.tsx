@@ -19,7 +19,7 @@ import {
   Tag,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { cn } from "@/lib/utils";
+import { cn, getCustomerInitials } from "@/lib/utils";
 import { useCartStore } from "@/lib/cartStore";
 import GlobalSearchModal from "@/components/GlobalSearchModal";
 import QuickNotificationsPopover from "@/components/QuickNotificationsPopover";
@@ -52,16 +52,33 @@ const PAGE_TITLES: Record<string, string> = {
 
 export default function CustomerHeader({ onOpenMobileMenu }: CustomerHeaderProps) {
   const pathname = usePathname() || "/customer";
+  const [mounted, setMounted] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [userProfile, setUserProfile] = useState<any>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
 
   const cartOpen = useCartStore((s) => s.openCart);
-  const cartItemCount = useCartStore((s) => s.getItemCount());
+  const rawCartItemCount = useCartStore((s) => s.getItemCount());
+  const cartItemCount = mounted ? rawCartItemCount : 0;
 
   useEffect(() => {
+    setMounted(true);
     fetchProfile();
+
+    const handleProfileUpdate = (e: any) => {
+      if (e?.detail?.profile) {
+        setUserProfile(e.detail.profile);
+        setIsAuthenticated(true);
+      } else {
+        fetchProfile();
+      }
+    };
+
+    window.addEventListener("nexbyte-profile-update", handleProfileUpdate);
+    return () => {
+      window.removeEventListener("nexbyte-profile-update", handleProfileUpdate);
+    };
   }, []);
 
   const fetchProfile = async () => {
@@ -79,13 +96,6 @@ export default function CustomerHeader({ onOpenMobileMenu }: CustomerHeaderProps
     } catch {
       setIsAuthenticated(false);
     }
-  };
-
-  const getInitials = (name?: string) => {
-    if (!name) return "CU";
-    const parts = name.trim().split(" ");
-    if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-    return name.substring(0, 2).toUpperCase();
   };
 
   const getPageTitle = () => {
@@ -192,12 +202,14 @@ export default function CustomerHeader({ onOpenMobileMenu }: CustomerHeaderProps
                         fill
                         className="object-cover"
                       />
+                    ) : getCustomerInitials(userProfile.full_name) ? (
+                      <span>{getCustomerInitials(userProfile.full_name)}</span>
                     ) : (
-                      getInitials(userProfile.full_name)
+                      <User className="h-4 w-4 text-white" />
                     )}
                   </div>
-                  <span className="hidden md:inline font-bold truncate max-w-[100px]">
-                    {userProfile.full_name?.split(" ")[0] || "Customer"}
+                  <span className="hidden md:inline font-bold truncate">
+                    Customer
                   </span>
                   <ChevronDown className={cn("h-3.5 w-3.5 transition-transform text-[#94A3B8]", userDropdownOpen && "rotate-180")} />
                 </button>
