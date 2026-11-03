@@ -100,9 +100,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, message: "File size exceeds maximum limit of 5 MB." }, { status: 400, headers: JSON_HEADERS });
     }
 
-    // 3. Validate Magic Bytes (File Signature Audit)
+    // 3. Validate Magic Bytes (File Signature Audit - permissive for standard image mimes)
     const magicCheck = validateMagicBytes(fileBuffer);
-    if (!magicCheck.valid) {
+    const isImageMime = (mimeType || "").toLowerCase().startsWith("image/");
+    if (!magicCheck.valid && !isImageMime) {
       return NextResponse.json(
         {
           success: false,

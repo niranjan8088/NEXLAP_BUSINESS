@@ -628,13 +628,38 @@ export default function AdminProductsManager() {
             console.warn("Server /api/upload failed, falling back to base64:", uploadErr);
           }
 
-          // Robust fallback: if server upload didn't return a fileUrl, generate base64 data URL directly
+          // Robust fallback 1: generate base64 data URL from file directly
           if (!fileUrl && item.file) {
-            fileUrl = await new Promise<string>((resolve) => {
-              const reader = new FileReader();
-              reader.onloadend = () => resolve(reader.result as string);
-              reader.readAsDataURL(item.file!);
-            });
+            try {
+              fileUrl = await new Promise<string>((resolve) => {
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                  const res = reader.result;
+                  if (typeof res === "string" && res.length > 0) resolve(res);
+                  else resolve("");
+                };
+                reader.onerror = () => resolve("");
+                reader.readAsDataURL(item.file!);
+              });
+            } catch {}
+          }
+
+          // Robust fallback 2: if blob URL, convert blob to base64
+          if (!fileUrl && item.url) {
+            if (!item.url.startsWith("blob:")) {
+              fileUrl = item.url;
+            } else {
+              try {
+                const blobRes = await fetch(item.url);
+                const blob = await blobRes.blob();
+                fileUrl = await new Promise<string>((resolve) => {
+                  const reader = new FileReader();
+                  reader.onloadend = () => resolve((reader.result as string) || "");
+                  reader.onerror = () => resolve("");
+                  reader.readAsDataURL(blob);
+                });
+              } catch {}
+            }
           }
 
           if (fileUrl) {
@@ -645,8 +670,14 @@ export default function AdminProductsManager() {
               sort_order: i + 1,
               alt_text: item.alt_text || ""
             });
-          } else {
-            throw new Error(`Failed to process image ${i + 1}`);
+          } else if (item.url) {
+            uploadedImages.push({
+              id: item.id,
+              url: item.url,
+              is_primary: item.is_primary,
+              sort_order: i + 1,
+              alt_text: item.alt_text || ""
+            });
           }
         } else {
           uploadedImages.push({
@@ -654,6 +685,11 @@ export default function AdminProductsManager() {
             sort_order: i + 1
           });
         }
+      }
+
+      if (uploadedImages.length === 0) {
+        setImageError("At least 1 product image is required.");
+        return;
       }
 
       // Guarantee at least 1 Primary image

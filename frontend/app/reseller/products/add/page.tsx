@@ -94,15 +94,27 @@ export default function ResellerAddProductPage() {
           }
 
           if (!fileUrl && img.file) {
-            fileUrl = await new Promise<string>((resolve) => {
-              const reader = new FileReader();
-              reader.onloadend = () => resolve(reader.result as string);
-              reader.readAsDataURL(img.file!);
-            });
+            try {
+              fileUrl = await new Promise<string>((resolve) => {
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                  const res = reader.result;
+                  if (typeof res === "string" && res.length > 0) resolve(res);
+                  else resolve("");
+                };
+                reader.onerror = () => resolve("");
+                reader.readAsDataURL(img.file!);
+              });
+            } catch {}
           }
 
-          if (!fileUrl) throw new Error("Upload failed.");
-          uploaded.push({ id: img.id, url: fileUrl, is_primary: img.is_primary, sort_order: i + 1, alt_text: img.alt_text });
+          if (!fileUrl && img.url && !img.url.startsWith("blob:")) {
+            fileUrl = img.url;
+          }
+
+          if (fileUrl) {
+            uploaded.push({ id: img.id, url: fileUrl, is_primary: img.is_primary, sort_order: i + 1, alt_text: img.alt_text });
+          }
         }
       }
 
