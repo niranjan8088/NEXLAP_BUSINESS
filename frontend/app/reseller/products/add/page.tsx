@@ -77,10 +77,32 @@ export default function ResellerAddProductPage() {
           const form = new FormData();
           form.append("file", img.file);
           form.append("productId", tempProductId);
-          const res = await fetch("/api/upload", { method: "POST", body: form });
-          const json = await res.json();
-          if (!json.success) throw new Error(json.message || "Upload failed.");
-          uploaded.push({ id: img.id, url: json.fileUrl, is_primary: img.is_primary, sort_order: i + 1, alt_text: img.alt_text });
+
+          let fileUrl = "";
+          try {
+            const res = await fetch("/api/upload", { method: "POST", body: form });
+            const text = await res.text();
+            let json: any = null;
+            try {
+              json = JSON.parse(text);
+            } catch {}
+            if (json && json.success && json.fileUrl) {
+              fileUrl = json.fileUrl;
+            }
+          } catch (uploadErr) {
+            console.warn("Server /api/upload failed, using base64 fallback:", uploadErr);
+          }
+
+          if (!fileUrl && img.file) {
+            fileUrl = await new Promise<string>((resolve) => {
+              const reader = new FileReader();
+              reader.onloadend = () => resolve(reader.result as string);
+              reader.readAsDataURL(img.file!);
+            });
+          }
+
+          if (!fileUrl) throw new Error("Upload failed.");
+          uploaded.push({ id: img.id, url: fileUrl, is_primary: img.is_primary, sort_order: i + 1, alt_text: img.alt_text });
         }
       }
 

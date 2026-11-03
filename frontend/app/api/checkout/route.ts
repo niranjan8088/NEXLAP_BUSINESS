@@ -208,6 +208,21 @@ export async function POST(request: NextRequest) {
     };
 
     const savedOrder = await dbHelper.orders.create(orderPayload);
+
+    // Auto-Register/Update Customer in Customers Directory
+    try {
+      await dbHelper.customers.autoCreateOrUpdate(customer.phone, {
+        name: customer.name,
+        email: customer.email,
+        city: shippingAddress.city || "Bengaluru",
+        address: `${shippingAddress.addressLine1 || ""}, ${shippingAddress.city || ""}`.trim(),
+        actionType: "order",
+        actionItem: verifiedItems.map((i: any) => i.title).join(", "),
+      });
+    } catch (custErr) {
+      console.warn("Auto customer directory update notice:", custErr);
+    }
+
     let offerUsageRecorded = true;
     if (appliedOfferId) {
       try {

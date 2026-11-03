@@ -2458,41 +2458,45 @@ export const dbHelper = {
       return updated.find((c) => c.id === id);
     },
     async autoCreateOrUpdate(phone: string, details: { name: string; email?: string; city?: string; address?: string; actionType: string; actionItem: string }) {
-      const existing = await this.getByPhone(phone);
+      const list = await this.list();
+      const existing = list.find((c: any) =>
+        (phone && c.phone && String(c.phone).trim() === String(phone).trim()) ||
+        (details.email && c.email && String(c.email).trim().toLowerCase() === String(details.email).trim().toLowerCase())
+      );
       if (existing) {
         const updates: any = {};
-        if (details.actionType === "booking") {
+        if (details.actionType === "booking" || details.actionType === "order") {
           updates.totalBookings = (existing.totalBookings || 0) + 1;
-          updates.servicesTaken = existing.servicesTaken 
-            ? `${existing.servicesTaken}, ${details.actionItem}` 
-            : details.actionItem;
-        } else if (details.actionType === "enquiry") {
+        }
+        if (details.actionType === "order" || details.actionType === "enquiry") {
           updates.productsPurchased = existing.productsPurchased 
             ? `${existing.productsPurchased}, ${details.actionItem}` 
+            : details.actionItem;
+        } else if (details.actionType === "booking" || details.actionType === "training" || details.actionType === "internship") {
+          updates.servicesTaken = existing.servicesTaken 
+            ? `${existing.servicesTaken}, ${details.actionItem}` 
             : details.actionItem;
         } else if (details.actionType === "review") {
           updates.reviewsCount = (existing.reviewsCount || 0) + 1;
         } else if (details.actionType === "certificate") {
           updates.certificatesCount = (existing.certificatesCount || 0) + 1;
-        } else if (details.actionType === "training" || details.actionType === "internship") {
-          updates.servicesTaken = existing.servicesTaken 
-            ? `${existing.servicesTaken}, ${details.actionItem}` 
-            : details.actionItem;
         }
+        if (details.name && (!existing.name || existing.name === "Customer")) updates.name = details.name;
         if (details.email && !existing.email) updates.email = details.email;
         if (details.city && !existing.city) updates.city = details.city;
+        if (details.address && !existing.address) updates.address = details.address;
         return this.update(existing.id, updates);
       } else {
         const newCust: any = {
-          name: details.name,
-          phone,
+          name: details.name || "Customer",
+          phone: phone || "",
           email: details.email || "",
           city: details.city || "Bengaluru",
           address: details.address || "",
-          totalBookings: details.actionType === "booking" ? 1 : 0,
+          totalBookings: (details.actionType === "booking" || details.actionType === "order") ? 1 : 0,
           reviewsCount: details.actionType === "review" ? 1 : 0,
           certificatesCount: details.actionType === "certificate" ? 1 : 0,
-          productsPurchased: details.actionType === "enquiry" ? details.actionItem : "",
+          productsPurchased: (details.actionType === "order" || details.actionType === "enquiry") ? details.actionItem : "",
           servicesTaken: (details.actionType === "booking" || details.actionType === "training" || details.actionType === "internship") ? details.actionItem : "",
         };
         return this.create(newCust);
@@ -2909,14 +2913,18 @@ export const dbHelper = {
     async update(id: string, updates: any) {
       const payload = { ...updates, updated_at: new Date().toISOString() };
       if (supabase) {
-        const { data } = await supabase.from("orders").update(payload).eq("id", id).select().single();
-        notifyDataChange("orders", "update", data);
-        return data;
+        try {
+          const { data, error } = await supabase.from("orders").update(payload).or(`id.eq.${id},order_id.eq.${id}`).select().single();
+          if (!error && data) {
+            notifyDataChange("orders", "update", data);
+            return data;
+          }
+        } catch {}
       }
       const list = getMockData("orders");
-      const updated = list.map((o: any) => o.id === id ? { ...o, ...payload } : o);
+      const updated = list.map((o: any) => (o.id === id || o.order_id === id) ? { ...o, ...payload } : o);
       saveMockData("orders", updated);
-      const found = updated.find((o: any) => o.id === id);
+      const found = updated.find((o: any) => o.id === id || o.order_id === id);
       notifyDataChange("orders", "update", found);
       return found;
     }

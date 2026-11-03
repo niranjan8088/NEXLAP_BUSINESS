@@ -65,7 +65,7 @@ export default function AdminDashboardHome() {
     setLoading(true);
     try {
       const [
-        ordersList,
+        ordersRes,
         bookingsList,
         productsList,
         notificationsList,
@@ -74,7 +74,9 @@ export default function AdminDashboardHome() {
         laptopsList,
         contactsList
       ] = await Promise.all([
-        dbHelper.orders.list(),
+        fetch("/api/admin/orders", { cache: "no-store" })
+          .then((r) => (r.ok ? r.json() : null))
+          .catch(() => null),
         dbHelper.bookings.list(),
         dbHelper.products.list(),
         dbHelper.notifications.list(),
@@ -84,9 +86,16 @@ export default function AdminDashboardHome() {
         dbHelper.contacts.list(),
       ]);
 
+      const ordersList = (ordersRes && Array.isArray(ordersRes.orders))
+        ? ordersRes.orders
+        : await dbHelper.orders.list();
+
       // 1. Orders & Revenue Calculation
-      const validOrders = ordersList.filter((o: any) => o.status !== "cancelled");
-      const computedOrderRevenue = validOrders.reduce((acc: number, o: any) => acc + (Number(o.total) || 0), 0);
+      const validOrders = ordersList.filter((o: any) => String(o.status || "").toLowerCase() !== "cancelled");
+      const computedOrderRevenue = validOrders.reduce((acc: number, o: any) => {
+        const amt = Number(o.total || o.total_amount || 0);
+        return acc + (isNaN(amt) ? 0 : amt);
+      }, 0);
       
       const bookingRevenue = bookingsList
         .filter((b: any) => b.status === "completed")
@@ -150,22 +159,39 @@ export default function AdminDashboardHome() {
         cancelled: 0
       };
       ordersList.forEach((o: any) => {
-        const st = o.status || "pending";
-        statusMap[st] = (statusMap[st] || 0) + 1;
+        const st = String(o.status || "pending").toLowerCase();
+        if (statusMap[st] !== undefined) {
+          statusMap[st] = (statusMap[st] || 0) + 1;
+        } else {
+          statusMap.pending = (statusMap.pending || 0) + 1;
+        }
       });
       setOrderStatusCounts(statusMap);
 
       setNotifications(unreadNotifs.slice(0, 5));
 
-      // Latest customer enquiries/bookings
-      const latestCust = bookingsList.slice(0, 5).map((b: any) => ({
+      // Latest customer enquiries/bookings & orders
+      const orderCust = ordersList.slice(0, 3).map((o: any) => ({
+        name: o.customer_name || o.name || "Customer",
+        phone: o.phone || o.customer_phone || "Order Placed",
+        product: Array.isArray(o.items) && o.items[0] ? (o.items[0].title || o.items[0].name) : `Order #${o.order_id || o.id}`,
+        status: o.status || "confirmed",
+        date: o.created_at || new Date().toISOString()
+      }));
+
+      const bookingCust = bookingsList.slice(0, 3).map((b: any) => ({
         name: b.customerName || b.customer_name || "Enterprise Client",
         phone: b.phone || "Verified Contact",
         product: b.productName || "IT Infrastructure Service",
         status: b.status,
         date: b.createdAt || b.created_at || new Date().toISOString()
       }));
-      setLatestCustomers(latestCust);
+
+      const combinedCust = [...orderCust, ...bookingCust]
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+        .slice(0, 5);
+
+      setLatestCustomers(combinedCust.length > 0 ? combinedCust : bookingCust);
 
       // Top Products by interest/enquiry frequency
       const prodFreq: Record<string, number> = {};

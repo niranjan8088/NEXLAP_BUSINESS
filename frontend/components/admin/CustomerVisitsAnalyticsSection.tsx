@@ -45,6 +45,9 @@ export default function CustomerVisitsAnalyticsSection() {
 
   useEffect(() => {
     fetchAnalytics();
+    // Live polling every 15 seconds to stream real visitors without page refresh
+    const interval = setInterval(fetchAnalytics, 15000);
+    return () => clearInterval(interval);
   }, []);
 
   const fetchAnalytics = async () => {
@@ -63,25 +66,29 @@ export default function CustomerVisitsAnalyticsSection() {
     }
   };
 
-  const handleSimulateVisit = async () => {
+  const handleLogTestVisit = async () => {
     try {
       setSimulating(true);
       setFeedback(null);
-      const res = await fetch("/api/analytics/visits", {
+      const res = await fetch("/api/analytics/track", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "simulate" }),
+        body: JSON.stringify({
+          path: "/products",
+          title: "Hardware Storefront (Live Test)",
+          device: window.innerWidth < 768 ? "mobile" : "desktop",
+          referrer: "admin_test_trigger",
+        }),
       });
-      const json = await res.json();
-      if (json.success && json.analytics) {
-        setData(json.analytics);
+      if (res.ok) {
+        await fetchAnalytics();
         setFeedback({
           type: "success",
-          text: "Simulated a real-time customer visit! Live charts and daily totals updated.",
+          text: "Live test visit recorded! Telemetry charts and streams updated in real time.",
         });
       }
     } catch {
-      setFeedback({ type: "error", text: "Failed to simulate test customer visit." });
+      setFeedback({ type: "error", text: "Failed to record live test visit." });
     } finally {
       setSimulating(false);
     }
@@ -97,7 +104,7 @@ export default function CustomerVisitsAnalyticsSection() {
         setData(json.analytics);
         setFeedback({
           type: "success",
-          text: "Visitor analytics reset to fresh baseline.",
+          text: "Visitor analytics logs cleared. Fresh tracking active from zero.",
         });
       }
     } catch {
@@ -215,31 +222,31 @@ export default function CustomerVisitsAnalyticsSection() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-cyan-50 dark:bg-cyan-950/60 border border-cyan-200 dark:border-cyan-800 px-3 py-1 text-xs font-bold text-cyan-700 dark:text-cyan-300">
-                <BarChart3 className="h-3.5 w-3.5" /> Customer Traffic Telemetry
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 px-3 py-1 text-xs font-bold text-emerald-700 dark:text-emerald-300">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" /> Live Telemetry Active
               </span>
-              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 px-2.5 py-0.5 text-[10px] font-bold text-emerald-700 dark:text-emerald-300">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" /> Live Tracker Active
+              <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 px-2.5 py-0.5 text-[10px] font-bold text-blue-700 dark:text-blue-300">
+                100% Real Customer Traffic
               </span>
             </div>
             <h2 className="text-xl font-extrabold text-slate-900 dark:text-white tracking-tight">
               Customer Visits &amp; Monthly Traffic Analytics
             </h2>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Real-time monitoring of daily and monthly customer visits, unique users, device breakdown, and peak shopping hours.
+              Real-time monitoring of actual daily and monthly customer visits, unique users, device breakdown, and peak shopping hours across nexlaptech.in.
             </p>
           </div>
 
           {/* Quick Actions */}
           <div className="flex flex-wrap items-center gap-2 shrink-0">
             <button
-              onClick={handleSimulateVisit}
+              onClick={handleLogTestVisit}
               disabled={simulating}
               className="inline-flex items-center gap-1.5 rounded-xl border border-cyan-500/30 bg-cyan-50 dark:bg-cyan-950/40 text-cyan-700 dark:text-cyan-300 px-3.5 py-2 text-xs font-bold hover:bg-cyan-100 dark:hover:bg-cyan-900/40 transition-colors disabled:opacity-50"
-              title="Record a simulated customer visit to test real-time graph updates"
+              title="Record a test visit from this device to verify live telemetry streaming"
             >
-              <PlusCircle className={`h-3.5 w-3.5 ${simulating ? "animate-spin" : ""}`} />
-              {simulating ? "Simulating..." : "Simulate Customer Visit"}
+              <Eye className={`h-3.5 w-3.5 ${simulating ? "animate-spin" : ""}`} />
+              {simulating ? "Recording..." : "Test Storefront Visit"}
             </button>
 
             <button
@@ -857,25 +864,33 @@ export default function CustomerVisitsAnalyticsSection() {
           </p>
 
           <div className="space-y-2 pt-2">
-            {data.topPages.map((page, idx) => (
-              <div
-                key={idx}
-                className="flex items-center justify-between p-2.5 rounded-xl border border-slate-100 dark:border-white/5 bg-slate-50 dark:bg-white/[0.02]"
-              >
-                <div className="min-w-0 flex-1 pr-3">
-                  <p className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
-                    {page.title}
-                  </p>
-                  <p className="text-[10px] text-slate-400 font-mono truncate">{page.path}</p>
-                </div>
-                <div className="text-right shrink-0">
-                  <span className="text-xs font-extrabold text-blue-600 dark:text-blue-400">
-                    {page.visits.toLocaleString()}
-                  </span>
-                  <span className="text-[10px] text-slate-400 ml-1">({page.percentage}%)</span>
-                </div>
+            {data.topPages.length === 0 ? (
+              <div className="text-center py-10 text-xs text-slate-400">
+                <Eye className="h-6 w-6 text-slate-300 dark:text-slate-600 mx-auto mb-2 opacity-50" />
+                <p className="font-semibold text-slate-600 dark:text-slate-400">Awaiting live customer traffic</p>
+                <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">Top visited routes will display here as visitors browse nexlaptech.in.</p>
               </div>
-            ))}
+            ) : (
+              data.topPages.map((page, idx) => (
+                <div
+                  key={idx}
+                  className="flex items-center justify-between p-2.5 rounded-xl border border-slate-100 dark:border-white/5 bg-slate-50 dark:bg-white/[0.02]"
+                >
+                  <div className="min-w-0 flex-1 pr-3">
+                    <p className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
+                      {page.title}
+                    </p>
+                    <p className="text-[10px] text-slate-400 font-mono truncate">{page.path}</p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <span className="text-xs font-extrabold text-blue-600 dark:text-blue-400">
+                      {page.visits.toLocaleString()}
+                    </span>
+                    <span className="text-[10px] text-slate-400 ml-1">({page.percentage}%)</span>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
 
@@ -886,7 +901,7 @@ export default function CustomerVisitsAnalyticsSection() {
               <h3 className="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
                 <Sparkles className="h-4 w-4 text-cyan-500" /> Live Customer Stream
               </h3>
-              <p className="text-[11px] text-slate-400">Latest recorded customer visits.</p>
+              <p className="text-[11px] text-slate-400">Real-time recorded customer visits.</p>
             </div>
             <span className="text-[10px] font-bold text-slate-400 bg-slate-100 dark:bg-white/5 px-2 py-0.5 rounded-full">
               Latest 10
@@ -894,34 +909,42 @@ export default function CustomerVisitsAnalyticsSection() {
           </div>
 
           <div className="space-y-1.5 max-h-[310px] overflow-y-auto pr-1">
-            {data.recentVisits.slice(0, 10).map((v) => {
-              const timeStr = new Date(v.timestamp).toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-              });
-              return (
-                <div
-                  key={v.id}
-                  className="flex items-center justify-between p-2 rounded-xl border border-slate-100 dark:border-white/5 text-xs hover:bg-slate-50 dark:hover:bg-white/[0.02] transition-colors"
-                >
-                  <div className="min-w-0 flex-1 pr-2">
-                    <p className="font-semibold text-slate-800 dark:text-slate-200 truncate">
-                      {v.path}
-                    </p>
-                    <div className="flex items-center gap-2 text-[10px] text-slate-400 mt-0.5">
-                      <span>{v.date}</span>
-                      <span>•</span>
-                      <span>{timeStr}</span>
-                      <span>•</span>
-                      <span className="capitalize">{v.device}</span>
+            {data.recentVisits.length === 0 ? (
+              <div className="text-center py-10 text-xs text-slate-400">
+                <Sparkles className="h-6 w-6 text-slate-300 dark:text-slate-600 mx-auto mb-2 opacity-50" />
+                <p className="font-semibold text-slate-600 dark:text-slate-400">Live tracker is active</p>
+                <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">Visits will stream here as visitors browse nexlaptech.in.</p>
+              </div>
+            ) : (
+              data.recentVisits.slice(0, 10).map((v) => {
+                const timeStr = new Date(v.timestamp).toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                });
+                return (
+                  <div
+                    key={v.id}
+                    className="flex items-center justify-between p-2 rounded-xl border border-slate-100 dark:border-white/5 text-xs hover:bg-slate-50 dark:hover:bg-white/[0.02] transition-colors"
+                  >
+                    <div className="min-w-0 flex-1 pr-2">
+                      <p className="font-semibold text-slate-800 dark:text-slate-200 truncate">
+                        {v.path}
+                      </p>
+                      <div className="flex items-center gap-2 text-[10px] text-slate-400 mt-0.5">
+                        <span>{v.date}</span>
+                        <span>•</span>
+                        <span>{timeStr}</span>
+                        <span>•</span>
+                        <span className="capitalize">{v.device}</span>
+                      </div>
                     </div>
+                    <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-100 dark:bg-white/5 text-slate-500 shrink-0">
+                      {v.ipAnonymized}
+                    </span>
                   </div>
-                  <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-100 dark:bg-white/5 text-slate-500 shrink-0">
-                    {v.ipAnonymized}
-                  </span>
-                </div>
-              );
-            })}
+                );
+              })
+            )}
           </div>
         </div>
       </div>

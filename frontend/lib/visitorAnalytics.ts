@@ -81,92 +81,27 @@ export interface CustomerVisitsAnalyticsData {
 const DAYS_OF_WEEK = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-// Seed realistic historical visitor traffic data for the past 30 days & 12 months
-function generateSeedCustomerVisits(): CustomerVisitRecord[] {
-  const records: CustomerVisitRecord[] = [];
-  const now = new Date();
-  const samplePages = [
-    { path: "/customer/shop", title: "All Products & Catalog" },
-    { path: "/", title: "Homepage & Featured Deals" },
-    { path: "/products", title: "Hardware Storefront" },
-    { path: "/customer", title: "Customer Dashboard" },
-    { path: "/services", title: "Laptop Repair & Services" },
-    { path: "/customer/orders", title: "Customer Order Tracking" },
-    { path: "/customer/bookings", title: "Service Booking Schedule" },
-    { path: "/customer/favorites", title: "Customer Wishlist" },
-    { path: "/contact", title: "Support & Contact" },
-  ];
-
-  const devices: ("mobile" | "desktop" | "tablet")[] = [
-    "mobile", "mobile", "mobile", "mobile", "desktop", "desktop", "desktop", "tablet"
-  ];
-
-  // Past 30 days simulation (approx 80-160 visits/day)
-  for (let daysAgo = 30; daysAgo >= 0; daysAgo--) {
-    const d = new Date(now.getTime() - daysAgo * 24 * 60 * 60 * 1000);
-    const dateStr = d.toISOString().split("T")[0];
-    const monthStr = dateStr.substring(0, 7);
-    const dayOfWeek = DAYS_OF_WEEK[d.getDay()];
-
-    // Weekend boost
-    const isWeekend = d.getDay() === 0 || d.getDay() === 6;
-    const baseCount = isWeekend ? 130 + (d.getDate() % 25) : 95 + (d.getDate() % 20);
-    const dailyCount = daysAgo === 0 ? Math.max(45, Math.floor(baseCount * 0.75)) : baseCount;
-
-    // Simulate unique visitor ratio (~65% unique)
-    const uniquePoolSize = Math.max(10, Math.floor(dailyCount * 0.65));
-    const visitorIds = Array.from({ length: uniquePoolSize }, (_, i) => `seed-vis-${daysAgo}-${i}`);
-
-    for (let v = 0; v < dailyCount; v++) {
-      // Diurnal curve: peak at 10-13h and 18-21h
-      const peakBias = Math.random();
-      let hour: number;
-      if (peakBias < 0.45) {
-        hour = 17 + Math.floor(Math.random() * 5); // 17 - 21 (evening)
-      } else if (peakBias < 0.8) {
-        hour = 10 + Math.floor(Math.random() * 5); // 10 - 14 (midday)
-      } else {
-        hour = Math.floor(Math.random() * 24);
-      }
-
-      const minute = Math.floor(Math.random() * 60);
-      const second = Math.floor(Math.random() * 60);
-      const visitTime = new Date(d.getFullYear(), d.getMonth(), d.getDate(), hour, minute, second);
-
-      const page = samplePages[v % samplePages.length];
-      const device = devices[v % devices.length];
-      const visitorId = visitorIds[v % visitorIds.length];
-
-      records.push({
-        id: `visit-seed-${daysAgo}-${v}`,
-        timestamp: visitTime.toISOString(),
-        date: dateStr,
-        month: monthStr,
-        hour,
-        dayOfWeek,
-        path: page.path,
-        title: page.title,
-        device,
-        visitorId,
-        referrer: v % 3 === 0 ? "https://google.com" : v % 4 === 0 ? "direct" : "https://instagram.com",
-        ipAnonymized: `192.168.${10 + (v % 20)}.xxx`,
-        role: "customer",
-      });
-    }
-  }
-
-  return records;
-}
-
-// In-memory reference for local dev runtime
+// In-memory reference for server runtime
 const globalAny = globalThis as any;
 if (!globalAny.__nexbyteCustomerVisits) {
   globalAny.__nexbyteCustomerVisits = null;
 }
 
+function anonymizeClientIp(ip?: string): string {
+  if (!ip || ip === "127.0.0.1" || ip === "::1") return "127.0.0.xxx";
+  const clean = ip.replace(/^.*:/, ""); // handle IPv4-mapped IPv6
+  if (clean.includes(".")) {
+    const parts = clean.split(".");
+    if (parts.length >= 3) {
+      return `${parts[0]}.${parts[1]}.${parts[2]}.xxx`;
+    }
+  }
+  return `${clean.slice(0, 8)}...xxx`;
+}
+
 function getStoredVisits(): CustomerVisitRecord[] {
-  // If in-memory cache is present and populated
-  if (Array.isArray(globalAny.__nexbyteCustomerVisits) && globalAny.__nexbyteCustomerVisits.length > 0) {
+  // If in-memory cache is present
+  if (Array.isArray(globalAny.__nexbyteCustomerVisits)) {
     return globalAny.__nexbyteCustomerVisits;
   }
 
@@ -183,7 +118,7 @@ function getStoredVisits(): CustomerVisitRecord[] {
       if (f.existsSync(dbPath)) {
         const raw = f.readFileSync(dbPath, "utf8");
         const json = JSON.parse(raw);
-        if (Array.isArray(json.customer_visits) && json.customer_visits.length >= 20) {
+        if (Array.isArray(json.customer_visits)) {
           globalAny.__nexbyteCustomerVisits = json.customer_visits;
           return json.customer_visits;
         }
@@ -191,10 +126,8 @@ function getStoredVisits(): CustomerVisitRecord[] {
     } catch (e) {}
   }
 
-  // Baseline seed if empty
-  const seeded = generateSeedCustomerVisits();
-  saveStoredVisits(seeded);
-  return seeded;
+  globalAny.__nexbyteCustomerVisits = [];
+  return [];
 }
 
 function saveStoredVisits(visits: CustomerVisitRecord[]) {
@@ -217,7 +150,7 @@ function saveStoredVisits(visits: CustomerVisitRecord[]) {
           existingDb = JSON.parse(f.readFileSync(dbPath, "utf8"));
         } catch (e) {}
       }
-      existingDb.customer_visits = visits.slice(-5000); // keep recent 5,000 records
+      existingDb.customer_visits = visits.slice(-10000); // keep recent 10,000 real records
       f.writeFileSync(dbPath, JSON.stringify(existingDb, null, 2), "utf8");
     } catch (e) {}
   }
@@ -225,7 +158,7 @@ function saveStoredVisits(visits: CustomerVisitRecord[]) {
 
 export const visitorAnalytics = {
   /**
-   * Record a new customer visit
+   * Record an authentic real customer/visitor visit
    */
   async recordVisit(payload: {
     path: string;
@@ -243,11 +176,11 @@ export const visitorAnalytics = {
     const hour = now.getHours();
     const dayOfWeek = DAYS_OF_WEEK[now.getDay()];
 
-    const cleanPath = payload.path || "/customer";
-    const visitorId = payload.visitorId || `vis-${Math.random().toString(36).substring(2, 10)}`;
+    const cleanPath = payload.path || "/";
+    const visitorId = payload.visitorId || `vis-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 8)}`;
 
     const record: CustomerVisitRecord = {
-      id: `visit-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      id: `visit-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
       timestamp: now.toISOString(),
       date: dateStr,
       month: monthStr,
@@ -258,8 +191,8 @@ export const visitorAnalytics = {
       device: payload.device || "desktop",
       visitorId,
       referrer: payload.referrer || "",
-      ipAnonymized: payload.ip ? payload.ip.split(".").slice(0, 3).join(".") + ".xxx" : "127.0.0.xxx",
-      role: payload.role || "customer",
+      ipAnonymized: anonymizeClientIp(payload.ip),
+      role: payload.role || "guest",
     };
 
     visits.push(record);
@@ -277,15 +210,14 @@ export const visitorAnalytics = {
   },
 
   /**
-   * Reset visitor analytics and re-seed clean baseline
+   * Reset visitor analytics logs
    */
   async resetVisits(): Promise<void> {
-    const freshSeed = generateSeedCustomerVisits();
-    saveStoredVisits(freshSeed);
+    saveStoredVisits([]);
   },
 
   /**
-   * Calculate full analytics metrics, daily & monthly trends, and charts data
+   * Calculate full real analytics metrics, daily & monthly trends, and charts data
    */
   async getAnalytics(): Promise<CustomerVisitsAnalyticsData> {
     const visits = getStoredVisits();
@@ -299,7 +231,7 @@ export const visitorAnalytics = {
     const lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
     const lastMonthStr = lastMonthDate.toISOString().split("T")[0].substring(0, 7);
 
-    // 1. Basic counts
+    // 1. Basic real counts
     const todayRecords = visits.filter((v) => v.date === todayStr);
     const yesterdayRecords = visits.filter((v) => v.date === yesterdayStr);
     const thisMonthRecords = visits.filter((v) => v.month === thisMonthStr);
@@ -346,16 +278,12 @@ export const visitorAnalytics = {
       const mRecords = visits.filter((v) => v.month === mStr);
       const uniqueCount = new Set(mRecords.map((v) => v.visitorId)).size;
 
-      // If simulated older months have low raw records, provide an estimated realistic historical volume
-      const estimatedVisits = mRecords.length > 0 ? mRecords.length : Math.floor(1800 + Math.sin(m) * 450 + (12 - m) * 120);
-      const estimatedUnique = Math.floor(estimatedVisits * 0.62);
-
       const label = `${MONTH_NAMES[mDate.getMonth()]} ${mDate.getFullYear()}`;
       monthlyTrends.push({
         month: mStr,
         label,
-        visits: estimatedVisits,
-        uniqueVisitors: estimatedUnique,
+        visits: mRecords.length,
+        uniqueVisitors: uniqueCount,
       });
     }
 
@@ -376,15 +304,14 @@ export const visitorAnalytics = {
     }));
 
     // Find peak hour
-    let peakHourIndex = 19;
+    let peakHourLabel = "Awaiting traffic";
     let peakCount = 0;
     hourlyCounts.forEach((cnt, idx) => {
       if (cnt > peakCount) {
         peakCount = cnt;
-        peakHourIndex = idx;
+        peakHourLabel = `${idx.toString().padStart(2, "0")}:00 - ${(idx + 1).toString().padStart(2, "0")}:00`;
       }
     });
-    const peakHourLabel = `${peakHourIndex.toString().padStart(2, "0")}:00 - ${(peakHourIndex + 1).toString().padStart(2, "0")}:00`;
 
     // 5. Peak Day of Week
     const dayCounts: Record<string, number> = {};
@@ -394,7 +321,7 @@ export const visitorAnalytics = {
         dayCounts[v.dayOfWeek]++;
       }
     });
-    let peakDayLabel = "Saturday";
+    let peakDayLabel = "Awaiting traffic";
     let maxDayCount = 0;
     Object.entries(dayCounts).forEach(([day, cnt]) => {
       if (cnt > maxDayCount) {
@@ -413,14 +340,14 @@ export const visitorAnalytics = {
       else desktop++;
     });
 
-    const totalDev = Math.max(desktop + mobile + tablet, 1);
+    const totalDev = desktop + mobile + tablet;
     const deviceBreakdown: DeviceBreakdown = {
       desktop,
       mobile,
       tablet,
-      desktopPct: Math.round((desktop / totalDev) * 100),
-      mobilePct: Math.round((mobile / totalDev) * 100),
-      tabletPct: Math.round((tablet / totalDev) * 100),
+      desktopPct: totalDev > 0 ? Math.round((desktop / totalDev) * 100) : 0,
+      mobilePct: totalDev > 0 ? Math.round((mobile / totalDev) * 100) : 0,
+      tabletPct: totalDev > 0 ? Math.round((tablet / totalDev) * 100) : 0,
     };
 
     // 7. Top Visited Pages
@@ -438,7 +365,7 @@ export const visitorAnalytics = {
         path,
         title: info.title,
         visits: info.count,
-        percentage: Number(((info.count / Math.max(visits.length, 1)) * 100).toFixed(1)),
+        percentage: visits.length > 0 ? Number(((info.count / visits.length) * 100).toFixed(1)) : 0,
       }))
       .sort((a, b) => b.visits - a.visits)
       .slice(0, 8);
@@ -446,9 +373,9 @@ export const visitorAnalytics = {
     // 8. Recent Visits (latest 20)
     const recentVisits = [...visits].reverse().slice(0, 20);
 
-    const totalDaysCounted = dailyTrends.length || 1;
+    const activeDaysCount = dailyTrends.filter((d) => d.visits > 0).length || 1;
     const sumDailyVisits = dailyTrends.reduce((acc, curr) => acc + curr.visits, 0);
-    const avgDailyVisits = Math.round(sumDailyVisits / totalDaysCounted);
+    const avgDailyVisits = Math.round(sumDailyVisits / activeDaysCount);
 
     return {
       todayVisits,

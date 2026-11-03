@@ -30,10 +30,25 @@ export default function AdminOrdersPage() {
   const loadOrders = async () => {
     setLoading(true);
     try {
+      const res = await fetch("/api/admin/orders", { cache: "no-store" });
+      if (res.ok) {
+        const data = await res.json();
+        if (data && Array.isArray(data.orders)) {
+          setOrders(data.orders);
+          try {
+            localStorage.setItem("nexbyte_orders", JSON.stringify(data.orders));
+          } catch {}
+          return;
+        }
+      }
       const list = await dbHelper.orders.list();
       setOrders(list);
     } catch (err) {
-      console.error(err);
+      console.warn("API orders fetch warning, falling back to local:", err);
+      try {
+        const list = await dbHelper.orders.list();
+        setOrders(list);
+      } catch {}
     } finally {
       setLoading(false);
     }
@@ -49,13 +64,30 @@ export default function AdminOrdersPage() {
 
   const handleUpdateStatus = async (orderId: string, status: string) => {
     try {
-      await dbHelper.orders.update(orderId, { status });
-      if (selectedOrder && selectedOrder.id === orderId) {
+      const res = await fetch("/api/admin/orders", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: orderId, status }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to update order status");
+      }
+      if (selectedOrder && (selectedOrder.id === orderId || selectedOrder.order_id === orderId)) {
         setSelectedOrder((prev: any) => ({ ...prev, status }));
       }
-      loadOrders();
+      await loadOrders();
     } catch (err: any) {
-      alert(err.message || "Failed to update order status");
+      console.warn("API update failed, trying fallback:", err);
+      try {
+        await dbHelper.orders.update(orderId, { status });
+        if (selectedOrder && (selectedOrder.id === orderId || selectedOrder.order_id === orderId)) {
+          setSelectedOrder((prev: any) => ({ ...prev, status }));
+        }
+        await loadOrders();
+      } catch (e: any) {
+        alert(err.message || "Failed to update order status");
+      }
     }
   };
 
@@ -67,12 +99,32 @@ export default function AdminOrdersPage() {
         tracking_id: trackingIdInput.trim() || null,
         tracking_carrier: trackingCarrierInput.trim() || null,
       };
-      await dbHelper.orders.update(selectedOrder.id, updates);
+      const res = await fetch("/api/admin/orders", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: selectedOrder.id || selectedOrder.order_id, ...updates }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to save tracking details");
+      }
       setSelectedOrder((prev: any) => ({ ...prev, ...updates }));
-      loadOrders();
+      await loadOrders();
       alert("Fulfillment tracking details saved successfully.");
     } catch (err: any) {
-      alert(err.message || "Failed to save tracking info");
+      console.warn("API tracking update failed, trying fallback:", err);
+      try {
+        const updates = {
+          tracking_id: trackingIdInput.trim() || null,
+          tracking_carrier: trackingCarrierInput.trim() || null,
+        };
+        await dbHelper.orders.update(selectedOrder.id, updates);
+        setSelectedOrder((prev: any) => ({ ...prev, ...updates }));
+        await loadOrders();
+        alert("Fulfillment tracking details saved successfully.");
+      } catch (e: any) {
+        alert(err.message || "Failed to save tracking info");
+      }
     } finally {
       setSavingTracking(false);
     }
@@ -82,18 +134,23 @@ export default function AdminOrdersPage() {
     const q = search.toLowerCase();
     const matchQuery =
       String(o.id || o.order_id || "").toLowerCase().includes(q) ||
-      (o.customer_name || "").toLowerCase().includes(q) ||
-      (o.customer_email || "").toLowerCase().includes(q) ||
+      String(o.customer_name || o.name || "").toLowerCase().includes(q) ||
+      String(o.customer_email || o.email || "").toLowerCase().includes(q) ||
+      String(o.phone || o.customer_phone || "").toLowerCase().includes(q) ||
       String(o.shipping_address || "").toLowerCase().includes(q) ||
       String(o.applied_offer_code || o.appliedOfferCode || "").toLowerCase().includes(q);
 
     if (!matchQuery) return false;
-    if (statusFilter !== "all" && o.status !== statusFilter) return false;
+    if (statusFilter !== "all") {
+      const st = String(o.status || "").toLowerCase();
+      if (st !== statusFilter.toLowerCase()) return false;
+    }
     return true;
   });
 
   const getStatusBadge = (status: string) => {
-    switch (status) {
+    const st = String(status || "").toLowerCase();
+    switch (st) {
       case "pending":
         return <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-500/30 flex items-center gap-1 w-fit"><Clock className="h-3 w-3" /> Pending</span>;
       case "confirmed":
@@ -107,13 +164,23 @@ export default function AdminOrdersPage() {
       case "cancelled":
         return <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-500/30 flex items-center gap-1 w-fit"><XCircle className="h-3 w-3" /> Cancelled</span>;
       default:
-        return <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/10 w-fit">{status}</span>;
+        return <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/10 w-fit">{status || "Pending"}</span>;
     }
   };
 
-  const totalRevenue = orders.reduce((acc, o) => (o.status !== "cancelled" ? acc + Number(o.total || 0) : acc), 0);
-  const pendingCount = orders.filter((o) => o.status === "pending").length;
-  const processingCount = orders.filter((o) => o.status === "processing" || o.status === "confirmed").length;
+  const totalRevenue = orders.reduce((acc, o) => {
+    const st = String(o.status || "").toLowerCase();
+    if (st !== "cancelled") {
+      const amt = Number(o.total || o.total_amount || 0);
+      return acc + (isNaN(amt) ? 0 : amt);
+    }
+    return acc;
+  }, 0);
+  const pendingCount = orders.filter((o) => String(o.status || "").toLowerCase() === "pending").length;
+  const processingCount = orders.filter((o) => {
+    const st = String(o.status || "").toLowerCase();
+    return st === "processing" || st === "confirmed";
+  }).length;
 
   return (
     <div className="space-y-6">
@@ -218,11 +285,11 @@ export default function AdminOrdersPage() {
                 {filteredOrders.map((o) => (
                   <tr key={o.id} className="hover:bg-slate-50 dark:hover:bg-white/[0.02] transition-colors">
                     <td className="py-4 px-4 font-mono font-bold text-indigo-600 dark:text-cyan-400">
-                      {o.id}
+                      {o.order_id || o.id}
                     </td>
                     <td className="py-4 px-4">
-                      <div className="font-semibold text-slate-900 dark:text-white">{o.customer_name || "Guest Customer"}</div>
-                      <div className="text-[10px] text-slate-500 dark:text-slate-400">{o.customer_email || "N/A"}</div>
+                      <div className="font-semibold text-slate-900 dark:text-white">{o.customer_name || o.name || "Customer"}</div>
+                      <div className="text-[10px] text-slate-500 dark:text-slate-400">{o.customer_email || o.email || o.phone || "N/A"}</div>
                     </td>
                     <td className="py-4 px-4 font-medium">
                       {o.items?.length || 1} item(s)
@@ -236,7 +303,7 @@ export default function AdminOrdersPage() {
                       ) : <span className="text-slate-400">—</span>}
                     </td>
                     <td className="py-4 px-4 font-bold text-slate-900 dark:text-white">
-                      Rs. {(Number(o.total) || 0).toLocaleString("en-IN")}
+                      Rs. {(Number(o.total || o.total_amount) || 0).toLocaleString("en-IN")}
                     </td>
                     <td className="py-4 px-4">
                       {getStatusBadge(o.status)}
@@ -273,7 +340,7 @@ export default function AdminOrdersPage() {
             <div className="flex items-center justify-between border-b border-slate-200 dark:border-white/10 pb-4">
               <div>
                 <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Order Detail</span>
-                <h3 className="font-mono text-lg font-bold text-slate-900 dark:text-white mt-0.5">{selectedOrder.id}</h3>
+                <h3 className="font-mono text-lg font-bold text-slate-900 dark:text-white mt-0.5">{selectedOrder.order_id || selectedOrder.id}</h3>
               </div>
               <button
                 onClick={() => setSelectedOrder(null)}
@@ -297,9 +364,9 @@ export default function AdminOrdersPage() {
                 ].map((s) => (
                   <button
                     key={s.id}
-                    onClick={() => handleUpdateStatus(selectedOrder.id, s.id)}
+                    onClick={() => handleUpdateStatus(selectedOrder.id || selectedOrder.order_id, s.id)}
                     className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                      selectedOrder.status === s.id
+                      (selectedOrder.status || "").toLowerCase() === s.id
                         ? "bg-indigo-600 text-white shadow-sm ring-1 ring-white/30"
                         : "bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-white/10"
                     }`}
@@ -366,12 +433,12 @@ export default function AdminOrdersPage() {
                 <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
                   <User className="h-3.5 w-3.5 text-indigo-600 dark:text-cyan-400" /> Customer Information
                 </div>
-                <div className="text-xs font-semibold text-slate-900 dark:text-white">{selectedOrder.customer_name || "N/A"}</div>
+                <div className="text-xs font-semibold text-slate-900 dark:text-white">{selectedOrder.customer_name || selectedOrder.name || "Customer"}</div>
                 <div className="text-xs text-slate-600 dark:text-slate-400 flex items-center gap-1.5">
-                  <Mail className="h-3 w-3" /> {selectedOrder.customer_email || "N/A"}
+                  <Mail className="h-3 w-3" /> {selectedOrder.customer_email || selectedOrder.email || "N/A"}
                 </div>
                 <div className="text-xs text-slate-600 dark:text-slate-400 flex items-center gap-1.5">
-                  <Phone className="h-3 w-3" /> {selectedOrder.customer_phone || "Not provided"}
+                  <Phone className="h-3 w-3" /> {selectedOrder.customer_phone || selectedOrder.phone || "Not provided"}
                 </div>
               </div>
 
@@ -463,10 +530,10 @@ export default function AdminOrdersPage() {
                     <div key={idx} className="p-3.5 flex items-center justify-between gap-4">
                       <div>
                         <div className="text-xs font-semibold text-slate-900 dark:text-white">{item.title || item.product_title || "Product Item"}</div>
-                        <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">Quantity: {item.quantity || 1} × Rs. {(Number(item.price) || 0).toLocaleString("en-IN")}</div>
+                        <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">Quantity: {item.quantity || 1} × Rs. {(Number(item.price || item.unitPrice || 0)).toLocaleString("en-IN")}</div>
                       </div>
                       <div className="text-xs font-bold text-slate-900 dark:text-white">
-                        Rs. {((Number(item.price) || 0) * (Number(item.quantity) || 1)).toLocaleString("en-IN")}
+                        Rs. {((Number(item.price || item.unitPrice || 0)) * (Number(item.quantity) || 1)).toLocaleString("en-IN")}
                       </div>
                     </div>
                   ))
@@ -477,7 +544,7 @@ export default function AdminOrdersPage() {
 
               <div className="flex justify-between items-center pt-3 border-t border-slate-200 dark:border-white/10 text-sm font-bold text-slate-900 dark:text-white">
                 <span>Grand Total</span>
-                <span className="text-indigo-600 dark:text-cyan-400 text-base">Rs. {(Number(selectedOrder.total) || 0).toLocaleString("en-IN")}</span>
+                <span className="text-indigo-600 dark:text-cyan-400 text-base">Rs. {(Number(selectedOrder.total || selectedOrder.total_amount) || 0).toLocaleString("en-IN")}</span>
               </div>
             </div>
 

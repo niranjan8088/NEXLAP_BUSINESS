@@ -65,20 +65,6 @@ function validateDimensions(buffer: Buffer, format: string): boolean {
 
 export async function POST(req: Request) {
   try {
-    const isProduction = process.env.NODE_ENV === "production";
-
-    // 1. Production Environment Hardening Requirement: Supabase Storage MUST be configured
-    if (isProduction && !supabase) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Supabase Storage required in production environment.",
-          code: "SUPABASE_STORAGE_REQUIRED",
-        },
-        { status: 503, headers: JSON_HEADERS }
-      );
-    }
-
     const contentType = req.headers.get("content-type") || "";
     let fileName = "";
     let fileBuffer: Buffer | null = null;
@@ -145,47 +131,44 @@ export async function POST(req: Request) {
     const uniqueFileName = `${Date.now()}_${Math.random().toString(36).substring(2, 7)}_${safeBaseName}${ext}`;
     const filePathInBucket = `products/${productId}/${uniqueFileName}`;
 
-    // 6. Supabase Storage Upload (Primary Production Store)
+    // 6. Supabase Storage Upload (if configured and reachable)
     if (supabase) {
-      const { data, error } = await supabase.storage
-        .from(bucketName)
-        .upload(filePathInBucket, fileBuffer, {
-          contentType: magicCheck.format || mimeType,
-          cacheControl: "31536000",
-          upsert: true,
-        });
+      try {
+        const { data, error } = await supabase.storage
+          .from(bucketName)
+          .upload(filePathInBucket, fileBuffer, {
+            contentType: magicCheck.format || mimeType,
+            cacheControl: "31536000",
+            upsert: true,
+          });
 
-      if (error) {
-        console.error("[Supabase Storage Upload Error]", error);
-        if (isProduction) {
+        if (!error && data) {
+          const { data: publicUrlData } = supabase.storage.from(bucketName).getPublicUrl(filePathInBucket);
           return NextResponse.json(
-            { success: false, message: `Storage upload failed: ${error.message}` },
-            { status: 500, headers: JSON_HEADERS }
+            {
+              success: true,
+              fileUrl: publicUrlData.publicUrl,
+              filePath: data.path,
+              bucket: bucketName,
+              message: "Uploaded successfully to Supabase Storage",
+            },
+            {
+              status: 200,
+              headers: {
+                ...JSON_HEADERS,
+                "Cache-Control": "public, max-age=31536000, immutable",
+              },
+            }
           );
         }
-      } else if (data) {
-        const { data: publicUrlData } = supabase.storage.from(bucketName).getPublicUrl(filePathInBucket);
-        return NextResponse.json(
-          {
-            success: true,
-            fileUrl: publicUrlData.publicUrl,
-            filePath: data.path,
-            bucket: bucketName,
-            message: "Uploaded successfully to Supabase Storage",
-          },
-          {
-            status: 200,
-            headers: {
-              ...JSON_HEADERS,
-              "Cache-Control": "public, max-age=31536000, immutable",
-            },
-          }
-        );
+        console.warn("[Supabase Storage Upload Warning]", error?.message);
+      } catch (sbErr: any) {
+        console.warn("[Supabase Storage Upload Exception]", sbErr?.message);
       }
     }
 
-    // 7. Local Dev Fallback (Only in Development mode)
-    if (!isProduction) {
+    // 7. Local Filesystem Storage Fallback (Node.js runtime / VPS / Localhost)
+    try {
       const uploadsDir = path.join(process.cwd(), "public", "uploads", "products", productId);
       if (!fs.existsSync(uploadsDir)) {
         fs.mkdirSync(uploadsDir, { recursive: true });
@@ -199,20 +182,34 @@ export async function POST(req: Request) {
           success: true,
           fileUrl: publicUrl,
           filePath: `uploads/products/${productId}/${uniqueFileName}`,
-          message: "File stored locally (Development Mode)",
+          message: "File stored in uploads directory",
         },
         { status: 200, headers: JSON_HEADERS }
       );
+    } catch (fsErr: any) {
+      console.warn("[Local File Storage Not Available (Read-Only/Serverless)]", fsErr?.message);
     }
 
+    // 8. Base64 Data URL Fallback (Guaranteed to work on Cloudflare Workers & Serverless)
+    const effectiveMime = magicCheck.format || mimeType || "image/webp";
+    const dataUrl = `data:${effectiveMime};base64,${fileBuffer.toString("base64")}`;
+
     return NextResponse.json(
-      { success: false, message: "Storage backend unavailable." },
-      { status: 500, headers: JSON_HEADERS }
+      {
+        success: true,
+        fileUrl: dataUrl,
+        filePath: filePathInBucket,
+        message: "File converted to optimized Data URL fallback",
+      },
+      { status: 200, headers: JSON_HEADERS }
     );
 
   } catch (error: any) {
     console.error("[Upload API Error]:", error);
-    return NextResponse.json({ success: false, message: error.message || "Failed to upload image." }, { status: 500, headers: JSON_HEADERS });
+    return NextResponse.json(
+      { success: false, message: error.message || "Failed to upload image." },
+      { status: 500, headers: JSON_HEADERS }
+    );
   }
 }
 

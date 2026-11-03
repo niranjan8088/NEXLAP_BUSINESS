@@ -613,19 +613,40 @@ export default function AdminProductsManager() {
           formData.append("file", item.file);
           formData.append("productId", targetProductId);
 
-          const res = await fetch("/api/upload", { method: "POST", body: formData });
-          const json = await res.json();
+          let fileUrl = "";
+          try {
+            const res = await fetch("/api/upload", { method: "POST", body: formData });
+            const text = await res.text();
+            let json: any = null;
+            try {
+              json = JSON.parse(text);
+            } catch {}
+            if (json && json.success && json.fileUrl) {
+              fileUrl = json.fileUrl;
+            }
+          } catch (uploadErr) {
+            console.warn("Server /api/upload failed, falling back to base64:", uploadErr);
+          }
 
-          if (json.success && json.fileUrl) {
+          // Robust fallback: if server upload didn't return a fileUrl, generate base64 data URL directly
+          if (!fileUrl && item.file) {
+            fileUrl = await new Promise<string>((resolve) => {
+              const reader = new FileReader();
+              reader.onloadend = () => resolve(reader.result as string);
+              reader.readAsDataURL(item.file!);
+            });
+          }
+
+          if (fileUrl) {
             uploadedImages.push({
               id: item.id,
-              url: json.fileUrl,
+              url: fileUrl,
               is_primary: item.is_primary,
               sort_order: i + 1,
               alt_text: item.alt_text || ""
             });
           } else {
-            throw new Error(json.message || `Failed to upload image ${i + 1}`);
+            throw new Error(`Failed to process image ${i + 1}`);
           }
         } else {
           uploadedImages.push({

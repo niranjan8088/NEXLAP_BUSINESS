@@ -19,38 +19,30 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json().catch(() => ({}));
-    const { action, path, device } = body;
+    const { path, device, title } = body;
 
-    if (action === "simulate") {
-      // Simulate a real-time customer visit for live testing
-      const samplePaths = [
-        { path: "/customer/shop", title: "All Products" },
-        { path: "/products", title: "Laptops & Hardware" },
-        { path: "/customer/orders", title: "Order Tracking" },
-        { path: "/customer/bookings", title: "Repair Booking" },
-        { path: "/services", title: "IT Services" },
-      ];
-      const selected = samplePaths[Math.floor(Math.random() * samplePaths.length)];
-      const devices: ("mobile" | "desktop" | "tablet")[] = ["mobile", "desktop", "tablet"];
-      const randomDevice = device || devices[Math.floor(Math.random() * devices.length)];
+    const cfIp = request.headers.get("cf-connecting-ip");
+    const realIp = request.headers.get("x-real-ip");
+    const forwardedFor = request.headers.get("x-forwarded-for");
+    const ip = cfIp || realIp || (forwardedFor ? forwardedFor.split(",")[0].trim() : "127.0.0.1");
 
-      await visitorAnalytics.recordVisit({
-        path: path || selected.path,
-        title: selected.title,
-        device: randomDevice,
-        referrer: "https://google.com",
-        role: "customer",
-      });
-    }
+    await visitorAnalytics.recordVisit({
+      path: path || "/",
+      title: title || "Live Visit",
+      device: device || "desktop",
+      referrer: "admin_test",
+      ip,
+      role: "customer",
+    });
 
     const updated = await visitorAnalytics.getAnalytics();
     return NextResponse.json({
       success: true,
-      message: "Customer visit recorded successfully",
+      message: "Customer visit logged successfully",
       analytics: updated,
     });
   } catch (err: any) {
-    console.error("POST Customer Visit Simulation Error:", err);
+    console.error("POST Customer Visit Error:", err);
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });
   }
 }
@@ -61,7 +53,7 @@ export async function DELETE() {
     const fresh = await visitorAnalytics.getAnalytics();
     return NextResponse.json({
       success: true,
-      message: "Visitor analytics reset to baseline successfully",
+      message: "Visitor analytics logs reset successfully",
       analytics: fresh,
     });
   } catch (err: any) {
@@ -69,4 +61,3 @@ export async function DELETE() {
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });
   }
 }
-

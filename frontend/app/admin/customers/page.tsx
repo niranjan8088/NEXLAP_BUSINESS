@@ -27,10 +27,27 @@ export default function AdminCustomersPage() {
   const load = async () => {
     setLoading(true);
     try {
+      const res = await fetch("/api/admin/customers", { cache: "no-store" });
+      if (res.ok) {
+        const data = await res.json();
+        if (data && Array.isArray(data.customers)) {
+          setCustomers(data.customers);
+          try {
+            localStorage.setItem("nexbyte_customers", JSON.stringify(data.customers));
+          } catch {}
+          return;
+        }
+      }
       const list = await dbHelper.customers.list();
       setCustomers(list);
-    } catch {
-      alert("Failed to load customer profiles.");
+    } catch (err) {
+      console.warn("Customers API fetch warning, using local fallback:", err);
+      try {
+        const list = await dbHelper.customers.list();
+        setCustomers(list);
+      } catch {
+        alert("Failed to load customer profiles.");
+      }
     } finally {
       setLoading(false);
     }
@@ -76,12 +93,28 @@ export default function AdminCustomersPage() {
     };
 
     try {
-      await dbHelper.customers.update(selectedCust.id, payload);
+      const res = await fetch("/api/admin/customers", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: selectedCust.id, ...payload }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to update customer");
+      }
       setShowEditModal(false);
-      load();
+      await load();
       window.dispatchEvent(new CustomEvent("nexbyte-realtime"));
-    } catch {
-      alert("Failed to save customer profile.");
+    } catch (err: any) {
+      console.warn("API update failed, trying fallback:", err);
+      try {
+        await dbHelper.customers.update(selectedCust.id, payload);
+        setShowEditModal(false);
+        await load();
+        window.dispatchEvent(new CustomEvent("nexbyte-realtime"));
+      } catch {
+        alert("Failed to save customer profile.");
+      }
     }
   };
 

@@ -19,10 +19,11 @@ function detectDevice(): "desktop" | "mobile" | "tablet" {
   if (typeof window === "undefined") return "desktop";
   const width = window.innerWidth;
   const ua = navigator.userAgent.toLowerCase();
-  const isMobileUa = /iphone|ipad|ipod|android|blackberry|mini|windows\sce|palm/i.test(ua);
+  const isTablet = /ipad|tablet|(android(?!.*mobile))/i.test(ua) || (width >= 768 && width < 1024);
+  const isMobile = /mobile|iphone|ipod|blackberry|opera mini|windows phone/i.test(ua) || (width < 768);
 
-  if (width < 768 || (isMobileUa && width < 768)) return "mobile";
-  if (width >= 768 && width < 1024) return "tablet";
+  if (isTablet) return "tablet";
+  if (isMobile) return "mobile";
   return "desktop";
 }
 
@@ -40,8 +41,8 @@ export default function VisitorTracker() {
     }
 
     const now = Date.now();
-    // Debounce rapid duplicate fires within 2 seconds on the exact same path
-    if (lastPathRef.current === pathname && now - lastTimeRef.current < 2000) {
+    // Debounce duplicate fires within 2.5 seconds on the exact same path
+    if (lastPathRef.current === pathname && now - lastTimeRef.current < 2500) {
       return;
     }
 
@@ -53,26 +54,25 @@ export default function VisitorTracker() {
     const payload = JSON.stringify({
       path: pathname,
       title: document.title || pathname,
-      referrer: document.referrer || "",
+      referrer: document.referrer || "direct",
       device,
       visitorId,
     });
 
     try {
-      if (typeof navigator !== "undefined" && navigator.sendBeacon) {
-        const blob = new Blob([payload], { type: "application/json" });
-        navigator.sendBeacon("/api/analytics/track", blob);
-      } else {
-        fetch("/api/analytics/track", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: payload,
-          keepalive: true,
-        }).catch(() => {});
-      }
+      fetch("/api/analytics/track", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: payload,
+        keepalive: true,
+      }).catch(() => {
+        if (typeof navigator !== "undefined" && navigator.sendBeacon) {
+          const blob = new Blob([payload], { type: "application/json" });
+          navigator.sendBeacon("/api/analytics/track", blob);
+        }
+      });
     } catch {}
   }, [pathname]);
 
   return null;
 }
-
