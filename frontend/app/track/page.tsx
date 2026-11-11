@@ -19,11 +19,13 @@ export default function TrackPage() {
   const [loading, setLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const [results, setResults] = useState<{
+    orders: any[];
     bookings: any[];
     enrollments: any[];
     laptopEnquiries: any[];
     internships: any[];
   }>({
+    orders: [],
     bookings: [],
     enrollments: [],
     laptopEnquiries: [],
@@ -40,6 +42,7 @@ export default function TrackPage() {
       const res = await safeJsonFetch(`/api/track?search=${encodeURIComponent(queryText.trim())}`);
       if (res.ok && res.data?.success) {
         setResults({
+          orders: res.data.results.orders || [],
           bookings: res.data.results.bookings || [],
           enrollments: res.data.results.enrollments || [],
           laptopEnquiries: res.data.results.laptopEnquiries || [],
@@ -256,6 +259,7 @@ export default function TrackPage() {
             )}
 
             {hasSearched &&
+              (results.orders || []).length === 0 &&
               results.bookings.length === 0 &&
               results.enrollments.length === 0 &&
               (results.laptopEnquiries || []).length === 0 &&
@@ -264,13 +268,122 @@ export default function TrackPage() {
                   <span className="text-3xl block mb-3">❌</span>
                   <h3 className="font-display text-base font-bold text-slate-900 dark:text-white">No active records found</h3>
                   <p className="text-xs text-readable-secondary mt-1 max-w-sm mx-auto">
-                    Double check your Application ID (e.g. `INT-2026-000001`) or search by your primary Phone number used during submission.
+                    Double check your Order ID (e.g. `NB-ORD-2026-000001`), Tracking Number (e.g. `NEX-TRK-...`), Application ID, or primary Phone number.
                   </p>
                 </div>
               )}
 
             {hasSearched && (
               <div className="space-y-6">
+
+                {/* Hardware Orders Results */}
+                {results.orders && results.orders.map((order: any) => {
+                  const s = (order.status || "").toLowerCase();
+                  let stepIdx = 0;
+                  if (s.includes("delivered")) stepIdx = 3;
+                  else if (s.includes("out for delivery")) stepIdx = 2;
+                  else if (s.includes("processing") || s.includes("shipped") || s.includes("dispatched")) stepIdx = 1;
+
+                  const orderId = order.order_number || order.order_id || order.id;
+                  const total = Number(order.total_amount || order.total || order.grandTotal || 0);
+                  const dateStr = order.created_at ? new Date(order.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "Recent";
+                  const items = Array.isArray(order.items) ? order.items : [];
+
+                  return (
+                    <motion.div
+                      key={order.id || orderId}
+                      initial={{ opacity: 0, y: 15 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="futuristic-card p-6 rounded-2xl relative overflow-hidden space-y-6 shadow-xl border border-indigo-200/50 dark:border-indigo-500/20"
+                    >
+                      <div className="absolute right-0 top-0 opacity-[0.03] pointer-events-none transform translate-x-4 -translate-y-4">
+                        <ShoppingBag size={140} />
+                      </div>
+
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b border-slate-200 dark:border-white/10 pb-4 gap-2">
+                        <div>
+                          <span className="text-[10px] font-bold uppercase text-emerald-600 dark:text-emerald-400 tracking-wider flex items-center gap-1.5">
+                            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                            Hardware Marketplace Order
+                          </span>
+                          <h3 className="font-display text-lg font-black text-slate-900 dark:text-white mt-1">
+                            Order #{orderId}
+                          </h3>
+                          <p className="text-xs text-readable-secondary">Ordered on {dateStr} by {order.customer_name || "Customer"}</p>
+                        </div>
+                        <div className="text-left sm:text-right">
+                          <span className="text-[10px] text-readable-secondary uppercase block">Total Amount</span>
+                          <span className="font-display text-lg font-black text-cyan-600 dark:text-cyan-400">
+                            ₹{total.toLocaleString("en-IN")}
+                          </span>
+                          <div className="text-[11px] font-bold text-slate-600 dark:text-slate-300 mt-0.5">
+                            Status: <span className="text-emerald-600 dark:text-emerald-400 font-extrabold uppercase">{order.status || "Confirmed"}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Delivery Status Steps */}
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-[11px] font-bold text-slate-500 dark:text-slate-400">
+                          <span className={stepIdx >= 0 ? "text-emerald-600 dark:text-emerald-400" : ""}>✓ Confirmed</span>
+                          <span className={stepIdx >= 1 ? "text-emerald-600 dark:text-emerald-400" : ""}>Processing</span>
+                          <span className={stepIdx >= 2 ? "text-emerald-600 dark:text-emerald-400" : ""}>Out for Delivery</span>
+                          <span className={stepIdx >= 3 ? "text-emerald-600 dark:text-emerald-400" : ""}>Delivered</span>
+                        </div>
+                        <div className="h-2.5 rounded-full bg-slate-100 dark:bg-white/10 overflow-hidden flex">
+                          <div className="h-full bg-emerald-500 transition-all duration-500" style={{ width: `${((stepIdx + 1) / 4) * 100}%` }} />
+                        </div>
+                        {order.tracking_number && (
+                          <div className="flex flex-wrap items-center justify-between text-xs text-slate-600 dark:text-slate-400 pt-1">
+                            <span>Courier: <strong className="text-slate-800 dark:text-slate-200">{order.courier || "NexLapTech Logistics"}</strong></span>
+                            <span>Tracking: <code className="font-mono font-bold text-slate-900 dark:text-white px-2 py-0.5 bg-slate-100 dark:bg-white/5 rounded border border-slate-200 dark:border-white/10">{order.tracking_number}</code></span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Items */}
+                      {items.length > 0 && (
+                        <div className="space-y-3 border-t border-slate-200 dark:border-white/10 pt-4">
+                          <h4 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">Purchased Products ({items.length})</h4>
+                          <div className="space-y-2">
+                            {items.map((item: any, idx: number) => (
+                              <div key={idx} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 text-xs">
+                                <div className="flex items-center gap-3">
+                                  {item.image && (
+                                    <img src={getSafeImageSrc(item.image)} alt={item.title} className="w-10 h-10 object-cover rounded-lg border border-slate-200 dark:border-white/10" />
+                                  )}
+                                  <div>
+                                    <p className="font-bold text-slate-900 dark:text-white">{item.title}</p>
+                                    <p className="text-[10px] text-readable-secondary">Qty: {item.quantity} × ₹{Number(item.price || item.unitPrice || 0).toLocaleString("en-IN")}</p>
+                                  </div>
+                                </div>
+                                <span className="font-bold text-slate-900 dark:text-white">
+                                  ₹{((Number(item.price || item.unitPrice || 0)) * (Number(item.quantity || 1))).toLocaleString("en-IN")}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Quick Actions */}
+                      <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-200 dark:border-white/10 text-xs">
+                        <Link
+                          href="/customer/orders"
+                          className="futuristic-btn-primary !py-2 !px-4 text-xs font-bold inline-flex items-center gap-1.5"
+                        >
+                          <ShoppingBag className="h-3.5 w-3.5" /> View in Customer Portal
+                        </Link>
+                        <Link
+                          href="/customer/messages"
+                          className="futuristic-btn-secondary !py-2 !px-4 text-xs font-bold inline-flex items-center gap-1.5"
+                        >
+                          <Send className="h-3.5 w-3.5" /> Message Support
+                        </Link>
+                      </div>
+                    </motion.div>
+                  );
+                })}
 
                 {/* Internship Applications Results */}
                 {results.internships && results.internships.map((intern) => (

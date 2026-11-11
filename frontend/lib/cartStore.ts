@@ -108,6 +108,10 @@ export const useCartStore = create<CartStore>()(
     }),
     {
       name: "nexbyte_cart_storage",
+      partialize: (state) => ({
+        items: state.items,
+        appliedOfferCode: state.appliedOfferCode,
+      }),
     }
   )
 );

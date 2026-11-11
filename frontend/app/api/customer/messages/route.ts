@@ -9,7 +9,7 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized access." }, { status: 401 });
     }
 
-    const messages = await dbHelper.messages.getByUser(authUser.id);
+    const messages = await dbHelper.messages.getByUser(authUser.id, authUser.email);
     return NextResponse.json({ messages });
   } catch (err: any) {
     console.error("GET Customer Messages Error:", err);
@@ -32,6 +32,7 @@ export async function POST(request: Request) {
     const newMessage = await dbHelper.messages.send({
       user_id: authUser.id,
       customer_email: authUser.email,
+      customer_name: authUser.name || "Customer",
       subject: subject || "Customer Enquiry",
       message: message.trim(),
       sender: "customer",

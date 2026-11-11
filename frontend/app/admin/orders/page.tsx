@@ -30,19 +30,37 @@ export default function AdminOrdersPage() {
   const loadOrders = async () => {
     setLoading(true);
     try {
+      let ordersList: any[] = [];
       const res = await fetch("/api/admin/orders", { cache: "no-store" });
       if (res.ok) {
         const data = await res.json();
-        if (data && Array.isArray(data.orders)) {
-          setOrders(data.orders);
-          try {
-            localStorage.setItem("nexbyte_orders", JSON.stringify(data.orders));
-          } catch {}
-          return;
+        if (data && Array.isArray(data.orders) && data.orders.length > 0) {
+          ordersList = data.orders;
         }
       }
-      const list = await dbHelper.orders.list();
-      setOrders(list);
+      if (ordersList.length === 0) {
+        const list = await dbHelper.orders.list();
+        ordersList = list || [];
+      }
+      try {
+        const rawLocal = localStorage.getItem("nexbyte_orders");
+        if (rawLocal) {
+          const localParsed = JSON.parse(rawLocal);
+          if (Array.isArray(localParsed)) {
+            const map = new Map<string, any>();
+            localParsed.forEach((o: any) => map.set(o.order_id || o.id, o));
+            ordersList.forEach((o: any) => map.set(o.order_id || o.id, o));
+            ordersList = Array.from(map.values()).sort(
+              (a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
+            );
+          }
+        }
+      } catch {}
+
+      setOrders(ordersList);
+      try {
+        localStorage.setItem("nexbyte_orders", JSON.stringify(ordersList));
+      } catch {}
     } catch (err) {
       console.warn("API orders fetch warning, falling back to local:", err);
       try {

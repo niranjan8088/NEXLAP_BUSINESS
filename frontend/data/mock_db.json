@@ -4410,5 +4410,36 @@
       "updated_at": "2026-11-01T04:36:13.515Z"
     }
   ],
-  "customer_visits": []
+  "customer_visits": [
+    {
+      "id": "visit-1794417772260-p6v3e",
+      "timestamp": "2026-11-11T17:22:52.259Z",
+      "date": "2026-11-11",
+      "month": "2026-11",
+      "hour": 22,
+      "dayOfWeek": "Wednesday",
+      "path": "/",
+      "title": "NEXLAPTECH | Laptops, Components & Accessories",
+      "device": "desktop",
+      "visitorId": "vis-mvxar769-zc8oug",
+      "referrer": "direct",
+      "ipAnonymized": "127.0.0.xxx",
+      "role": "guest"
+    },
+    {
+      "id": "visit-1794417772270-t1l9k",
+      "timestamp": "2026-11-11T17:22:52.270Z",
+      "date": "2026-11-11",
+      "month": "2026-11",
+      "hour": 22,
+      "dayOfWeek": "Wednesday",
+      "path": "/",
+      "title": "NEXLAPTECH | Laptops, Components & Accessories",
+      "device": "desktop",
+      "visitorId": "vis-mwcdzyba-kdhm7y",
+      "referrer": "direct",
+      "ipAnonymized": "192.168.31.xxx",
+      "role": "guest"
+    }
+  ]
 }

@@ -229,6 +229,16 @@ export default function CheckoutPage() {
 
       setOrderPlaced({ ...data.order, warning: data.warning });
       clearCart();
+
+      if (data?.order) {
+        try {
+          const raw = localStorage.getItem("nexbyte_orders");
+          const existing = raw ? JSON.parse(raw) : [];
+          const updated = [data.order, ...existing.filter((o: any) => (o.order_id || o.id) !== (data.order.order_id || data.order.id))];
+          localStorage.setItem("nexbyte_orders", JSON.stringify(updated));
+          window.dispatchEvent(new CustomEvent("nexbyte-data-changed", { detail: { table: "orders", action: "insert", data: data.order } }));
+        } catch {}
+      }
     } catch (err: any) {
       setError("Network error. Please try placing your order again.");
     } finally {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { useCartStore } from "@/lib/cartStore";
 import { ShoppingBag, X, Trash2, Plus, Minus, ArrowRight, CheckCircle2, Loader2, Sparkles, Tag } from "lucide-react";
 import { getSafeImageSrc } from "@/lib/utils";
@@ -8,6 +9,13 @@ import { safeJsonFetch } from "@/lib/apiHelper";
 
 export default function CartDrawer() {
   const { items, isOpen, closeCart, removeItem, updateQuantity, clearCart, getTotal, getItemCount, appliedOfferCode, setAppliedOfferCode } = useCartStore();
+  const pathname = usePathname();
+
+  useEffect(() => {
+    if (pathname && (pathname.includes("/signin") || pathname.includes("/login") || pathname.includes("/checkout"))) {
+      closeCart();
+    }
+  }, [pathname, closeCart]);
   
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [customerName, setCustomerName] = useState("");
@@ -171,6 +179,7 @@ export default function CartDrawer() {
       });
 
       if (res.status === 401) {
+        closeCart();
         window.location.assign(`/customer/signin?next=${encodeURIComponent("/checkout")}`);
         return;
       }
@@ -178,8 +187,19 @@ export default function CartDrawer() {
         throw new Error(res.data?.error || res.error || "Failed to place order.");
       }
 
-      setCompletedOrder(res.data.order);
+      const placedOrder = res.data.order;
+      setCompletedOrder(placedOrder);
       clearCart();
+
+      if (placedOrder) {
+        try {
+          const raw = localStorage.getItem("nexbyte_orders");
+          const existing = raw ? JSON.parse(raw) : [];
+          const updated = [placedOrder, ...existing.filter((o: any) => (o.order_id || o.id) !== (placedOrder.order_id || placedOrder.id))];
+          localStorage.setItem("nexbyte_orders", JSON.stringify(updated));
+          window.dispatchEvent(new CustomEvent("nexbyte-data-changed", { detail: { table: "orders", action: "insert", data: placedOrder } }));
+        } catch {}
+      }
     } catch (err: any) {
       console.error("Cart checkout failed.", err);
       alert(err instanceof Error ? err.message : "Failed to place order. Please try again.");
@@ -192,6 +212,7 @@ export default function CartDrawer() {
     try {
       const res = await fetch("/api/customer/favorites");
       if (res.status === 401) {
+        closeCart();
         window.location.assign(`/customer/signin?next=${encodeURIComponent("/checkout")}`);
         return;
       }

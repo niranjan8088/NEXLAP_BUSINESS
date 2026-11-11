@@ -1750,6 +1750,9 @@ export const dbHelper = {
         admin_reply_at: new Date().toISOString(),
         status: "replied"
       };
+      try {
+        await dbHelper.messages.reply(id, replyMessage);
+      } catch {}
       return this.update(id, updates);
     }
   },
@@ -2910,11 +2913,24 @@ export const dbHelper = {
     async list() {
       const cached = getCachedQuery<any[]>("orders:list");
       if (cached) return cached;
+      const mockOrders = getMockData("orders");
       if (supabase) {
-        const { data } = await supabase.from("orders").select("*").order("created_at", { ascending: false });
-        return setCachedQuery("orders:list", data || []);
+        try {
+          const { data, error } = await supabase.from("orders").select("*").order("created_at", { ascending: false });
+          if (!error && Array.isArray(data)) {
+            const map = new Map<string, any>();
+            mockOrders.forEach((o: any) => map.set(o.order_id || o.id, o));
+            data.forEach((o: any) => map.set(o.order_id || o.id, o));
+            const merged = Array.from(map.values()).sort(
+              (a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
+            );
+            return setCachedQuery("orders:list", merged);
+          }
+        } catch (e) {
+          console.warn("Supabase orders query fallback:", e);
+        }
       }
-      return setCachedQuery("orders:list", getMockData("orders"));
+      return setCachedQuery("orders:list", mockOrders);
     },
     async listByUser(userId: string) {
       const list = await this.list();
@@ -2926,32 +2942,42 @@ export const dbHelper = {
     },
     async getById(id: string) {
       if (supabase) {
-        const { data } = await supabase.from("orders").select("*").eq("id", id).single();
-        return data || null;
+        try {
+          const { data } = await supabase.from("orders").select("*").or(`id.eq.${id},order_id.eq.${id}`).single();
+          if (data) return data;
+        } catch {}
       }
-      const list = getMockData("orders");
+      const list = await this.list();
       return list.find((o: any) => o.id === id || o.order_id === id) || null;
     },
     async create(order: any) {
-      const orderId = await this.getNextOrderId();
+      const orderId = order.order_id || (await this.getNextOrderId());
       const newOrder = {
         id: `ord-${Date.now()}`,
         order_id: orderId,
-        status: "pending",
+        order_number: orderId,
+        status: "Confirmed",
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         ...order,
       };
-      if (supabase) {
-        const { data, error } = await supabase.from("orders").insert([newOrder]).select().single();
-        if (error) throw error;
-        notifyDataChange("orders", "insert", data);
-        return data;
-      }
       const list = getMockData("orders");
-      saveMockData("orders", [newOrder, ...list]);
-      notifyDataChange("orders", "insert", newOrder);
-      return newOrder;
+      const filtered = list.filter((o: any) => (o.order_id || o.id) !== orderId);
+      saveMockData("orders", [newOrder, ...filtered]);
+
+      let savedData: any = newOrder;
+      if (supabase) {
+        try {
+          const { data, error } = await supabase.from("orders").insert([newOrder]).select().single();
+          if (!error && data) {
+            savedData = data;
+          }
+        } catch (sbErr) {
+          console.warn("Supabase order insert fallback:", sbErr);
+        }
+      }
+      notifyDataChange("orders", "insert", savedData);
+      return savedData;
     },
     async update(id: string, updates: any) {
       const payload = { ...updates, updated_at: new Date().toISOString() };
@@ -3171,13 +3197,42 @@ export const dbHelper = {
 
   // --- MESSAGES SECTION ---
   messages: {
-    async getByUser(userId: string) {
+    async getByUser(userId: string, userEmail?: string) {
+      const cleanEmail = (userEmail || "").trim().toLowerCase();
+      const cleanId = (userId || "").trim();
+      const mockList = getMockData("messages");
+      const filterFn = (m: any) => {
+        const mUserId = (m.user_id || "").trim();
+        const mEmail = (m.customer_email || m.email || "").trim().toLowerCase();
+        return (
+          (cleanId && (mUserId === cleanId || mEmail === cleanId.toLowerCase())) ||
+          (cleanEmail && (mEmail === cleanEmail || mUserId === cleanEmail))
+        );
+      };
+
       if (supabase) {
-        const { data } = await supabase.from("messages").select("*").or(`user_id.eq.${userId},customer_email.eq.${userId}`).order("created_at", { ascending: true });
-        return data || [];
+        try {
+          let query = supabase.from("messages").select("*");
+          if (cleanEmail && cleanId && cleanEmail !== cleanId) {
+            query = query.or(`user_id.eq.${cleanId},customer_email.eq.${cleanEmail},customer_email.eq.${cleanId},user_id.eq.${cleanEmail}`);
+          } else {
+            const val = cleanEmail || cleanId;
+            query = query.or(`user_id.eq.${val},customer_email.eq.${val}`);
+          }
+          const { data, error } = await query.order("created_at", { ascending: true });
+          if (!error && Array.isArray(data)) {
+            const map = new Map<string, any>();
+            mockList.filter(filterFn).forEach((m: any) => map.set(m.id, m));
+            data.forEach((m: any) => map.set(m.id, m));
+            return Array.from(map.values()).sort(
+              (a, b) => new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime()
+            );
+          }
+        } catch (e) {
+          console.warn("Supabase messages query error:", e);
+        }
       }
-      const list = getMockData("messages");
-      return list.filter((m: any) => m.user_id === userId || m.customer_email === userId);
+      return mockList.filter(filterFn);
     },
     async send(message: any) {
       const payload = {
@@ -3186,16 +3241,36 @@ export const dbHelper = {
         created_at: new Date().toISOString(),
         ...message
       };
+      const list = getMockData("messages");
+      saveMockData("messages", [...list, payload]);
+
       let savedData: any = payload;
       if (supabase) {
-        const { data } = await supabase.from("messages").insert([payload]).select().single();
-        notifyDataChange("messages", "insert", data);
-        savedData = data || payload;
-      } else {
-        const list = getMockData("messages");
-        saveMockData("messages", [...list, payload]);
-        notifyDataChange("messages", "insert", payload);
+        try {
+          const { data, error } = await supabase.from("messages").insert([payload]).select().single();
+          if (!error && data) {
+            savedData = data;
+          }
+        } catch (sbErr) {
+          console.warn("Supabase messages insert error:", sbErr);
+        }
       }
+      notifyDataChange("messages", "insert", savedData);
+
+      // Auto-sync into contacts so Admin sees it in Admin Contacts & Messages console
+      try {
+        await dbHelper.contacts.create({
+          id: payload.id,
+          name: message.sender_name || message.customer_name || "Customer",
+          email: message.customer_email || message.email || "customer@nexbyte.com",
+          phone: message.phone || "",
+          subject: message.subject || "Customer Portal Chat",
+          message: message.message,
+          user_id: message.user_id,
+          source: "customer_portal",
+          status: "new",
+        });
+      } catch {}
 
       // Fire admin notification with deep link reference to this conversation
       try {

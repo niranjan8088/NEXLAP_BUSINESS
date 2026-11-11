@@ -78,10 +78,27 @@ export async function GET(req: Request) {
         return safeData;
       });
 
+    const orders = await dbHelper.orders.list();
+    const cleanDigits = cleanSearch.replace(/\D/g, "");
+    const matchedOrders = orders.filter((o: any) => {
+      const orderId = (o.order_id || o.order_number || o.id || "").toLowerCase();
+      const trk = (o.tracking_number || "").toLowerCase();
+      const phoneDigits = (o.phone || "").replace(/\D/g, "");
+      const email = (o.email || "").toLowerCase();
+
+      return (
+        orderId === cleanSearch ||
+        trk === cleanSearch ||
+        (cleanDigits.length >= 6 && phoneDigits.includes(cleanDigits)) ||
+        (cleanSearch.includes("@") && email === cleanSearch)
+      );
+    });
+
     return NextResponse.json(
       {
         success: true,
         results: {
+          orders: matchedOrders,
           bookings: matchedBookings,
           enrollments: matchedEnrollments,
           laptopEnquiries: matchedLaptopEnquiries,
