@@ -147,12 +147,28 @@ export async function POST(request: Request) {
       full_name: fullName,
       phone: cleanPhone,
       date_of_birth: body.dateOfBirth,
+      password: password.trim(),
       role: "user",
       status: "active",
       created_at: new Date().toISOString(),
     };
 
     await dbHelper.users.create(newUser);
+
+    try {
+      await dbHelper.profiles.update(newUser.id, {
+        id: newUser.id,
+        email: cleanEmail,
+        full_name: fullName,
+        phone: cleanPhone,
+        date_of_birth: body.dateOfBirth,
+        role: "user",
+        status: "active",
+        city: "Bengaluru",
+        state: "Karnataka",
+        country: "India",
+      });
+    } catch {}
 
     const response = NextResponse.json({
       success: true,
@@ -167,6 +183,11 @@ export async function POST(request: Request) {
       sameSite: "lax",
       maxAge: 60 * 60 * 24 * 30,
       path: "/",
+    });
+    response.cookies.set("nexbyte_customer_email", cleanEmail, {
+      httpOnly: false,
+      path: "/",
+      maxAge: 60 * 60 * 24 * 30,
     });
     response.cookies.set("nexbyte_customer_name", encodeURIComponent(fullName), {
       httpOnly: false,

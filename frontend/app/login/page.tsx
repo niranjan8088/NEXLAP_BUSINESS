@@ -105,13 +105,13 @@ function LoginPageContent() {
       }
 
       if (selectedRole === "admin") {
-        router.replace("/admin");
+        window.location.href = "/admin";
       } else if (selectedRole === "reseller") {
-        router.replace("/reseller");
+        window.location.href = "/reseller";
       } else if (redirectTarget) {
-        router.replace(redirectTarget);
+        window.location.href = redirectTarget;
       } else {
-        router.replace("/customer");
+        window.location.href = "/customer";
       }
     } catch (err: any) {
       setErrorMsg(err.message || "An unexpected authentication error occurred.");

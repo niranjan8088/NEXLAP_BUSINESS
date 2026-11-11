@@ -195,6 +195,7 @@ export default function CustomerDashboardPage() {
     certificates: { count: 0 },
   });
   const [dashboardConfig, setDashboardConfig] = useState<CustomerDashboardLayoutConfig | null>(null);
+  const [flyers, setFlyers] = useState<any[]>([]);
 
   const cartAddItem = useCartStore((s) => s.addItem);
   const cartOpenFn = useCartStore((s) => s.openCart);
@@ -214,8 +215,16 @@ export default function CustomerDashboardPage() {
         safeJsonFetch("/api/public/settings"),
       ]);
 
-      if (settingsRes.ok && settingsRes.data?.customerDashboard) {
-        setDashboardConfig(settingsRes.data.customerDashboard);
+      if (settingsRes.ok) {
+        if (settingsRes.data?.customerDashboard) {
+          setDashboardConfig(settingsRes.data.customerDashboard);
+        }
+        if (settingsRes.data?.flyersPromotions?.flyers) {
+          const activeFlyers = settingsRes.data.flyersPromotions.flyers.filter(
+            (f: any) => f.active !== false && (f.placement === "customer_dashboard" || f.placement === "all" || !f.placement)
+          );
+          setFlyers(activeFlyers);
+        }
       }
 
       // Profile
@@ -420,6 +429,48 @@ export default function CustomerDashboardPage() {
         featuredProduct={featuredProducts[0]}
         activeOffer={activeOffers[0]}
       />
+
+      {/* ── 1B. PROMOTIONAL FLYER POSTERS (DYNAMIC CMS CAROUSEL) ─────────── */}
+      {flyers.length > 0 && (
+        <section className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {flyers.map((flyer) => (
+              <Link key={flyer.id} href={flyer.destinationUrl || "/customer/shop"}>
+                <div className="group relative overflow-hidden rounded-3xl border border-[#DCEAF2] dark:border-[#263247] bg-gradient-to-r from-cyan-50/80 via-white to-blue-50/80 dark:from-[#0B1526] dark:via-[#101B2B] dark:to-[#080E1A] p-5 sm:p-6 shadow-sm hover:shadow-xl hover:border-[#0891B2]/50 transition-all duration-300 cursor-pointer min-h-[140px] flex items-center justify-between gap-4">
+                  <div className="space-y-1.5 z-10 max-w-sm">
+                    {flyer.badge && (
+                      <span className="inline-block rounded-full bg-[#2563EB] dark:bg-[#0891B2] text-white text-[10px] font-black uppercase px-2.5 py-0.5 tracking-wider shadow-sm">
+                        {flyer.badge}
+                      </span>
+                    )}
+                    <h3 className="font-display text-base sm:text-lg font-black text-[#0F172A] dark:text-white group-hover:text-[#2563EB] dark:group-hover:text-[#38BDF8] transition-colors leading-snug">
+                      {flyer.title}
+                    </h3>
+                    <p className="text-xs text-[#475569] dark:text-[#94A3B8] font-medium line-clamp-2">
+                      {flyer.subtitle}
+                    </p>
+                    <div className="inline-flex items-center gap-1.5 text-xs font-bold text-[#2563EB] dark:text-[#38BDF8] pt-1">
+                      <span>Explore Deal</span>
+                      <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-1 transition-transform" />
+                    </div>
+                  </div>
+                  {flyer.imageUrl && (
+                    <div className="relative h-24 w-24 sm:h-32 sm:w-32 shrink-0 transition-transform duration-300 group-hover:scale-105">
+                      <Image
+                        src={flyer.imageUrl}
+                        alt={flyer.title}
+                        fill
+                        className="object-contain drop-shadow-md"
+                        onError={(e: any) => { e.target.src = "/images/poster-products.png"; }}
+                      />
+                    </div>
+                  )}
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* ── 2. KPI STATS (REAL BUSINESS INSIGHTS) ─────────────────────────── */}
       <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">

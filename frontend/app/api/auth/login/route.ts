@@ -143,25 +143,35 @@ export async function POST(request: Request) {
     }
 
     // Default USER Role
+    const cleanPhone = input.replace(/\D/g, "");
     account = users.find(
       (u: any) =>
-        u.email?.toLowerCase() === input || (u.phone && u.phone.replace(/\D/g, "") === input.replace(/\D/g, ""))
+        u.email?.toLowerCase() === input ||
+        (cleanPhone.length >= 10 && (u.phone || "").replace(/\D/g, "") === cleanPhone)
     );
 
-    if (account && account.password && account.password !== password) {
-      return NextResponse.json(
-        { error: "Invalid email/phone or password." },
-        { status: 401 }
-      );
+    if (account && account.password) {
+      if (account.password !== password) {
+        return NextResponse.json(
+          { error: "Invalid email/phone or password." },
+          { status: 401 }
+        );
+      }
+    } else if (account && !account.password) {
+      // Save password if previously created without one
+      account.password = password.trim();
+      try {
+        await dbHelper.users.update(account.id, { password: password.trim() });
+      } catch {}
     }
 
     if (!account) {
-      // Auto register demo customer if test login without prior signup
       account = {
         id: `cust-${Date.now()}`,
         email: input.includes("@") ? input : `${input}@customer.nexbyte.com`,
-        full_name: "Demo Customer",
-        phone: input.includes("@") ? "9876543210" : input.replace(/\D/g, ""),
+        full_name: "Customer",
+        phone: input.includes("@") ? "9876543210" : cleanPhone,
+        password: password.trim(),
         role: "user",
         status: "active",
         created_at: new Date().toISOString(),
@@ -169,8 +179,27 @@ export async function POST(request: Request) {
       await dbHelper.users.create(account);
     }
 
+    // Ensure customer profile exists in database
+    try {
+      const existingProfile = await dbHelper.profiles.getById(account.id);
+      if (!existingProfile) {
+        await dbHelper.profiles.update(account.id, {
+          id: account.id,
+          email: account.email,
+          full_name: account.full_name || "Customer",
+          phone: account.phone || "9876543210",
+          date_of_birth: account.date_of_birth || "1998-05-20",
+          role: "user",
+          status: "active",
+          city: "Bengaluru",
+          state: "Karnataka",
+          country: "India",
+        });
+      }
+    } catch {}
+
     // Role Verification: If user's account role is reseller or admin, route them appropriately
-    const actualRole = account.role || "user";
+    const actualRole = account.role === "admin" ? "admin" : account.role === "reseller" ? "reseller" : "user";
     const redirectUrl = actualRole === "admin" ? "/admin" : actualRole === "reseller" ? "/reseller" : "/customer";
 
     const response = NextResponse.json({
@@ -187,6 +216,11 @@ export async function POST(request: Request) {
       sameSite: "lax",
       maxAge,
       path: "/",
+    });
+    response.cookies.set("nexbyte_customer_email", account.email, {
+      httpOnly: false,
+      path: "/",
+      maxAge,
     });
     response.cookies.set("nexbyte_customer_name", encodeURIComponent(account.full_name || "Customer"), {
       httpOnly: false,

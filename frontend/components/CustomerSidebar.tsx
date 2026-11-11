@@ -30,11 +30,14 @@ import {
   ChevronRight,
   X,
   AlertTriangle,
+  Sun,
+  Moon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
 import { useCartStore } from "@/lib/cartStore";
 import { useNotificationStore } from "@/lib/notificationStore";
+import { useTheme } from "@/components/ThemeProvider";
 
 interface CustomerSidebarProps {
   mobileOpen: boolean;
@@ -98,6 +101,7 @@ const NAV_CATEGORIES = [
 
 export default function CustomerSidebar({ mobileOpen, setMobileOpen }: CustomerSidebarProps) {
   const pathname = usePathname() || "/customer";
+  const { theme, toggleTheme } = useTheme();
   const [collapsed, setCollapsed] = useState(false);
   const [showSignOutModal, setShowSignOutModal] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
@@ -242,15 +246,25 @@ export default function CustomerSidebar({ mobileOpen, setMobileOpen }: CustomerS
       >
         {/* Branding */}
         <div className="flex items-center justify-between px-4 py-4 border-b border-[#DCEAF2] dark:border-[#2A3B50] shrink-0">
-          <Link href="/customer" className="flex items-center gap-3 group overflow-hidden">
+          <Link href="/customer" className="flex items-center gap-3 group overflow-hidden min-w-0">
             <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-full bg-[#020b1f] shadow-[0_0_16px_rgba(59,130,246,0.25)] ring-2 ring-cyan-400/70">
               <BrandLogo width={120} height={120} sizes="44px" priority className="h-full w-full" />
             </div>
+            {!collapsed && (
+              <div className="min-w-0 flex-1 truncate">
+                <h2 className="truncate font-display text-sm font-extrabold tracking-tight text-slate-900 dark:text-white">
+                  NEXLAPTECH
+                </h2>
+                <span className="block text-[9px] font-semibold uppercase tracking-wider text-indigo-600 dark:text-cyan-400">
+                  CUSTOMER PORTAL
+                </span>
+              </div>
+            )}
           </Link>
           <button
             onClick={toggleCollapsed}
             aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-            className="flex h-7 w-7 items-center justify-center rounded-lg border border-[#E2E8F0] dark:border-[#263247] text-[#64748B] dark:text-[#94A3B8] hover:bg-[#F0F4FF] dark:hover:bg-[#1a2744] hover:text-[#2563EB] dark:hover:text-[#60A5FA] transition-colors"
+            className="flex h-7 w-7 items-center justify-center rounded-lg border border-[#E2E8F0] dark:border-[#263247] text-[#64748B] dark:text-[#94A3B8] hover:bg-[#F0F4FF] dark:hover:bg-[#1a2744] hover:text-[#2563EB] dark:hover:text-[#60A5FA] transition-colors shrink-0 ml-1"
           >
             {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
           </button>
@@ -273,12 +287,36 @@ export default function CustomerSidebar({ mobileOpen, setMobileOpen }: CustomerS
           ))}
         </div>
 
-        {/* Sign Out */}
-        <div className="p-3 border-t border-[#E2E8F0] dark:border-[#263247] shrink-0 bg-white dark:bg-[#080B12]">
+        {/* Sidebar Footer: Theme Toggle & Sign Out */}
+        <div className="p-3 border-t border-[#E2E8F0] dark:border-[#263247] shrink-0 bg-white dark:bg-[#080B12] space-y-1.5">
+          {/* Quick Theme Toggle */}
+          <button
+            onClick={toggleTheme}
+            type="button"
+            className={cn(
+              "group relative w-full flex items-center gap-3 rounded-xl px-3.5 py-2 text-xs font-semibold text-[#475569] dark:text-[#CBD5E1] hover:bg-[#F1F5F9] dark:hover:bg-[#1E1638]/50 hover:text-[#2563EB] dark:hover:text-[#60A5FA] transition-all duration-200 cursor-pointer",
+              collapsed ? "justify-center" : ""
+            )}
+            title={theme === "night" ? "Switch to light theme" : "Switch to dark theme"}
+          >
+            {theme === "night" ? (
+              <Sun className="h-4 w-4 shrink-0 text-amber-400" />
+            ) : (
+              <Moon className="h-4 w-4 shrink-0 text-indigo-600 dark:text-cyan-400" />
+            )}
+            {!collapsed && <span>{theme === "night" ? "Light Mode" : "Dark Mode"}</span>}
+            {collapsed && (
+              <div className="absolute left-full ml-2.5 hidden rounded-lg bg-[#111827] dark:bg-[#1B1B20] px-2.5 py-1 text-[11px] font-medium text-white shadow-md group-hover:block z-50 whitespace-nowrap">
+                {theme === "night" ? "Light Mode" : "Dark Mode"}
+              </div>
+            )}
+          </button>
+
+          {/* Sign Out */}
           <button
             onClick={() => setShowSignOutModal(true)}
             className={cn(
-              "group relative w-full flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-all duration-200",
+              "group relative w-full flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-all duration-200 cursor-pointer",
               collapsed ? "justify-center" : ""
             )}
           >
@@ -313,14 +351,22 @@ export default function CustomerSidebar({ mobileOpen, setMobileOpen }: CustomerS
               className="lg:hidden fixed top-0 left-0 bottom-0 z-50 w-72 bg-white dark:bg-[#080B12] border-r border-[#E2E8F0] dark:border-[#263247] flex flex-col shadow-2xl"
             >
               <div className="flex items-center justify-between p-4 border-b border-[#E2E8F0] dark:border-[#263247]">
-                <div className="flex items-center gap-3">
-                  <div className="relative h-11 w-11 overflow-hidden rounded-full bg-[#020b1f] shadow-[0_0_16px_rgba(59,130,246,0.25)] ring-2 ring-cyan-400/70">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-full bg-[#020b1f] shadow-[0_0_16px_rgba(59,130,246,0.25)] ring-2 ring-cyan-400/70">
                     <BrandLogo width={120} height={120} sizes="44px" className="h-full w-full" />
+                  </div>
+                  <div className="min-w-0 flex-1 truncate">
+                    <h2 className="truncate font-display text-sm font-extrabold tracking-tight text-slate-900 dark:text-white">
+                      NEXLAPTECH
+                    </h2>
+                    <span className="block text-[9px] font-semibold uppercase tracking-wider text-indigo-600 dark:text-cyan-400">
+                      CUSTOMER PORTAL
+                    </span>
                   </div>
                 </div>
                 <button
                   onClick={() => setMobileOpen(false)}
-                  className="p-2 rounded-lg text-[#64748B] hover:bg-[#F0F4FF] dark:hover:bg-[#1a2744]"
+                  className="p-2 rounded-lg text-[#64748B] hover:bg-[#F0F4FF] dark:hover:bg-[#1a2744] shrink-0"
                 >
                   <X className="h-5 w-5" />
                 </button>
@@ -342,10 +388,22 @@ export default function CustomerSidebar({ mobileOpen, setMobileOpen }: CustomerS
                 ))}
               </div>
 
-              <div className="p-4 border-t border-[#E2E8F0] dark:border-[#263247]">
+              <div className="p-4 border-t border-[#E2E8F0] dark:border-[#263247] space-y-2">
+                <button
+                  onClick={toggleTheme}
+                  type="button"
+                  className="w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold text-[#475569] dark:text-[#CBD5E1] hover:bg-[#F0F4FF] dark:hover:bg-[#1a2744] transition-colors"
+                >
+                  {theme === "night" ? (
+                    <Sun className="h-4 w-4 text-amber-400" />
+                  ) : (
+                    <Moon className="h-4 w-4 text-indigo-600 dark:text-cyan-400" />
+                  )}
+                  <span>{theme === "night" ? "Switch to Light Mode" : "Switch to Dark Mode"}</span>
+                </button>
                 <button
                   onClick={() => { setMobileOpen(false); setShowSignOutModal(true); }}
-                  className="w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30"
+                  className="w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors"
                 >
                   <LogOut className="h-4 w-4 text-rose-600 dark:text-rose-400" />
                   <span>Sign Out</span>

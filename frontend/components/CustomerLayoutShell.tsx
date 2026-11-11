@@ -146,17 +146,8 @@ export default function CustomerLayoutShell({ children }: { children: React.Reac
             sidebarCollapsed ? "lg:pl-[72px]" : "lg:pl-64"
           )}
         >
-          {/* Top Header:
-              On /customer homepage, hidden on desktop so hero is right at the top matching Screenshot 3.
-              On all other customer routes (/customer/requests, /services, etc.), shown prominently matching Screenshot 1.
-          */}
-          {isCustomerHome ? (
-            <div className="lg:hidden">
-              <CustomerHeader onOpenMobileMenu={() => setMobileSidebarOpen(true)} />
-            </div>
-          ) : (
-            <CustomerHeader onOpenMobileMenu={() => setMobileSidebarOpen(true)} />
-          )}
+          {/* Top Header: Always visible across all customer pages with search, theme switch, cart and user profile */}
+          <CustomerHeader onOpenMobileMenu={() => setMobileSidebarOpen(true)} />
 
           {/* Page Content */}
           <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto space-y-6 pb-24 lg:pb-8">

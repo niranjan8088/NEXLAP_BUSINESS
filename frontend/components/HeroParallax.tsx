@@ -120,7 +120,7 @@ export default function HeroParallax({
       ref={containerRef}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
-      className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#F0FDFF] via-white to-[#F8FAFC] p-6 sm:p-8 md:p-10 lg:p-12 text-[#0F172A] shadow-md border border-[#E2E8F0] transition-colors"
+      className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#F0FDFF] via-white to-[#F8FAFC] dark:from-[#0B1526] dark:via-[#101B2B] dark:to-[#080E1A] p-6 sm:p-8 md:p-10 lg:p-12 text-[#0F172A] dark:text-[#F8FAFC] shadow-md border border-[#DCEAF2] dark:border-[#203047] transition-colors"
     >
       {/* Fine Background Grid & Soft Radial Cyan Glow */}
       <motion.div
@@ -289,13 +289,13 @@ export default function HeroParallax({
           {/* ── FLOATING PANEL A: FEATURED PRODUCT CARD (Top Right) ── */}
           <motion.div
             style={{ x: isTouchDevice ? 0 : floatCard1X, y: isTouchDevice ? 0 : floatCard1Y }}
-            animate={isTouchDevice ? {} : { y: [0, -6, 0] }}
+            animate={isTouchDevice ? {} : { y: [0, -4, 0] }}
             transition={{ repeat: Infinity, duration: 5, ease: "easeInOut" }}
-            className="absolute -top-2 right-0 sm:right-2 rounded-2xl bg-white/95 dark:bg-[#162438]/95 backdrop-blur-md border border-[#DCEAF2] dark:border-[#263247] p-3 shadow-xl shadow-[#0891B2]/10 max-w-[200px] z-20"
+            className="absolute top-1 right-1 sm:top-2 sm:right-2 rounded-2xl bg-white/95 dark:bg-[#162438]/95 backdrop-blur-md border border-[#DCEAF2] dark:border-[#263247] p-2.5 sm:p-3 shadow-xl shadow-[#0891B2]/10 max-w-[180px] sm:max-w-[200px] z-20"
           >
-            <div className="flex items-center gap-2.5">
-              <div className="h-10 w-10 rounded-xl bg-[#ECFEFF] dark:bg-[#0891B2]/30 flex items-center justify-center shrink-0 border border-[#0891B2]/20">
-                <ShoppingBag className="h-5 w-5 text-[#0891B2]" />
+            <div className="flex items-center gap-2 sm:gap-2.5">
+              <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-xl bg-[#ECFEFF] dark:bg-[#0891B2]/30 flex items-center justify-center shrink-0 border border-[#0891B2]/20">
+                <ShoppingBag className="h-4 w-4 sm:h-5 sm:w-5 text-[#0891B2]" />
               </div>
               <div className="min-w-0">
                 <span className="text-[9px] font-extrabold uppercase tracking-wider text-[#0891B2] block">Featured</span>
@@ -316,13 +316,13 @@ export default function HeroParallax({
           {/* ── FLOATING PANEL B: SPECIFICATION CARD (Bottom Left) ── */}
           <motion.div
             style={{ x: isTouchDevice ? 0 : floatCard2X, y: isTouchDevice ? 0 : floatCard2Y }}
-            animate={isTouchDevice ? {} : { y: [0, 6, 0] }}
+            animate={isTouchDevice ? {} : { y: [0, 4, 0] }}
             transition={{ repeat: Infinity, duration: 6, ease: "easeInOut" }}
-            className="absolute bottom-2 left-0 sm:left-2 rounded-2xl bg-white/95 dark:bg-[#162438]/95 backdrop-blur-md border border-[#DCEAF2] dark:border-[#263247] p-3 shadow-xl shadow-[#0891B2]/10 max-w-[210px] z-20"
+            className="absolute bottom-1 left-1 sm:bottom-2 sm:left-2 rounded-2xl bg-white/95 dark:bg-[#162438]/95 backdrop-blur-md border border-[#DCEAF2] dark:border-[#263247] p-2.5 sm:p-3 shadow-xl shadow-[#0891B2]/10 max-w-[190px] sm:max-w-[210px] z-20"
           >
-            <div className="flex items-center gap-2.5">
-              <div className="h-10 w-10 rounded-xl bg-[#EEF6FF] dark:bg-[#2563EB]/30 flex items-center justify-center shrink-0 border border-[#2563EB]/20">
-                <Cpu className="h-5 w-5 text-[#2563EB]" />
+            <div className="flex items-center gap-2 sm:gap-2.5">
+              <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-xl bg-[#EEF6FF] dark:bg-[#2563EB]/30 flex items-center justify-center shrink-0 border border-[#2563EB]/20">
+                <Cpu className="h-4 w-4 sm:h-5 sm:w-5 text-[#2563EB]" />
               </div>
               <div>
                 <span className="text-[9px] font-extrabold uppercase tracking-wider text-[#64748B] dark:text-[#94A3B8] block">Specs</span>
@@ -332,12 +332,12 @@ export default function HeroParallax({
             </div>
           </motion.div>
 
-          {/* ── FLOATING PANEL C: SUPPORT ASSISTANT CARD (Top Left) ── */}
+          {/* ── FLOATING PANEL C: SUPPORT ASSISTANT CARD (Top Left - Desktop only) ── */}
           <motion.div
             style={{ x: isTouchDevice ? 0 : floatCard3X, y: isTouchDevice ? 0 : floatCard3Y }}
-            animate={isTouchDevice ? {} : { y: [0, -5, 0] }}
+            animate={isTouchDevice ? {} : { y: [0, -4, 0] }}
             transition={{ repeat: Infinity, duration: 5.5, ease: "easeInOut", delay: 1 }}
-            className="absolute top-12 left-0 sm:-left-4 rounded-2xl bg-white/95 dark:bg-[#162438]/95 backdrop-blur-md border border-[#DCEAF2] dark:border-[#263247] p-3 shadow-xl shadow-[#0891B2]/10 max-w-[190px] z-20"
+            className="hidden md:block absolute top-12 left-1 sm:left-2 rounded-2xl bg-white/95 dark:bg-[#162438]/95 backdrop-blur-md border border-[#DCEAF2] dark:border-[#263247] p-2.5 sm:p-3 shadow-xl shadow-[#0891B2]/10 max-w-[185px] z-20"
           >
             <div className="flex items-center gap-2">
               <div className="h-8 w-8 rounded-xl bg-purple-50 dark:bg-purple-950/50 flex items-center justify-center shrink-0 text-purple-600 dark:text-purple-300">
@@ -355,13 +355,13 @@ export default function HeroParallax({
             </div>
           </motion.div>
 
-          {/* ── FLOATING PANEL D: ACTIVE OFFER CARD (Bottom Right) ── */}
+          {/* ── FLOATING PANEL D: ACTIVE OFFER CARD (Bottom Right - Desktop only) ── */}
           {activeOffer && (
             <motion.div
               style={{ x: isTouchDevice ? 0 : floatCard4X, y: isTouchDevice ? 0 : floatCard4Y }}
-              animate={isTouchDevice ? {} : { y: [0, 5, 0] }}
+              animate={isTouchDevice ? {} : { y: [0, 4, 0] }}
               transition={{ repeat: Infinity, duration: 6.5, ease: "easeInOut", delay: 0.5 }}
-              className="absolute bottom-14 right-0 sm:-right-4 rounded-2xl bg-white/95 dark:bg-[#162438]/95 backdrop-blur-md border border-amber-300/50 dark:border-amber-500/30 p-3 shadow-xl shadow-amber-500/10 max-w-[195px] z-20"
+              className="hidden md:block absolute bottom-12 right-1 sm:right-2 rounded-2xl bg-white/95 dark:bg-[#162438]/95 backdrop-blur-md border border-amber-300/50 dark:border-amber-500/30 p-2.5 sm:p-3 shadow-xl shadow-amber-500/10 max-w-[190px] z-20"
             >
               <div className="flex items-center gap-2">
                 <div className="h-8 w-8 rounded-xl bg-amber-50 dark:bg-amber-950/50 flex items-center justify-center shrink-0 text-amber-500">

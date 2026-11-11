@@ -55,15 +55,17 @@ export default function CustomerSignInPage() {
       }
 
       const requestedNext = new URLSearchParams(window.location.search).get("next");
+      const isCustomer = res.data.role === "user" || res.data.role === "customer";
       const safeNext =
-        res.data.role === "user" &&
+        isCustomer &&
         requestedNext?.startsWith("/") &&
         !requestedNext.startsWith("//") &&
-        !requestedNext.startsWith("/customer/signin")
+        !requestedNext.startsWith("/customer/signin") &&
+        !requestedNext.startsWith("/customer/login")
           ? requestedNext
           : null;
       const redirectUrl = safeNext || res.data.redirectUrl || "/customer";
-      router.replace(redirectUrl);
+      window.location.href = redirectUrl;
     } catch (err: any) {
       setErrorMsg(err.message || "The email/phone or password is incorrect.");
     } finally {

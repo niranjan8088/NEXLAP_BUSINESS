@@ -16,12 +16,14 @@ import {
   Package,
   Calendar,
   Sun,
+  Moon,
   Tag,
   Heart,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn, getCustomerInitials } from "@/lib/utils";
 import { useCartStore } from "@/lib/cartStore";
+import { useTheme } from "@/components/ThemeProvider";
 import GlobalSearchModal from "@/components/GlobalSearchModal";
 import QuickNotificationsPopover from "@/components/QuickNotificationsPopover";
 
@@ -53,6 +55,7 @@ const PAGE_TITLES: Record<string, string> = {
 
 export default function CustomerHeader({ onOpenMobileMenu }: CustomerHeaderProps) {
   const pathname = usePathname() || "/customer";
+  const { theme, toggleTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [userProfile, setUserProfile] = useState<any>(null);
@@ -125,12 +128,12 @@ export default function CustomerHeader({ onOpenMobileMenu }: CustomerHeaderProps
               <Menu className="h-5 w-5" />
             </button>
 
-            {/* Page title — desktop only */}
-            <div className="hidden sm:flex flex-col min-w-0">
-              <span className="text-[10px] font-bold text-[#0891B2] dark:text-[#0891B2] tracking-wider uppercase">
+            {/* Page title & Brand */}
+            <div className="flex flex-col min-w-0">
+              <span className="text-[10px] font-bold text-[#0891B2] dark:text-[#38BDF8] tracking-wider uppercase">
                 NEXLAPTECH
               </span>
-              <h1 className="text-base font-extrabold text-[#0F172A] dark:text-[#F8FAFC] truncate">
+              <h1 className="text-sm sm:text-base font-extrabold text-[#0F172A] dark:text-[#F8FAFC] truncate">
                 {getPageTitle()}
               </h1>
             </div>
@@ -188,16 +191,21 @@ export default function CustomerHeader({ onOpenMobileMenu }: CustomerHeaderProps
             {/* Notifications */}
             <QuickNotificationsPopover role="customer" />
 
-            {/* Theme is fixed to light mode. */}
-            <div
-              role="status"
-              aria-label="Light theme active"
+            {/* Interactive Theme Toggle Button */}
+            <button
+              onClick={toggleTheme}
+              type="button"
+              aria-label="Toggle theme"
               id="customer-theme-btn"
-              className="p-2.5 rounded-xl border border-[#E2E8F0] dark:border-[#263247] bg-white dark:bg-[#111827] text-[#111827] dark:text-[#F8FAFC] hover:bg-[#EEF6FF] dark:hover:bg-[#1a2744] transition-colors"
-              title="Light theme active"
+              className="p-2.5 rounded-xl border border-[#DCEAF2] dark:border-[#263247] bg-white dark:bg-[#111827] text-[#111827] dark:text-[#F8FAFC] hover:bg-[#EEF6FF] dark:hover:bg-[#1a2744] transition-colors cursor-pointer"
+              title={theme === "night" ? "Switch to light theme" : "Switch to dark theme"}
             >
-              <Sun className="h-4.5 w-4.5 text-amber-500" />
-            </div>
+              {theme === "night" ? (
+                <Sun className="h-4.5 w-4.5 text-amber-400" />
+              ) : (
+                <Moon className="h-4.5 w-4.5 text-indigo-600 dark:text-cyan-400" />
+              )}
+            </button>
 
             {/* Profile Dropdown */}
             {isAuthenticated && userProfile ? (

@@ -195,16 +195,23 @@ export default function CustomerSignUpPage() {
                   <div>
                     <h3 className="font-display text-xl font-bold">Account created successfully!</h3>
                     <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
-                      Welcome to NexLapTech, <strong>{successName}</strong>. You can now sign in to your account.
+                      Welcome to NexLapTech, <strong>{successName}</strong>. Your customer session is active.
                     </p>
                   </div>
-                  <div className="pt-4">
+                  <div className="pt-4 space-y-2">
+                    <button
+                      onClick={() => { window.location.href = "/customer"; }}
+                      type="button"
+                      className="w-full rounded-xl bg-nex-blue hover:bg-blue-600 text-white py-3 text-xs font-bold inline-flex items-center justify-center gap-2 shadow-md cursor-pointer transition-all"
+                    >
+                      <span>Go to Customer Dashboard</span>
+                      <ArrowRight className="h-4 w-4" />
+                    </button>
                     <Link
                       href="/customer/signin"
-                      className="w-full rounded-xl bg-nex-blue text-white py-3 text-xs font-bold inline-flex items-center justify-center gap-2 shadow-md"
+                      className="w-full rounded-xl border border-slate-200 dark:border-white/10 py-2.5 text-xs font-semibold inline-flex items-center justify-center gap-2 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
                     >
-                      <span>Continue to Sign In</span>
-                      <ArrowRight className="h-4 w-4" />
+                      <span>Sign In with another account</span>
                     </Link>
                   </div>
                 </div>
