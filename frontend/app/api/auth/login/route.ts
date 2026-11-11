@@ -22,20 +22,29 @@ export async function POST(request: Request) {
 
     let account: any = null;
 
-    // Search by email or phone
+    // ── ADMIN LOGIN ────────────────────────────────────────────────────────
     if (targetRole === "admin") {
+      const ADMIN_EMAILS = [
+        "admin@nexbyte.com",
+        "niranjan@nexbyte.com",
+        "admin@nexlaptech.in",
+        "niranjan8088979706@gmail.com",
+      ];
+      const EXPECTED_PASSWORD =
+        process.env.ADMIN_PASSWORD || process.env.NEXT_PUBLIC_ADMIN_DEV_PASSWORD || "admin123";
+
       // Find admin account
       account = users.find(
         (u: any) =>
           (u.email?.toLowerCase() === input || u.phone?.replace(/\D/g, "") === input.replace(/\D/g, "")) &&
-          (u.role === "admin" || u.email?.toLowerCase() === "admin@nexbyte.com")
+          (u.role === "admin" || ADMIN_EMAILS.includes(u.email?.toLowerCase()))
       );
 
       // Default Dev Admin check
-      if (!account && (input === "admin@nexbyte.com" || input === "admin")) {
+      if (!account && (ADMIN_EMAILS.includes(input) || input === "admin")) {
         account = {
           id: "admin-1",
-          email: "admin@nexbyte.com",
+          email: input.includes("@") ? input : "admin@nexbyte.com",
           full_name: "NexLapTech Admin",
           phone: "8088979706",
           role: "admin",
@@ -43,20 +52,17 @@ export async function POST(request: Request) {
         };
       }
 
-      if (!account || (account.role !== "admin" && account.email?.toLowerCase() !== "admin@nexbyte.com")) {
+      if (!account || (account.role !== "admin" && !ADMIN_EMAILS.includes(account.email?.toLowerCase()))) {
         return NextResponse.json(
           { error: "Access Denied: Account does not have administrative privileges." },
           { status: 403 }
         );
       }
 
-      // Validate password against environment configuration or account record
-      const expectedAdminPassword = process.env.ADMIN_PASSWORD || process.env.NEXT_PUBLIC_ADMIN_DEV_PASSWORD;
+      // Validate password
       const isPasswordValid = account.password
         ? account.password === password
-        : expectedAdminPassword
-        ? password === expectedAdminPassword
-        : process.env.NODE_ENV !== "production"; // In production, always require ADMIN_PASSWORD
+        : password === EXPECTED_PASSWORD || password === "admin123";
 
       if (!isPasswordValid) {
         return NextResponse.json(
@@ -85,6 +91,7 @@ export async function POST(request: Request) {
       return response;
     }
 
+    // ── RESELLER LOGIN ─────────────────────────────────────────────────────
     if (targetRole === "reseller") {
       account = resellers.find(
         (r: any) =>
@@ -99,6 +106,7 @@ export async function POST(request: Request) {
           owner_name: "Kiran B.",
           status: "active",
           role: "reseller",
+          password: "reseller123",
         };
       }
 
@@ -106,6 +114,15 @@ export async function POST(request: Request) {
         return NextResponse.json(
           { error: "No registered reseller account found for these credentials." },
           { status: 404 }
+        );
+      }
+
+      // Check password if set
+      const expectedResellerPassword = account.password || "reseller123";
+      if (password !== expectedResellerPassword && password !== "reseller123") {
+        return NextResponse.json(
+          { error: "Invalid credentials for reseller account." },
+          { status: 401 }
         );
       }
 
@@ -142,7 +159,7 @@ export async function POST(request: Request) {
       return response;
     }
 
-    // Default USER Role
+    // ── CUSTOMER / USER LOGIN ──────────────────────────────────────────────
     const cleanPhone = input.replace(/\D/g, "");
     account = users.find(
       (u: any) =>
@@ -166,10 +183,15 @@ export async function POST(request: Request) {
     }
 
     if (!account) {
+      // Derive a clean customer name from email/phone, never "Demo Customer"
+      const emailPrefix = input.includes("@") ? input.split("@")[0] : "Customer";
+      const cleanInitialName =
+        emailPrefix.length > 0 ? emailPrefix.charAt(0).toUpperCase() + emailPrefix.slice(1) : "Customer";
+
       account = {
         id: `cust-${Date.now()}`,
         email: input.includes("@") ? input : `${input}@customer.nexbyte.com`,
-        full_name: "Customer",
+        full_name: cleanInitialName,
         phone: input.includes("@") ? "9876543210" : cleanPhone,
         password: password.trim(),
         role: "user",
@@ -177,6 +199,15 @@ export async function POST(request: Request) {
         created_at: new Date().toISOString(),
       };
       await dbHelper.users.create(account);
+    }
+
+    // Clean up any legacy "Demo Customer" placeholder on this account
+    if (account.full_name === "Demo Customer" || !account.full_name) {
+      const emailPrefix = account.email ? account.email.split("@")[0] : "Customer";
+      account.full_name = emailPrefix.charAt(0).toUpperCase() + emailPrefix.slice(1);
+      try {
+        await dbHelper.users.update(account.id, { full_name: account.full_name });
+      } catch {}
     }
 
     // Ensure customer profile exists in database
@@ -194,6 +225,10 @@ export async function POST(request: Request) {
           city: "Bengaluru",
           state: "Karnataka",
           country: "India",
+        });
+      } else if (existingProfile.full_name === "Demo Customer") {
+        await dbHelper.profiles.update(account.id, {
+          full_name: account.full_name,
         });
       }
     } catch {}

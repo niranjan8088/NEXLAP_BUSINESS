@@ -15,26 +15,49 @@ async function resolveAuthenticatedUser() {
 
   const emailCookie = cookieStore.get("nexbyte_customer_email")?.value;
   const nameCookie = cookieStore.get("nexbyte_customer_name")?.value;
-  const decodedName = nameCookie ? decodeURIComponent(nameCookie) : "";
+  let decodedName = nameCookie ? decodeURIComponent(nameCookie) : "";
+  if (decodedName === "Demo Customer") decodedName = "";
+
+  let id = "cust-1";
+  let email = emailCookie || "customer@nexbyte.com";
 
   if (userSession.startsWith("mock-user:")) {
     const parts = userSession.replace("mock-user:", "").split(":");
-    const id = parts[0] || "cust-1";
-    const email = parts[1] || emailCookie || "customer@nexbyte.com";
-    return { id, email, name: decodedName || "Customer" };
+    id = parts[0] || "cust-1";
+    email = parts[1] || emailCookie || "customer@nexbyte.com";
+  } else {
+    const parts = userSession.split(":");
+    if (parts.length >= 3) {
+      id = parts[1];
+      email = parts[2];
+    } else if (parts.length === 2 && parts[0] === "mock-user") {
+      id = parts[1];
+      email = emailCookie || parts[1];
+    } else {
+      id = userSession;
+      email = emailCookie || (userSession.includes("@") ? userSession : `${userSession}@customer.nexbyte.com`);
+    }
   }
 
-  const parts = userSession.split(":");
-  if (parts.length >= 3) {
-    return { id: parts[1], email: parts[2], name: decodedName || "Customer" };
-  }
-  if (parts.length === 2 && parts[0] === "mock-user") {
-    return { id: parts[1], email: emailCookie || parts[1], name: decodedName || "Customer" };
+  // Check registered user in db for authoritative name
+  try {
+    const users = await dbHelper.users.list();
+    const matchedUser = users.find(
+      (u: any) => u.id === id || (email && u.email?.toLowerCase() === email.toLowerCase())
+    );
+    if (matchedUser && matchedUser.full_name && matchedUser.full_name !== "Demo Customer") {
+      decodedName = matchedUser.full_name;
+    }
+  } catch {}
+
+  if (!decodedName && email) {
+    const prefix = email.split("@")[0];
+    decodedName = prefix.charAt(0).toUpperCase() + prefix.slice(1);
   }
 
   return {
-    id: userSession,
-    email: emailCookie || (userSession.includes("@") ? userSession : `${userSession}@customer.nexbyte.com`),
+    id,
+    email,
     name: decodedName || "Customer",
   };
 }
@@ -53,14 +76,29 @@ export async function GET() {
       profile = await dbHelper.profiles.getById(authUser.email);
     }
 
+    // Lookup user record to get registered name, phone, dob if available
+    let registeredUser: any = null;
+    try {
+      const users = await dbHelper.users.list();
+      registeredUser = users.find(
+        (u: any) => u.id === authUser.id || (authUser.email && u.email?.toLowerCase() === authUser.email.toLowerCase())
+      );
+    } catch {}
+
+    const resolvedName =
+      (registeredUser?.full_name && registeredUser.full_name !== "Demo Customer" ? registeredUser.full_name : null) ||
+      (profile?.full_name && profile.full_name !== "Demo Customer" ? profile.full_name : null) ||
+      authUser.name ||
+      "Customer";
+
     if (!profile) {
-      // First-time visit fallback: initialize and persist to database
+      // First-time visit: initialize with user's real registered details
       const initialProfile = {
         id: authUser.id,
         email: authUser.email,
-        full_name: authUser.name || "Customer",
-        phone: "9876543210",
-        date_of_birth: "1998-05-20",
+        full_name: resolvedName,
+        phone: registeredUser?.phone || "9876543210",
+        date_of_birth: registeredUser?.date_of_birth || "1998-05-20",
         avatar_url: "",
         gender: "Not Specified",
         address: "Padmanabhanagar",
@@ -72,6 +110,11 @@ export async function GET() {
         status: "active",
       };
       profile = await dbHelper.profiles.update(authUser.id, initialProfile);
+    } else if (profile.full_name === "Demo Customer" || !profile.full_name) {
+      // Clean up legacy placeholder
+      profile = await dbHelper.profiles.update(authUser.id, {
+        full_name: resolvedName,
+      });
     }
 
     // Strip sensitive internal fields
@@ -88,7 +131,6 @@ export async function GET() {
 
 export async function PUT(request: Request) {
   try {
-    const cookieStore = await cookies();
     const authUser = await resolveAuthenticatedUser();
 
     if (!authUser) {
@@ -187,9 +229,13 @@ export async function PUT(request: Request) {
     }
 
     // Strict Authorization: Update authenticated customer's record ONLY
-    // Email is immutable by client body, guaranteed to match authenticated session
     const updatesWithAuthEmail = { ...updates, email: authUser.email };
     const updated = await dbHelper.profiles.update(authUser.id, updatesWithAuthEmail);
+
+    // Keep dbHelper.users in sync as well
+    try {
+      await dbHelper.users.update(authUser.id, updatesWithAuthEmail);
+    } catch {}
 
     // Strip sensitive fields
     const { password, reset_token, reset_token_expiry, ...safeProfile } = updated;

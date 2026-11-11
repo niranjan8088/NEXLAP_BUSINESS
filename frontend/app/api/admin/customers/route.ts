@@ -23,20 +23,21 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized access." }, { status: 401 });
     }
 
-    const rawCustomers = await dbHelper.customers.list();
-    const rawOrders = await dbHelper.orders.list();
+    const rawCustomers = await dbHelper.customers.list().catch(() => []);
+    const rawOrders = await dbHelper.orders.list().catch(() => []);
     const rawUsers = await dbHelper.users.list().catch(() => []);
 
     // Create a unified customer map by email / phone / id
     const customerMap = new Map<string, any>();
 
-    // 1. Populate registered customers
+    // 1. Populate registered customers table
     rawCustomers.forEach((c: any, idx: number) => {
       const key = (c.email || c.phone || c.id || `idx-${idx}`).toLowerCase();
+      const cleanName = c.name === "Demo Customer" ? "" : c.name;
       customerMap.set(key, {
         id: c.id || `cust-${idx + 1}`,
         customerId: c.customerId || `CUST-${String(idx + 1).padStart(3, "0")}`,
-        name: c.name || "Customer",
+        name: cleanName || "Customer",
         email: c.email || "",
         phone: c.phone || "",
         address: c.address || "",
@@ -50,15 +51,18 @@ export async function GET() {
       });
     });
 
-    // 2. Merge registered user accounts (role === "user")
+    // 2. Merge registered user accounts (role === "user" or customer)
     rawUsers.forEach((u: any, idx: number) => {
       if (u.role === "admin" || u.role === "reseller") return;
       const key = (u.email || u.id || `user-${idx}`).toLowerCase();
-      if (!customerMap.has(key)) {
+      const existing = customerMap.get(key);
+      const cleanName = u.full_name === "Demo Customer" ? "" : (u.full_name || u.name);
+
+      if (!existing) {
         customerMap.set(key, {
           id: u.id || `cust-${customerMap.size + 1}`,
           customerId: `CUST-${String(customerMap.size + 1).padStart(3, "0")}`,
-          name: u.name || u.full_name || "Customer",
+          name: cleanName || (u.email ? u.email.split("@")[0] : "Customer"),
           email: u.email || "",
           phone: u.phone || "",
           address: u.address || "",
@@ -70,14 +74,17 @@ export async function GET() {
           servicesTaken: "",
           created_at: u.created_at || new Date().toISOString(),
         });
+      } else {
+        if (!existing.phone && u.phone) existing.phone = u.phone;
+        if (cleanName && (!existing.name || existing.name === "Customer")) existing.name = cleanName;
       }
     });
 
-    // 3. Integrate customer info from orders (including Order #NB-ORD-...)
+    // 4. Integrate customer info from orders (including Order #NB-ORD-...)
     rawOrders.forEach((o: any) => {
       const email = (o.email || o.customer_email || "").toLowerCase();
       const phone = o.phone || o.customer_phone || "";
-      const name = o.customer_name || o.name || "Customer";
+      const name = o.customer_name === "Demo Customer" ? "" : (o.customer_name || o.name || "");
       const key = (email || phone || o.user_id || o.id).toLowerCase();
 
       const existing = customerMap.get(key);
@@ -92,27 +99,30 @@ export async function GET() {
         }
         if (!existing.phone && phone) existing.phone = phone;
         if (!existing.address && o.shipping_address) {
-          existing.address = typeof o.shipping_address === "string"
-            ? o.shipping_address
-            : `${o.shipping_address.addressLine1 || ""}, ${o.shipping_address.city || ""}`;
+          existing.address =
+            typeof o.shipping_address === "string"
+              ? o.shipping_address
+              : `${o.shipping_address.addressLine1 || ""}, ${o.shipping_address.city || ""}`;
           existing.city = o.shipping_address.city || existing.city;
         }
-      } else {
-        const nextId = customerMap.size + 1;
+      } else if (email || phone) {
         customerMap.set(key, {
-          id: o.user_id || `cust-${nextId}`,
-          customerId: `CUST-${String(nextId).padStart(3, "0")}`,
-          name,
-          email,
-          phone,
-          address: typeof o.shipping_address === "string"
-            ? o.shipping_address
-            : o.shipping_address ? `${o.shipping_address.addressLine1 || ""}, ${o.shipping_address.city || ""}` : "",
-          city: typeof o.shipping_address === "object" ? o.shipping_address?.city || "" : "",
+          id: o.user_id || `cust-${customerMap.size + 1}`,
+          customerId: `CUST-${String(customerMap.size + 1).padStart(3, "0")}`,
+          name: name || (email ? email.split("@")[0] : "Customer"),
+          email: email || "",
+          phone: phone || "",
+          address:
+            typeof o.shipping_address === "string"
+              ? o.shipping_address
+              : o.shipping_address
+              ? `${o.shipping_address.addressLine1 || ""}, ${o.shipping_address.city || ""}`
+              : "",
+          city: o.shipping_address?.city || "Bengaluru",
           totalBookings: 1,
           reviewsCount: 0,
           certificatesCount: 0,
-          productsPurchased: itemsPurchased,
+          productsPurchased: itemsPurchased || "Hardware Product",
           servicesTaken: "",
           created_at: o.created_at || new Date().toISOString(),
         });
@@ -125,7 +135,7 @@ export async function GET() {
     return res;
   } catch (err: any) {
     console.error("GET Admin Customers Error:", err);
-    return NextResponse.json({ error: "Failed to fetch customers." }, { status: 500 });
+    return NextResponse.json({ error: "Failed to fetch customer directories." }, { status: 500 });
   }
 }
 
@@ -137,16 +147,16 @@ export async function PATCH(request: Request) {
     }
 
     const body = await request.json();
-    const { id, ...payload } = body;
+    const { id, ...updates } = body;
 
     if (!id) {
       return NextResponse.json({ error: "Customer ID is required." }, { status: 400 });
     }
 
-    const updated = await dbHelper.customers.update(id, payload);
+    const updated = await dbHelper.customers.update(id, updates);
     return NextResponse.json({ success: true, customer: updated });
   } catch (err: any) {
     console.error("PATCH Admin Customer Error:", err);
-    return NextResponse.json({ error: "Failed to update customer." }, { status: 500 });
+    return NextResponse.json({ error: "Failed to update customer directory." }, { status: 500 });
   }
 }

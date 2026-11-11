@@ -1,38 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
-import fs from "fs";
-import path from "path";
 import { invalidateQueryCache } from "@/lib/dbHelper";
 
-function getDiskDbPath(): string {
-  const fromRoot = path.join(process.cwd(), "nexbyte", "frontend", "data", "mock_db.json");
-  if (fs.existsSync(path.dirname(fromRoot))) return fromRoot;
-  return path.join(process.cwd(), "data", "mock_db.json");
+function loadMemoryDb(): Record<string, any> {
+  const globalRef = globalThis as any;
+  if (!globalRef.__nexbyteMockDb) {
+    globalRef.__nexbyteMockDb = {};
+  }
+  return globalRef.__nexbyteMockDb;
 }
 
-function loadDiskDb(): Record<string, any> {
-  try {
-    const filePath = getDiskDbPath();
-    if (fs.existsSync(filePath)) {
-      return JSON.parse(fs.readFileSync(filePath, "utf8"));
-    }
-  } catch (err) {
-    console.error("[SYNC-MOCK] Error reading mock_db.json:", err);
+function saveMemoryDb(db: Record<string, any>) {
+  const globalRef = globalThis as any;
+  if (!globalRef.__nexbyteMockDb) {
+    globalRef.__nexbyteMockDb = {};
   }
-  return {};
-}
-
-function saveDiskDb(db: Record<string, any>) {
-  try {
-    const filePath = getDiskDbPath();
-    fs.writeFileSync(filePath, JSON.stringify(db, null, 2), "utf8");
-    // Also sync in-memory global reference
-    const globalRef = globalThis as any;
-    if (globalRef.__nexbyteMockDb) {
-      globalRef.__nexbyteMockDb = { ...globalRef.__nexbyteMockDb, ...db };
-    }
-  } catch (err) {
-    console.error("[SYNC-MOCK] Error writing mock_db.json:", err);
-  }
+  globalRef.__nexbyteMockDb = { ...globalRef.__nexbyteMockDb, ...db };
 }
 
 export async function POST(req: NextRequest) {
@@ -44,7 +26,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Missing key or data" }, { status: 400 });
     }
 
-    const db = loadDiskDb();
+    const db = loadMemoryDb();
 
     if (key === "products") {
       const existingProducts: any[] = Array.isArray(db.products) ? [...db.products] : [];
@@ -59,7 +41,6 @@ export async function POST(req: NextRequest) {
         );
 
         if (index >= 0) {
-          // Merge updates, preserving existing fields
           existingProducts[index] = { ...existingProducts[index], ...item };
         } else {
           existingProducts.unshift(item);
@@ -67,7 +48,7 @@ export async function POST(req: NextRequest) {
       }
 
       db.products = existingProducts;
-      saveDiskDb(db);
+      saveMemoryDb(db);
       invalidateQueryCache("products");
 
       return NextResponse.json({
@@ -96,12 +77,19 @@ export async function POST(req: NextRequest) {
       db[key] = data;
     }
 
-    saveDiskDb(db);
+    saveMemoryDb(db);
     invalidateQueryCache(key);
 
-    return NextResponse.json({ success: true, key });
-  } catch (err: any) {
-    console.error("[SYNC-MOCK] API Error:", err);
-    return NextResponse.json({ error: "Internal Server Error in mock sync" }, { status: 500 });
+    return NextResponse.json({
+      success: true,
+      key,
+      count: Array.isArray(db[key]) ? db[key].length : 1,
+    });
+  } catch (error: any) {
+    console.error("[SYNC-MOCK] Error in sync-mock handler:", error);
+    return NextResponse.json(
+      { error: error.message || "Failed to sync mock data." },
+      { status: 500 }
+    );
   }
 }

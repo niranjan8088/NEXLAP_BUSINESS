@@ -99,14 +99,22 @@ function anonymizeClientIp(ip?: string): string {
   return `${clean.slice(0, 8)}...xxx`;
 }
 
+function isNodeFilesystemAvailable(): boolean {
+  if (typeof window !== "undefined") return false;
+  if (typeof process === "undefined" || !process.cwd || process.env.NEXT_RUNTIME === "edge" || !process.versions?.node) {
+    return false;
+  }
+  return true;
+}
+
 function getStoredVisits(): CustomerVisitRecord[] {
-  // If in-memory cache is present
+  // 1. In-memory cache
   if (Array.isArray(globalAny.__nexbyteCustomerVisits)) {
     return globalAny.__nexbyteCustomerVisits;
   }
 
-  // Server-side disk database sync
-  if (typeof window === "undefined") {
+  // 2. Server-side disk database sync (Node.js runtime only, never in edge/worker)
+  if (isNodeFilesystemAvailable()) {
     try {
       const p = eval("require")("path");
       const f = eval("require")("fs");
@@ -130,29 +138,35 @@ function getStoredVisits(): CustomerVisitRecord[] {
   return [];
 }
 
+let saveVisitsTimeout: any = null;
+
 function saveStoredVisits(visits: CustomerVisitRecord[]) {
   globalAny.__nexbyteCustomerVisits = visits;
 
-  if (typeof window === "undefined") {
-    try {
-      const p = eval("require")("path");
-      const f = eval("require")("fs");
-      const targetDir = f.existsSync(p.join(process.cwd(), "nexbyte", "frontend"))
-        ? p.join(process.cwd(), "nexbyte", "frontend", "data")
-        : p.join(process.cwd(), "data");
-      if (!f.existsSync(targetDir)) {
-        f.mkdirSync(targetDir, { recursive: true });
-      }
-      const dbPath = p.join(targetDir, "mock_db.json");
-      let existingDb: any = {};
-      if (f.existsSync(dbPath)) {
-        try {
-          existingDb = JSON.parse(f.readFileSync(dbPath, "utf8"));
-        } catch (e) {}
-      }
-      existingDb.customer_visits = visits.slice(-10000); // keep recent 10,000 real records
-      f.writeFileSync(dbPath, JSON.stringify(existingDb, null, 2), "utf8");
-    } catch (e) {}
+  // Asynchronous debounced background write for Node.js (never blocking the request, never in worker/edge)
+  if (isNodeFilesystemAvailable()) {
+    if (saveVisitsTimeout) clearTimeout(saveVisitsTimeout);
+    saveVisitsTimeout = setTimeout(() => {
+      try {
+        const p = eval("require")("path");
+        const f = eval("require")("fs");
+        const targetDir = f.existsSync(p.join(process.cwd(), "nexbyte", "frontend"))
+          ? p.join(process.cwd(), "nexbyte", "frontend", "data")
+          : p.join(process.cwd(), "data");
+        if (!f.existsSync(targetDir)) {
+          f.mkdirSync(targetDir, { recursive: true });
+        }
+        const dbPath = p.join(targetDir, "mock_db.json");
+        let existingDb: any = {};
+        if (f.existsSync(dbPath)) {
+          try {
+            existingDb = JSON.parse(f.readFileSync(dbPath, "utf8"));
+          } catch (e) {}
+        }
+        existingDb.customer_visits = visits.slice(-5000);
+        f.writeFileSync(dbPath, JSON.stringify(existingDb, null, 2), "utf8");
+      } catch (e) {}
+    }, 5000);
   }
 }
 

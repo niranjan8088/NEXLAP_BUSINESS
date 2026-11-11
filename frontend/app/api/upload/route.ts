@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import fs from "fs";
-import path from "path";
 
 const JSON_HEADERS = { "Content-Type": "application/json" };
 
@@ -69,38 +67,53 @@ export async function POST(req: Request) {
     let fileName = "";
     let fileBuffer: Buffer | null = null;
     let mimeType = "image/webp";
-    let bucketName = "nexbyte-assets";
+    const bucketName = "nexbyte-assets";
     let productId = "general";
 
     if (contentType.includes("multipart/form-data")) {
       const formData = await req.formData();
       const file = formData.get("file") as File | null;
       if (!file) {
-        return NextResponse.json({ success: false, message: "No file provided in form data." }, { status: 400, headers: JSON_HEADERS });
+        return NextResponse.json(
+          { success: false, message: "No file provided in form data." },
+          { status: 400, headers: JSON_HEADERS }
+        );
       }
-      fileName = file.name;
-      mimeType = file.type;
+      fileName = file.name || "image.webp";
+      mimeType = file.type || "image/webp";
       const arrayBuffer = await file.arrayBuffer();
       fileBuffer = Buffer.from(arrayBuffer);
       productId = (formData.get("productId") as string) || "general";
     } else {
       const body = await req.json();
-      fileName = body.fileName;
+      fileName = body.fileName || "image.webp";
       mimeType = body.mimeType || body.contentType || "image/webp";
       productId = body.productId || "general";
-      if (!fileName || !body.fileData) {
-        return NextResponse.json({ success: false, message: "fileName and fileData (base64) are required." }, { status: 400, headers: JSON_HEADERS });
+      if (!body.fileData) {
+        return NextResponse.json(
+          { success: false, message: "fileData (base64) is required." },
+          { status: 400, headers: JSON_HEADERS }
+        );
       }
       const base64Clean = body.fileData.replace(/^data:.+;base64,/, "");
       fileBuffer = Buffer.from(base64Clean, "base64");
     }
 
-    // 2. Validate file size (max 5MB)
+    // 1. Validate file size (max 5MB)
+    if (!fileBuffer || fileBuffer.length === 0) {
+      return NextResponse.json(
+        { success: false, message: "Uploaded file is empty." },
+        { status: 400, headers: JSON_HEADERS }
+      );
+    }
     if (fileBuffer.length > 5 * 1024 * 1024) {
-      return NextResponse.json({ success: false, message: "File size exceeds maximum limit of 5 MB." }, { status: 400, headers: JSON_HEADERS });
+      return NextResponse.json(
+        { success: false, message: "File size exceeds maximum limit of 5 MB." },
+        { status: 400, headers: JSON_HEADERS }
+      );
     }
 
-    // 3. Validate Magic Bytes (File Signature Audit - permissive for standard image mimes)
+    // 2. Validate Magic Bytes (File Signature Audit)
     const magicCheck = validateMagicBytes(fileBuffer);
     const isImageMime = (mimeType || "").toLowerCase().startsWith("image/");
     if (!magicCheck.valid && !isImageMime) {
@@ -114,7 +127,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // 4. Validate Dimensions (Image Bomb Protection)
+    // 3. Validate Dimensions (Image Bomb Protection)
     if (!validateDimensions(fileBuffer, magicCheck.format)) {
       return NextResponse.json(
         {
@@ -126,19 +139,21 @@ export async function POST(req: Request) {
       );
     }
 
-    // 5. Collision-Safe Unique Storage Path
-    const ext = path.extname(fileName) || `.${magicCheck.format.split("/")[1] || "webp"}`;
-    const safeBaseName = path.basename(fileName, ext).replace(/[^a-zA-Z0-9_-]/g, "_");
-    const uniqueFileName = `${Date.now()}_${Math.random().toString(36).substring(2, 7)}_${safeBaseName}${ext}`;
+    // 4. Generate unique file name and path without Node path module
+    const rawExt = fileName.includes(".") ? `.${fileName.split(".").pop()?.toLowerCase()}` : `.${magicCheck.format.split("/")[1] || "webp"}`;
+    const safeExt = [".jpg", ".jpeg", ".png", ".webp"].includes(rawExt) ? rawExt : ".webp";
+    const baseNameOnly = fileName.lastIndexOf(".") > 0 ? fileName.substring(0, fileName.lastIndexOf(".")) : fileName;
+    const safeBaseName = baseNameOnly.replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 40) || "product";
+    const uniqueFileName = `${Date.now()}_${Math.random().toString(36).substring(2, 7)}_${safeBaseName}${safeExt}`;
     const filePathInBucket = `products/${productId}/${uniqueFileName}`;
 
-    // 6. Supabase Storage Upload (if configured and reachable)
+    // 5. Supabase Storage Upload (if configured and reachable)
     if (supabase) {
       try {
         const { data, error } = await supabase.storage
           .from(bucketName)
           .upload(filePathInBucket, fileBuffer, {
-            contentType: magicCheck.format || mimeType,
+            contentType: magicCheck.format !== "unknown" && magicCheck.format !== "unsupported" ? magicCheck.format : mimeType,
             cacheControl: "31536000",
             upsert: true,
           });
@@ -168,31 +183,8 @@ export async function POST(req: Request) {
       }
     }
 
-    // 7. Local Filesystem Storage Fallback (Node.js runtime / VPS / Localhost)
-    try {
-      const uploadsDir = path.join(process.cwd(), "public", "uploads", "products", productId);
-      if (!fs.existsSync(uploadsDir)) {
-        fs.mkdirSync(uploadsDir, { recursive: true });
-      }
-      const localFilePath = path.join(uploadsDir, uniqueFileName);
-      fs.writeFileSync(localFilePath, fileBuffer);
-      const publicUrl = `/uploads/products/${productId}/${uniqueFileName}`;
-
-      return NextResponse.json(
-        {
-          success: true,
-          fileUrl: publicUrl,
-          filePath: `uploads/products/${productId}/${uniqueFileName}`,
-          message: "File stored in uploads directory",
-        },
-        { status: 200, headers: JSON_HEADERS }
-      );
-    } catch (fsErr: any) {
-      console.warn("[Local File Storage Not Available (Read-Only/Serverless)]", fsErr?.message);
-    }
-
-    // 8. Base64 Data URL Fallback (Guaranteed to work on Cloudflare Workers & Serverless)
-    const effectiveMime = magicCheck.format || mimeType || "image/webp";
+    // 6. Base64 Data URL Fallback (Guaranteed to work 100% on Cloudflare Workers & Serverless)
+    const effectiveMime = (magicCheck.format !== "unknown" && magicCheck.format !== "unsupported" ? magicCheck.format : mimeType) || "image/webp";
     const dataUrl = `data:${effectiveMime};base64,${fileBuffer.toString("base64")}`;
 
     return NextResponse.json(
@@ -200,7 +192,7 @@ export async function POST(req: Request) {
         success: true,
         fileUrl: dataUrl,
         filePath: filePathInBucket,
-        message: "File converted to optimized Data URL fallback",
+        message: "Optimized image processed successfully",
       },
       { status: 200, headers: JSON_HEADERS }
     );
@@ -208,7 +200,7 @@ export async function POST(req: Request) {
   } catch (error: any) {
     console.error("[Upload API Error]:", error);
     return NextResponse.json(
-      { success: false, message: error.message || "Failed to upload image." },
+      { success: false, message: error.message || "Failed to process image." },
       { status: 500, headers: JSON_HEADERS }
     );
   }
@@ -227,26 +219,17 @@ export async function DELETE(req: Request) {
       );
     }
 
-    // 1. Delete from Supabase Storage if configured
+    // Delete from Supabase Storage if configured
     if (supabase) {
-      const { error } = await supabase.storage.from(bucketName).remove([filePath]);
-      if (error) {
-        console.warn("[Supabase Storage Remove Warning]", error);
+      try {
+        await supabase.storage.from(bucketName).remove([filePath]);
+      } catch (sbErr: any) {
+        console.warn("[Supabase Storage Remove Warning]", sbErr?.message);
       }
-    }
-
-    // 2. Delete local file if it exists
-    try {
-      const localPath = path.join(process.cwd(), "public", filePath.startsWith("/") ? filePath.substring(1) : filePath);
-      if (fs.existsSync(localPath)) {
-        fs.unlinkSync(localPath);
-      }
-    } catch {
-      // Ignore local cleanup error
     }
 
     return NextResponse.json(
-      { success: true, message: `Storage object ${filePath} deleted successfully.` },
+      { success: true, message: `Storage object ${filePath} processed successfully.` },
       { status: 200, headers: JSON_HEADERS }
     );
   } catch (error: any) {

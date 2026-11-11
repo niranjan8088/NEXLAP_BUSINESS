@@ -11,10 +11,6 @@ import {
   Edit3,
   CheckCircle2,
   AlertTriangle,
-  Mail,
-  Phone,
-  MapPin,
-  Calendar,
 } from "lucide-react";
 import { safeJsonFetch } from "@/lib/apiHelper";
 import { getCustomerInitials } from "@/lib/utils";
@@ -26,6 +22,11 @@ export default function CustomerProfilePage() {
   const [saveLoading, setSaveLoading] = useState(false);
   const [avatarLoading, setAvatarLoading] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  // Dynamic Metrics
+  const [ordersCount, setOrdersCount] = useState<number>(0);
+  const [warrantiesCount, setWarrantiesCount] = useState<number>(0);
+  const [bookingsCount, setBookingsCount] = useState<number>(0);
 
   // Form states
   const [fullName, setFullName] = useState("");
@@ -55,8 +56,15 @@ export default function CustomerProfilePage() {
       const res = await safeJsonFetch("/api/customer/profile");
       if (res.ok && res.data?.profile) {
         const p = res.data.profile;
+        const initialCleanName =
+          p.full_name && p.full_name !== "Demo Customer"
+            ? p.full_name
+            : p.email
+            ? p.email.split("@")[0].charAt(0).toUpperCase() + p.email.split("@")[0].slice(1)
+            : "";
+
         setProfile(p);
-        setFullName(p.full_name || "");
+        setFullName(initialCleanName);
         setPhone(p.phone || "");
         setDob(p.date_of_birth || "");
         setGender(p.gender || "Not Specified");
@@ -65,6 +73,29 @@ export default function CustomerProfilePage() {
         setState(p.state || "");
         setPincode(p.pincode || "");
         setCountry(p.country || "India");
+      }
+
+      // Fetch dynamic counts from live orders & bookings
+      try {
+        const [ordersRes, bookingsRes] = await Promise.all([
+          safeJsonFetch("/api/customer/orders"),
+          safeJsonFetch("/api/customer/bookings"),
+        ]);
+
+        if (ordersRes.ok && Array.isArray(ordersRes.data?.orders)) {
+          const ords = ordersRes.data.orders;
+          setOrdersCount(ords.length);
+          const activeWarranties = ords.filter(
+            (o: any) => o.protection_plan || o.warranty || o.status === "Confirmed" || o.status === "Delivered"
+          );
+          setWarrantiesCount(activeWarranties.length);
+        }
+
+        if (bookingsRes.ok && Array.isArray(bookingsRes.data?.bookings)) {
+          setBookingsCount(bookingsRes.data.bookings.length);
+        }
+      } catch {
+        // Non-blocking metrics fetch
       }
     } catch (e) {
       console.error("Failed to load profile", e);
@@ -98,7 +129,18 @@ export default function CustomerProfilePage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to update profile");
 
-      const saved = data.profile || { ...profile, full_name: fullName, phone, date_of_birth: dob, gender, address, city, state, pincode, country };
+      const saved = data.profile || {
+        ...profile,
+        full_name: fullName,
+        phone,
+        date_of_birth: dob,
+        gender,
+        address,
+        city,
+        state,
+        pincode,
+        country,
+      };
       setProfile(saved);
       setFullName(saved.full_name || "");
       setPhone(saved.phone || "");
@@ -110,7 +152,7 @@ export default function CustomerProfilePage() {
       setPincode(saved.pincode || "");
       setCountry(saved.country || "India");
       setEditMode(false);
-      setMessage({ type: "success", text: "Profile updated successfully." });
+      setMessage({ type: "success", text: "Profile details updated and saved successfully." });
 
       // Immediately notify headers and layout of updated name and profile
       window.dispatchEvent(new CustomEvent("nexbyte-profile-update", { detail: { profile: saved } }));
@@ -205,6 +247,13 @@ export default function CustomerProfilePage() {
     }
   };
 
+  const displayName =
+    profile?.full_name && profile.full_name !== "Demo Customer"
+      ? profile.full_name
+      : profile?.email
+      ? profile.email.split("@")[0].charAt(0).toUpperCase() + profile.email.split("@")[0].slice(1)
+      : "Customer";
+
   return (
     <div className="space-y-6">
       {/* Alert Banner */}
@@ -231,9 +280,9 @@ export default function CustomerProfilePage() {
           <div className="relative group">
             <div className="relative h-20 w-20 rounded-2xl overflow-hidden border-2 border-sky-600 bg-sky-50 dark:bg-slate-800 text-sky-700 dark:text-sky-300 font-bold flex items-center justify-center text-xl shadow-sm">
               {profile?.avatar_url ? (
-                <Image src={profile.avatar_url} alt={profile?.full_name || "Customer"} fill className="object-cover" />
-              ) : getCustomerInitials(profile?.full_name) ? (
-                <span>{getCustomerInitials(profile?.full_name)}</span>
+                <Image src={profile.avatar_url} alt={displayName} fill className="object-cover" />
+              ) : getCustomerInitials(displayName) ? (
+                <span>{getCustomerInitials(displayName)}</span>
               ) : (
                 <User className="h-10 w-10 text-sky-600 dark:text-sky-400" />
               )}
@@ -268,8 +317,8 @@ export default function CustomerProfilePage() {
 
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="font-display text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white">
-                {profile?.full_name || "NexLapTech Customer"}
+              <h1 className="font-display text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white uppercase tracking-tight">
+                {displayName}
               </h1>
               <span className="rounded-full bg-emerald-50 dark:bg-emerald-950 text-emerald-700 border border-emerald-200 px-2.5 py-0.5 text-[10px] font-bold flex items-center gap-1">
                 <ShieldCheck className="h-3 w-3" /> Active
@@ -290,26 +339,40 @@ export default function CustomerProfilePage() {
         </div>
       </div>
 
-      {/* Account Overview Quick Stats */}
+      {/* Account Overview Real Dynamic Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <div className="rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900 p-4 shadow-sm text-center">
-          <span className="text-2xl font-extrabold text-slate-900 dark:text-white font-display">2</span>
-          <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mt-0.5">Hardware Orders</span>
+          <span className="text-2xl font-extrabold text-slate-900 dark:text-white font-display">
+            {ordersCount}
+          </span>
+          <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mt-0.5">
+            Hardware Orders
+          </span>
         </div>
 
         <div className="rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900 p-4 shadow-sm text-center">
-          <span className="text-2xl font-extrabold text-emerald-600 font-display">3</span>
-          <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mt-0.5">Active E-Warranties</span>
+          <span className="text-2xl font-extrabold text-emerald-600 font-display">
+            {warrantiesCount}
+          </span>
+          <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mt-0.5">
+            Active E-Warranties
+          </span>
         </div>
 
         <div className="rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900 p-4 shadow-sm text-center">
-          <span className="text-2xl font-extrabold text-purple-600 font-display">1</span>
-          <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mt-0.5">Service Request</span>
+          <span className="text-2xl font-extrabold text-purple-600 font-display">
+            {bookingsCount}
+          </span>
+          <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mt-0.5">
+            Service Request{bookingsCount !== 1 ? "s" : ""}
+          </span>
         </div>
 
         <div className="rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900 p-4 shadow-sm text-center">
           <span className="text-2xl font-extrabold text-sky-600 font-display">100%</span>
-          <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mt-0.5">Genuine Parts</span>
+          <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mt-0.5">
+            Genuine Parts
+          </span>
         </div>
       </div>
 
@@ -357,7 +420,7 @@ export default function CustomerProfilePage() {
       <div className="rounded-3xl bg-white dark:bg-slate-900 border border-[#E6EAF0] dark:border-white/10 p-6 sm:p-8 shadow-sm space-y-6">
         <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-white/5">
           <div>
-            <h2 className="font-display font-bold text-base text-slate-900 dark:text-white">Personal &amp; Contact Details</h2>
+            <h2 className="font-display font-bold text-base text-slate-900 dark:text-white uppercase tracking-tight">Personal &amp; Contact Details</h2>
             <p className="text-xs text-slate-500">Your official account profile for service delivery and billing.</p>
           </div>
           {!editMode ? (
@@ -381,7 +444,11 @@ export default function CustomerProfilePage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
             <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-100 dark:border-white/5 space-y-1">
               <span className="text-[10px] font-bold uppercase text-slate-400">Full Name</span>
-              <p className="font-semibold text-slate-900 dark:text-white text-sm">{profile?.full_name || "N/A"}</p>
+              <p className="font-semibold text-slate-900 dark:text-white text-sm">
+                {profile?.full_name && profile.full_name !== "Demo Customer"
+                  ? profile.full_name
+                  : "Not set yet (Click Edit Profile)"}
+              </p>
             </div>
 
             <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-100 dark:border-white/5 space-y-1">
@@ -422,98 +489,105 @@ export default function CustomerProfilePage() {
           <form onSubmit={handleSaveProfile} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1">Full Name</label>
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Full Name</label>
                 <input
                   type="text"
                   required
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 p-2.5 text-xs text-slate-900 bg-white"
+                  placeholder="Enter your official full name"
+                  className="w-full rounded-xl border border-slate-200 dark:border-white/10 p-2.5 text-xs text-slate-900 dark:text-white bg-white dark:bg-slate-800"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1">Phone Number</label>
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Phone Number</label>
                 <input
                   type="text"
                   required
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 p-2.5 text-xs text-slate-900 bg-white"
+                  placeholder="10-digit mobile number"
+                  className="w-full rounded-xl border border-slate-200 dark:border-white/10 p-2.5 text-xs text-slate-900 dark:text-white bg-white dark:bg-slate-800"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1">Date of Birth</label>
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Date of Birth</label>
                 <input
                   type="date"
                   value={dob}
                   onChange={(e) => setDob(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 p-2.5 text-xs text-slate-900 bg-white"
+                  className="w-full rounded-xl border border-slate-200 dark:border-white/10 p-2.5 text-xs text-slate-900 dark:text-white bg-white dark:bg-slate-800"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1">Gender</label>
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Gender</label>
                 <select
                   value={gender}
                   onChange={(e) => setGender(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 p-2.5 text-xs text-slate-900 bg-white"
+                  className="w-full rounded-xl border border-slate-200 dark:border-white/10 p-2.5 text-xs text-slate-900 dark:text-white bg-white dark:bg-slate-800"
                 >
+                  <option value="Not Specified">Not Specified</option>
                   <option value="Male">Male</option>
                   <option value="Female">Female</option>
                   <option value="Other">Other</option>
-                  <option value="Not Specified">Prefer not to say</option>
+                  <option value="Prefer not to say">Prefer not to say</option>
                 </select>
               </div>
 
               <div className="sm:col-span-2">
-                <label className="text-xs font-bold text-slate-700 block mb-1">Street Address</label>
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Street Address</label>
                 <input
                   type="text"
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 p-2.5 text-xs text-slate-900 bg-white"
+                  placeholder="Apartment, Street, Area"
+                  className="w-full rounded-xl border border-slate-200 dark:border-white/10 p-2.5 text-xs text-slate-900 dark:text-white bg-white dark:bg-slate-800"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1">City</label>
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">City</label>
                 <input
                   type="text"
                   value={city}
                   onChange={(e) => setCity(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 p-2.5 text-xs text-slate-900 bg-white"
+                  placeholder="e.g. Bengaluru"
+                  className="w-full rounded-xl border border-slate-200 dark:border-white/10 p-2.5 text-xs text-slate-900 dark:text-white bg-white dark:bg-slate-800"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1">State</label>
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">State</label>
                 <input
                   type="text"
                   value={state}
                   onChange={(e) => setState(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 p-2.5 text-xs text-slate-900 bg-white"
+                  placeholder="e.g. Karnataka"
+                  className="w-full rounded-xl border border-slate-200 dark:border-white/10 p-2.5 text-xs text-slate-900 dark:text-white bg-white dark:bg-slate-800"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1">Pincode</label>
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Pincode</label>
                 <input
                   type="text"
                   value={pincode}
                   onChange={(e) => setPincode(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 p-2.5 text-xs text-slate-900 bg-white"
+                  placeholder="6-digit PIN code"
+                  className="w-full rounded-xl border border-slate-200 dark:border-white/10 p-2.5 text-xs text-slate-900 dark:text-white bg-white dark:bg-slate-800"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1">Country</label>
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Country</label>
                 <input
                   type="text"
                   value={country}
                   onChange={(e) => setCountry(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 p-2.5 text-xs text-slate-900 bg-white"
+                  className="w-full rounded-xl border border-slate-200 dark:border-white/10 p-2.5 text-xs text-slate-900 dark:text-white bg-white dark:bg-slate-800"
                 />
               </div>
             </div>
@@ -522,16 +596,16 @@ export default function CustomerProfilePage() {
               <button
                 type="button"
                 onClick={() => setEditMode(false)}
-                className="px-4 py-2 text-xs font-bold text-slate-600 rounded-xl border border-slate-200"
+                className="rounded-xl border border-slate-200 dark:border-white/10 px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-300"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={saveLoading}
-                className="px-5 py-2 text-xs font-bold text-white bg-sky-600 hover:bg-sky-700 rounded-xl shadow-sm"
+                className="rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs px-5 py-2 shadow-sm transition-colors"
               >
-                {saveLoading ? "Saving..." : "Save Profile"}
+                {saveLoading ? "Saving Details..." : "Save Details"}
               </button>
             </div>
           </form>

@@ -630,7 +630,41 @@ if (!globalRef.__nexbyteMockDb) {
         created_at: new Date().toISOString()
       }
     ],
-    orders: [],
+    orders: [
+      {
+        id: "ord-2026-000001",
+        order_id: "NB-ORD-2026-000001",
+        order_number: "NB-ORD-2026-000001",
+        user_id: "cust-1",
+        customer_name: "Customer",
+        email: "customer@nexbyte.com",
+        phone: "9876543210",
+        total: 10620,
+        total_amount: 10620,
+        subtotal_amount: 9000,
+        gst_amount: 1620,
+        status: "Confirmed",
+        created_at: "2026-11-03T08:00:00.000Z",
+        items: [
+          {
+            id: "item-1",
+            productId: "p1",
+            title: "Lenovo ThinkPad Core i7 Business Edition",
+            quantity: 1,
+            unitPrice: 10620,
+            price: 10620,
+            total: 10620,
+            image: "/images/poster-products.png",
+          }
+        ],
+        shipping_address: {
+          addressLine1: "Padmanabhanagar",
+          city: "Bengaluru",
+          state: "Karnataka",
+          pincode: "560070",
+        },
+      }
+    ],
     cart_items: [],
     conversations: [],
     messages: [],
@@ -683,9 +717,13 @@ function safeParse<T>(value: string | null | undefined, fallback: T): T {
 
 function getPersistentDbPath(): string | null {
   if (typeof window !== "undefined") return null;
+  if (typeof process === "undefined" || !process.cwd || process.env.NEXT_RUNTIME === "edge" || !process.versions?.node) {
+    return null;
+  }
   try {
     const p = eval("require")("path");
     const f = eval("require")("fs");
+    if (!f.existsSync || !f.readFileSync || !f.writeFileSync) return null;
     let targetDir = f.existsSync(p.join(process.cwd(), "nexbyte", "frontend"))
       ? p.join(process.cwd(), "nexbyte", "frontend", "data")
       : p.join(process.cwd(), "data");
@@ -713,13 +751,18 @@ function loadPersistedDb(): Record<string, any> | null {
   return null;
 }
 
+let saveDbDebounce: any = null;
+
 function savePersistedDb(db: Record<string, any>) {
   const filePath = getPersistentDbPath();
   if (!filePath) return;
-  try {
-    const f = eval("require")("fs");
-    f.writeFileSync(filePath, JSON.stringify(db, null, 2), "utf8");
-  } catch {}
+  if (saveDbDebounce) clearTimeout(saveDbDebounce);
+  saveDbDebounce = setTimeout(() => {
+    try {
+      const f = eval("require")("fs");
+      f.writeFileSync(filePath, JSON.stringify(db, null, 2), "utf8");
+    } catch {}
+  }, 1000);
 }
 
 const ensureDiskDbLoaded = () => {
