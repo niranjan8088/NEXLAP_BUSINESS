@@ -275,7 +275,7 @@ export default function AdminDashboardHome() {
           <div>
             <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">Total Orders</span>
             <span className="font-display text-2xl font-black text-slate-900 dark:text-white block mt-1">{metrics.ordersCount}</span>
-            <Link href="/admin/orders" className="text-[10px] text-indigo-600 dark:text-cyan-400 hover:underline font-semibold mt-1.5 inline-flex items-center gap-1">
+            <Link href="/admin/orders" className="mt-2 inline-flex items-center gap-1 rounded-md border border-indigo-200 dark:border-indigo-500/30 bg-indigo-50/80 dark:bg-indigo-950/40 px-2 py-0.5 text-[11px] font-bold text-indigo-700 dark:text-cyan-300 transition-colors hover:bg-indigo-100 dark:hover:bg-indigo-900/60">
               View Marketplace Orders <ArrowRight className="h-2.5 w-2.5" />
             </Link>
           </div>
@@ -303,7 +303,7 @@ export default function AdminDashboardHome() {
           <div>
             <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">Pending Payments</span>
             <span className="font-display text-2xl font-black text-amber-600 dark:text-amber-400 block mt-1">{metrics.pendingPayments}</span>
-            <Link href="/admin/billing" className="text-[10px] text-amber-600 dark:text-amber-400 hover:underline font-semibold mt-1.5 inline-flex items-center gap-1">
+            <Link href="/admin/billing" className="mt-2 inline-flex items-center gap-1 rounded-md border border-amber-300 dark:border-amber-500/30 bg-amber-50/80 dark:bg-amber-950/40 px-2 py-0.5 text-[11px] font-bold text-amber-800 dark:text-amber-300 transition-colors hover:bg-amber-100 dark:hover:bg-amber-900/60">
               Check Invoices <ArrowRight className="h-2.5 w-2.5" />
             </Link>
           </div>
@@ -317,7 +317,7 @@ export default function AdminDashboardHome() {
           <div>
             <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">Pending Bookings</span>
             <span className="font-display text-2xl font-black text-cyan-600 dark:text-cyan-400 block mt-1">{metrics.pendingBookings}</span>
-            <Link href="/admin/bookings" className="text-[10px] text-indigo-600 dark:text-cyan-400 hover:underline font-semibold mt-1.5 inline-flex items-center gap-1">
+            <Link href="/admin/bookings" className="mt-2 inline-flex items-center gap-1 rounded-md border border-cyan-300 dark:border-cyan-500/30 bg-cyan-50/80 dark:bg-cyan-950/40 px-2 py-0.5 text-[11px] font-bold text-cyan-800 dark:text-cyan-300 transition-colors hover:bg-cyan-100 dark:hover:bg-cyan-900/60">
               Manage Bookings <ArrowRight className="h-2.5 w-2.5" />
             </Link>
           </div>
@@ -331,7 +331,7 @@ export default function AdminDashboardHome() {
           <div>
             <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">Active Resellers</span>
             <span className="font-display text-2xl font-black text-indigo-600 dark:text-indigo-400 block mt-1">{metrics.activeResellers}</span>
-            <Link href="/admin/resellers" className="text-[10px] text-indigo-600 dark:text-indigo-400 hover:underline font-semibold mt-1.5 inline-flex items-center gap-1">
+            <Link href="/admin/resellers" className="mt-2 inline-flex items-center gap-1 rounded-md border border-indigo-300 dark:border-indigo-500/30 bg-indigo-50/80 dark:bg-indigo-950/40 px-2 py-0.5 text-[11px] font-bold text-indigo-800 dark:text-indigo-300 transition-colors hover:bg-indigo-100 dark:hover:bg-indigo-900/60">
               Reseller Network <ArrowRight className="h-2.5 w-2.5" />
             </Link>
           </div>
@@ -345,7 +345,7 @@ export default function AdminDashboardHome() {
           <div>
             <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">Low Stock Alerts</span>
             <span className="font-display text-2xl font-black text-rose-600 dark:text-rose-400 block mt-1">{metrics.lowStockAlerts}</span>
-            <Link href="/admin/inventory" className="text-[10px] text-rose-600 dark:text-rose-400 hover:underline font-semibold mt-1.5 inline-flex items-center gap-1">
+            <Link href="/admin/inventory" className="mt-2 inline-flex items-center gap-1 rounded-md border border-rose-300 dark:border-rose-500/30 bg-rose-50/80 dark:bg-rose-950/40 px-2 py-0.5 text-[11px] font-bold text-rose-800 dark:text-rose-300 transition-colors hover:bg-rose-100 dark:hover:bg-rose-900/60">
               Restock Inventory <ArrowRight className="h-2.5 w-2.5" />
             </Link>
           </div>
@@ -359,7 +359,7 @@ export default function AdminDashboardHome() {
           <div>
             <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">Customer Enquiries</span>
             <span className="font-display text-2xl font-black text-violet-600 dark:text-violet-400 block mt-1">{metrics.newCustomerEnquiries}</span>
-            <Link href="/admin/laptop-enquiries" className="text-[10px] text-violet-600 dark:text-violet-400 hover:underline font-semibold mt-1.5 inline-flex items-center gap-1">
+            <Link href="/admin/laptop-enquiries" className="mt-2 inline-flex items-center gap-1 rounded-md border border-violet-300 dark:border-violet-500/30 bg-violet-50/80 dark:bg-violet-950/40 px-2 py-0.5 text-[11px] font-bold text-violet-800 dark:text-violet-300 transition-colors hover:bg-violet-100 dark:hover:bg-violet-900/60">
               View Laptop Inquiries <ArrowRight className="h-2.5 w-2.5" />
             </Link>
           </div>
@@ -373,7 +373,7 @@ export default function AdminDashboardHome() {
           <div>
             <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">Unread Alerts</span>
             <span className="font-display text-2xl font-black text-cyan-600 dark:text-cyan-400 block mt-1">{metrics.unreadNotifications}</span>
-            <Link href="/admin/notifications" className="text-[10px] text-indigo-600 dark:text-cyan-400 hover:underline font-semibold mt-1.5 inline-flex items-center gap-1">
+            <Link href="/admin/notifications" className="mt-2 inline-flex items-center gap-1 rounded-md border border-cyan-300 dark:border-cyan-500/30 bg-cyan-50/80 dark:bg-cyan-950/40 px-2 py-0.5 text-[11px] font-bold text-cyan-800 dark:text-cyan-300 transition-colors hover:bg-cyan-100 dark:hover:bg-cyan-900/60">
               Notification Feed <ArrowRight className="h-2.5 w-2.5" />
             </Link>
           </div>
@@ -480,7 +480,7 @@ export default function AdminDashboardHome() {
               </h3>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Automated stock health levels across catalog.</p>
             </div>
-            <Link href="/admin/inventory" className="text-[10px] text-indigo-600 dark:text-cyan-400 hover:underline font-bold">
+            <Link href="/admin/inventory" className="inline-flex items-center gap-1 rounded-lg border border-indigo-200 dark:border-cyan-500/30 bg-indigo-50 dark:bg-indigo-950/40 px-2.5 py-1 text-[11px] font-bold text-indigo-700 dark:text-cyan-300 transition-colors hover:bg-indigo-100 dark:hover:bg-indigo-900/60">
               Inventory Audit &rarr;
             </Link>
           </div>
@@ -525,7 +525,7 @@ export default function AdminDashboardHome() {
               </h3>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Recent booking requests &amp; inquiries from clients.</p>
             </div>
-            <Link href="/admin/bookings" className="text-[10px] text-indigo-600 dark:text-cyan-400 hover:underline font-bold">
+            <Link href="/admin/bookings" className="inline-flex items-center gap-1 rounded-lg border border-indigo-200 dark:border-cyan-500/30 bg-indigo-50 dark:bg-indigo-950/40 px-2.5 py-1 text-xs font-bold text-indigo-700 dark:text-cyan-300 transition-colors hover:bg-indigo-100 dark:hover:bg-indigo-900/60">
               View All &rarr;
             </Link>
           </div>

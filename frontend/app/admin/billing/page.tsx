@@ -500,17 +500,17 @@ export default function AdminBillingPage() {
       <div className="space-y-6 print:hidden">
 
         {/* ── SCREEN UI HEADER ─────────────────────────────────────────────────── */}
-        <div className="billing-reveal billing-reveal--1 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-[#26364D] pb-5">
+        <div className="billing-reveal billing-reveal--1 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 dark:border-[#26364D] pb-5">
           <div>
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-xl bg-[#2563EB]/15 border border-[#2563EB]/40 text-[#2563EB] flex items-center justify-center shadow-md shadow-[#2563EB]/20">
                 <Receipt className="h-5 w-5" />
               </div>
               <div>
-                <h1 className="font-display text-2xl font-bold tracking-tight text-[#F8FAFC] flex items-center gap-2">
+                <h1 className="font-display text-2xl font-bold tracking-tight text-slate-900 dark:text-[#F8FAFC] flex items-center gap-2">
                   Admin Billing &amp; Invoices
                 </h1>
-                <p className="text-xs text-[#94A3B8]">
+                <p className="text-xs text-slate-500 dark:text-[#94A3B8]">
                   Create, calculate, issue &amp; manage tax-compliant NexLapTech invoices.
                 </p>
               </div>
@@ -518,13 +518,13 @@ export default function AdminBillingPage() {
           </div>
 
           {/* Tab Navigation */}
-          <div className="flex items-center gap-2 bg-[#111B32] p-1.5 rounded-xl border border-[#26364D]">
+          <div className="flex items-center gap-2 bg-white dark:bg-[#111B32] p-1.5 rounded-xl border border-slate-200 dark:border-[#26364D]">
             <button
               onClick={() => setActiveTab("create")}
               className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${
                 activeTab === "create"
                   ? "bg-[#2563EB] text-white shadow-md shadow-[#2563EB]/30 border border-blue-400/40"
-                  : "text-[#CBD5E1] hover:text-white hover:bg-[#17243B]"
+                  : "text-slate-600 dark:text-[#CBD5E1] hover:text-white hover:bg-slate-50 dark:bg-[#17243B]"
               }`}
             >
               <Plus className="h-3.5 w-3.5" /> Create New Invoice
@@ -534,7 +534,7 @@ export default function AdminBillingPage() {
               className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${
                 activeTab === "history"
                   ? "bg-[#2563EB] text-white shadow-md shadow-[#2563EB]/30 border border-blue-400/40"
-                  : "text-[#CBD5E1] hover:text-white hover:bg-[#17243B]"
+                  : "text-slate-600 dark:text-[#CBD5E1] hover:text-white hover:bg-slate-50 dark:bg-[#17243B]"
               }`}
             >
               <Receipt className="h-3.5 w-3.5" /> Invoice History ({historyStats.totalCount})
@@ -544,21 +544,21 @@ export default function AdminBillingPage() {
 
         {/* ── METRICS BAR ──────────────────────────────────────────────────────── */}
         <div className="billing-metrics billing-reveal billing-reveal--2 grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <div className="p-4 rounded-xl bg-[#111B32] border border-[#26364D]">
-            <span className="text-[10px] font-bold text-[#94A3B8] uppercase tracking-wider block">Total Invoices</span>
-            <span className="font-display text-xl font-bold text-[#F8FAFC] mt-1 block">{historyStats.totalCount}</span>
+          <div className="p-4 rounded-xl bg-white dark:bg-[#111B32] border border-slate-200 dark:border-[#26364D]">
+            <span className="text-[10px] font-bold text-slate-500 dark:text-[#94A3B8] uppercase tracking-wider block">Total Invoices</span>
+            <span className="font-display text-xl font-bold text-slate-900 dark:text-[#F8FAFC] mt-1 block">{historyStats.totalCount}</span>
           </div>
-          <div className="p-4 rounded-xl bg-[#111B32] border border-[#26364D]">
-            <span className="text-[10px] font-bold text-[#94A3B8] uppercase tracking-wider block">Total Billed Revenue</span>
+          <div className="p-4 rounded-xl bg-white dark:bg-[#111B32] border border-slate-200 dark:border-[#26364D]">
+            <span className="text-[10px] font-bold text-slate-500 dark:text-[#94A3B8] uppercase tracking-wider block">Total Billed Revenue</span>
             <span className="font-display text-xl font-bold text-[#2563EB] mt-1 block">
               {formatRupees(historyStats.totalRevenue)}
             </span>
           </div>
-          <div className="p-4 rounded-xl bg-[#111B32] border border-[#26364D]">
+          <div className="p-4 rounded-xl bg-white dark:bg-[#111B32] border border-slate-200 dark:border-[#26364D]">
             <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider block">Paid Invoices</span>
             <span className="font-display text-xl font-bold text-emerald-400 mt-1 block">{historyStats.paidCount}</span>
           </div>
-          <div className="p-4 rounded-xl bg-[#111B32] border border-[#26364D]">
+          <div className="p-4 rounded-xl bg-white dark:bg-[#111B32] border border-slate-200 dark:border-[#26364D]">
             <span className="text-[10px] font-bold text-amber-400 uppercase tracking-wider block">Pending / Partial</span>
             <span className="font-display text-xl font-bold text-amber-400 mt-1 block">{historyStats.pendingCount}</span>
           </div>
@@ -594,24 +594,24 @@ export default function AdminBillingPage() {
             <div className="lg:col-span-7 space-y-6 min-w-0">
               
               {/* 1. Customer Details Section */}
-              <div className="p-6 rounded-2xl bg-[#111B32] border border-[#26364D] space-y-4">
-                <div className="flex items-center justify-between border-b border-[#26364D] pb-3">
-                  <h3 className="font-display text-sm font-bold text-[#F8FAFC] flex items-center gap-2">
+              <div className="p-6 rounded-2xl bg-white dark:bg-[#111B32] border border-slate-200 dark:border-[#26364D] space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-200 dark:border-[#26364D] pb-3">
+                  <h3 className="font-display text-sm font-bold text-slate-900 dark:text-[#F8FAFC] flex items-center gap-2">
                     <User className="h-4 w-4 text-[#2563EB]" /> 1. Customer Details
                   </h3>
                   {existingCustomers.length > 0 && (
-                    <div className="text-[10px] text-[#94A3B8] flex items-center gap-1.5">
+                    <div className="text-[10px] text-slate-500 dark:text-[#94A3B8] flex items-center gap-1.5">
                       <span>Quick Select:</span>
                       <select
                         onChange={(e) => {
                           const found = existingCustomers.find((c) => c.id === e.target.value);
                           if (found) handleSelectCustomer(found);
                         }}
-                        className="bg-[#17243B] text-[#F8FAFC] text-[11px] px-2.5 py-1 rounded-lg border border-[#26364D] focus:border-[#2563EB] focus:outline-none"
+                        className="bg-slate-50 dark:bg-[#17243B] text-slate-900 dark:text-[#F8FAFC] text-[11px] px-2.5 py-1 rounded-lg border border-slate-200 dark:border-[#26364D] focus:border-[#2563EB] focus:outline-none"
                       >
-                        <option value="" className="bg-[#17243B] text-[#F8FAFC]">Select Existing Client...</option>
+                        <option value="" className="bg-slate-50 dark:bg-[#17243B] text-slate-900 dark:text-[#F8FAFC]">Select Existing Client...</option>
                         {existingCustomers.map((c) => (
-                          <option key={c.id} value={c.id} className="bg-[#17243B] text-[#F8FAFC]">
+                          <option key={c.id} value={c.id} className="bg-slate-50 dark:bg-[#17243B] text-slate-900 dark:text-[#F8FAFC]">
                             {c.full_name || c.name} ({c.phone})
                           </option>
                         ))}
@@ -622,7 +622,7 @@ export default function AdminBillingPage() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                   <div>
-                    <label className="block text-[11px] font-semibold text-[#CBD5E1] mb-1.5">
+                    <label className="block text-[11px] font-semibold text-slate-600 dark:text-[#CBD5E1] mb-1.5">
                       Customer Name <span className="text-red-400">*</span>
                     </label>
                     <input
@@ -630,12 +630,12 @@ export default function AdminBillingPage() {
                       value={customerName}
                       onChange={(e) => setCustomerName(e.target.value)}
                       placeholder="e.g. Ramesh Kumar"
-                      className="w-full rounded-xl bg-[#17243B] border border-[#26364D] px-3.5 py-2.5 text-[#F8FAFC] text-xs placeholder:text-[#94A3B8]/60 focus:border-[#2563EB] focus:outline-none transition-colors"
+                      className="w-full rounded-xl bg-slate-50 dark:bg-[#17243B] border border-slate-200 dark:border-[#26364D] px-3.5 py-2.5 text-slate-900 dark:text-[#F8FAFC] text-xs placeholder:text-slate-500 dark:text-[#94A3B8]/60 focus:border-[#2563EB] focus:outline-none transition-colors"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-[#CBD5E1] mb-1.5">
+                    <label className="block text-[11px] font-semibold text-slate-600 dark:text-[#CBD5E1] mb-1.5">
                       Mobile Number (10 digits) <span className="text-red-400">*</span>
                     </label>
                     <input
@@ -644,72 +644,72 @@ export default function AdminBillingPage() {
                       value={mobile}
                       onChange={(e) => setMobile(e.target.value.replace(/\D/g, ""))}
                       placeholder="e.g. 9876543210"
-                      className="w-full rounded-xl bg-[#17243B] border border-[#26364D] px-3.5 py-2.5 text-[#F8FAFC] text-xs placeholder:text-[#94A3B8]/60 focus:border-[#2563EB] focus:outline-none transition-colors"
+                      className="w-full rounded-xl bg-slate-50 dark:bg-[#17243B] border border-slate-200 dark:border-[#26364D] px-3.5 py-2.5 text-slate-900 dark:text-[#F8FAFC] text-xs placeholder:text-slate-500 dark:text-[#94A3B8]/60 focus:border-[#2563EB] focus:outline-none transition-colors"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-[#CBD5E1] mb-1.5">Email Address</label>
+                    <label className="block text-[11px] font-semibold text-slate-600 dark:text-[#CBD5E1] mb-1.5">Email Address</label>
                     <input
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="customer@email.com"
-                      className="w-full rounded-xl bg-[#17243B] border border-[#26364D] px-3.5 py-2.5 text-[#F8FAFC] text-xs placeholder:text-[#94A3B8]/60 focus:border-[#2563EB] focus:outline-none transition-colors"
+                      className="w-full rounded-xl bg-slate-50 dark:bg-[#17243B] border border-slate-200 dark:border-[#26364D] px-3.5 py-2.5 text-slate-900 dark:text-[#F8FAFC] text-xs placeholder:text-slate-500 dark:text-[#94A3B8]/60 focus:border-[#2563EB] focus:outline-none transition-colors"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-[#CBD5E1] mb-1.5">City</label>
+                    <label className="block text-[11px] font-semibold text-slate-600 dark:text-[#CBD5E1] mb-1.5">City</label>
                     <input
                       type="text"
                       value={city}
                       onChange={(e) => setCity(e.target.value)}
                       placeholder="Bengaluru"
-                      className="w-full rounded-xl bg-[#17243B] border border-[#26364D] px-3.5 py-2.5 text-[#F8FAFC] text-xs placeholder:text-[#94A3B8]/60 focus:border-[#2563EB] focus:outline-none transition-colors"
+                      className="w-full rounded-xl bg-slate-50 dark:bg-[#17243B] border border-slate-200 dark:border-[#26364D] px-3.5 py-2.5 text-slate-900 dark:text-[#F8FAFC] text-xs placeholder:text-slate-500 dark:text-[#94A3B8]/60 focus:border-[#2563EB] focus:outline-none transition-colors"
                     />
                   </div>
 
                   <div className="sm:col-span-2">
-                    <label className="block text-[11px] font-semibold text-[#CBD5E1] mb-1.5">Street Address</label>
+                    <label className="block text-[11px] font-semibold text-slate-600 dark:text-[#CBD5E1] mb-1.5">Street Address</label>
                     <input
                       type="text"
                       value={address}
                       onChange={(e) => setAddress(e.target.value)}
                       placeholder="House/Shop No., Street, Area"
-                      className="w-full rounded-xl bg-[#17243B] border border-[#26364D] px-3.5 py-2.5 text-[#F8FAFC] text-xs placeholder:text-[#94A3B8]/60 focus:border-[#2563EB] focus:outline-none transition-colors"
+                      className="w-full rounded-xl bg-slate-50 dark:bg-[#17243B] border border-slate-200 dark:border-[#26364D] px-3.5 py-2.5 text-slate-900 dark:text-[#F8FAFC] text-xs placeholder:text-slate-500 dark:text-[#94A3B8]/60 focus:border-[#2563EB] focus:outline-none transition-colors"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-[#CBD5E1] mb-1.5">State</label>
+                    <label className="block text-[11px] font-semibold text-slate-600 dark:text-[#CBD5E1] mb-1.5">State</label>
                     <input
                       type="text"
                       value={state}
                       onChange={(e) => setState(e.target.value)}
                       placeholder="Karnataka"
-                      className="w-full rounded-xl bg-[#17243B] border border-[#26364D] px-3.5 py-2.5 text-[#F8FAFC] text-xs placeholder:text-[#94A3B8]/60 focus:border-[#2563EB] focus:outline-none transition-colors"
+                      className="w-full rounded-xl bg-slate-50 dark:bg-[#17243B] border border-slate-200 dark:border-[#26364D] px-3.5 py-2.5 text-slate-900 dark:text-[#F8FAFC] text-xs placeholder:text-slate-500 dark:text-[#94A3B8]/60 focus:border-[#2563EB] focus:outline-none transition-colors"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-[#CBD5E1] mb-1.5">Pincode (6 digits)</label>
+                    <label className="block text-[11px] font-semibold text-slate-600 dark:text-[#CBD5E1] mb-1.5">Pincode (6 digits)</label>
                     <input
                       type="text"
                       maxLength={6}
                       value={pincode}
                       onChange={(e) => setPincode(e.target.value.replace(/\D/g, ""))}
                       placeholder="560070"
-                      className="w-full rounded-xl bg-[#17243B] border border-[#26364D] px-3.5 py-2.5 text-[#F8FAFC] text-xs placeholder:text-[#94A3B8]/60 focus:border-[#2563EB] focus:outline-none transition-colors"
+                      className="w-full rounded-xl bg-slate-50 dark:bg-[#17243B] border border-slate-200 dark:border-[#26364D] px-3.5 py-2.5 text-slate-900 dark:text-[#F8FAFC] text-xs placeholder:text-slate-500 dark:text-[#94A3B8]/60 focus:border-[#2563EB] focus:outline-none transition-colors"
                     />
                   </div>
                 </div>
               </div>
 
               {/* 2. Product / Service Items Section */}
-              <div className="p-6 rounded-2xl bg-[#111B32] border border-[#26364D] space-y-4">
-                <div className="flex items-center justify-between border-b border-[#26364D] pb-3">
-                  <h3 className="font-display text-sm font-bold text-[#F8FAFC] flex items-center gap-2">
+              <div className="p-6 rounded-2xl bg-white dark:bg-[#111B32] border border-slate-200 dark:border-[#26364D] space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-200 dark:border-[#26364D] pb-3">
+                  <h3 className="font-display text-sm font-bold text-slate-900 dark:text-[#F8FAFC] flex items-center gap-2">
                     <FileText className="h-4 w-4 text-[#2563EB]" /> 2. Items &amp; Services ({items.length})
                   </h3>
                   <button
@@ -730,7 +730,7 @@ export default function AdminBillingPage() {
                     return (
                       <div
                         key={item.id}
-                        className="p-4 rounded-xl bg-[#17243B]/60 border border-[#26364D] space-y-3 relative group"
+                        className="p-4 rounded-xl bg-slate-50 dark:bg-[#17243B]/60 border border-slate-200 dark:border-[#26364D] space-y-3 relative group"
                       >
                         <div className="flex items-center justify-between">
                           <span className="text-[10px] font-bold text-[#8B5CF6] uppercase tracking-wider">
@@ -750,19 +750,19 @@ export default function AdminBillingPage() {
                                   if (s) handlePickCatalogItem(item.id, s, "service");
                                 }
                               }}
-                              className="bg-[#080D1B] text-[#F8FAFC] text-[10px] px-2 py-1 rounded-lg border border-[#26364D] focus:border-[#2563EB] focus:outline-none"
+                              className="bg-[#080D1B] text-slate-900 dark:text-[#F8FAFC] text-[10px] px-2 py-1 rounded-lg border border-slate-200 dark:border-[#26364D] focus:border-[#2563EB] focus:outline-none"
                             >
-                              <option value="" className="bg-[#080D1B] text-[#F8FAFC]">+ Insert Catalog Item...</option>
-                              <optgroup label="Products" className="bg-[#080D1B] text-[#CBD5E1]">
+                              <option value="" className="bg-[#080D1B] text-slate-900 dark:text-[#F8FAFC]">+ Insert Catalog Item...</option>
+                              <optgroup label="Products" className="bg-[#080D1B] text-slate-600 dark:text-[#CBD5E1]">
                                 {existingCatalog.products.map((p) => (
-                                  <option key={p.id} value={`prod:${p.id}`} className="bg-[#080D1B] text-[#F8FAFC]">
+                                  <option key={p.id} value={`prod:${p.id}`} className="bg-[#080D1B] text-slate-900 dark:text-[#F8FAFC]">
                                     {p.name} (₹{p.price})
                                   </option>
                                 ))}
                               </optgroup>
-                              <optgroup label="Services" className="bg-[#080D1B] text-[#CBD5E1]">
+                              <optgroup label="Services" className="bg-[#080D1B] text-slate-600 dark:text-[#CBD5E1]">
                                 {existingCatalog.services.map((s) => (
-                                  <option key={s.id} value={`serv:${s.id}`} className="bg-[#080D1B] text-[#F8FAFC]">
+                                  <option key={s.id} value={`serv:${s.id}`} className="bg-[#080D1B] text-slate-900 dark:text-[#F8FAFC]">
                                     {s.title} (₹{s.price})
                                   </option>
                                 ))}
@@ -773,7 +773,7 @@ export default function AdminBillingPage() {
                               type="button"
                               onClick={() => handleDuplicateItem(item)}
                               title="Duplicate Item"
-                              className="p-1.5 rounded-lg bg-[#080D1B] hover:bg-[#26364D] text-[#CBD5E1] hover:text-white transition-colors"
+                              className="p-1.5 rounded-lg bg-[#080D1B] hover:bg-slate-200 dark:hover:bg-[#26364D] text-slate-600 dark:text-[#CBD5E1] hover:text-white transition-colors"
                             >
                               <Copy className="h-3.5 w-3.5" />
                             </button>
@@ -790,7 +790,7 @@ export default function AdminBillingPage() {
 
                         <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 text-xs">
                           <div className="sm:col-span-7">
-                            <label className="block text-[10px] font-semibold text-[#CBD5E1] mb-1">
+                            <label className="block text-[10px] font-semibold text-slate-600 dark:text-[#CBD5E1] mb-1">
                               Item Name / Title <span className="text-red-400">*</span>
                             </label>
                             <input
@@ -798,23 +798,23 @@ export default function AdminBillingPage() {
                               value={item.name}
                               onChange={(e) => handleUpdateItem(item.id, "name", e.target.value)}
                               placeholder="e.g. Kingston 16GB DDR4 RAM"
-                              className="w-full rounded-lg bg-[#080D1B] border border-[#26364D] px-3 py-2 text-[#F8FAFC] text-xs placeholder:text-[#94A3B8]/60 focus:border-[#2563EB] focus:outline-none transition-colors"
+                              className="w-full rounded-lg bg-[#080D1B] border border-slate-200 dark:border-[#26364D] px-3 py-2 text-slate-900 dark:text-[#F8FAFC] text-xs placeholder:text-slate-500 dark:text-[#94A3B8]/60 focus:border-[#2563EB] focus:outline-none transition-colors"
                             />
                           </div>
 
                           <div className="sm:col-span-5">
-                            <label className="block text-[10px] font-semibold text-[#CBD5E1] mb-1">Description (Optional)</label>
+                            <label className="block text-[10px] font-semibold text-slate-600 dark:text-[#CBD5E1] mb-1">Description (Optional)</label>
                             <input
                               type="text"
                               value={item.description}
                               onChange={(e) => handleUpdateItem(item.id, "description", e.target.value)}
                               placeholder="e.g. 3200MHz SODIMM Laptop Memory"
-                              className="w-full rounded-lg bg-[#080D1B] border border-[#26364D] px-3 py-2 text-[#F8FAFC] text-xs placeholder:text-[#94A3B8]/60 focus:border-[#2563EB] focus:outline-none transition-colors"
+                              className="w-full rounded-lg bg-[#080D1B] border border-slate-200 dark:border-[#26364D] px-3 py-2 text-slate-900 dark:text-[#F8FAFC] text-xs placeholder:text-slate-500 dark:text-[#94A3B8]/60 focus:border-[#2563EB] focus:outline-none transition-colors"
                             />
                           </div>
 
                           <div className="sm:col-span-3">
-                            <label className="block text-[10px] font-semibold text-[#CBD5E1] mb-1">
+                            <label className="block text-[10px] font-semibold text-slate-600 dark:text-[#CBD5E1] mb-1">
                               Qty <span className="text-red-400">*</span>
                             </label>
                             <input
@@ -822,12 +822,12 @@ export default function AdminBillingPage() {
                               min={1}
                               value={item.quantity}
                               onChange={(e) => handleUpdateItem(item.id, "quantity", e.target.value)}
-                              className="w-full rounded-lg bg-[#080D1B] border border-[#26364D] px-3 py-2 text-[#F8FAFC] text-xs focus:border-[#2563EB] focus:outline-none transition-colors"
+                              className="w-full rounded-lg bg-[#080D1B] border border-slate-200 dark:border-[#26364D] px-3 py-2 text-slate-900 dark:text-[#F8FAFC] text-xs focus:border-[#2563EB] focus:outline-none transition-colors"
                             />
                           </div>
 
                           <div className="sm:col-span-3">
-                            <label className="block text-[10px] font-semibold text-[#CBD5E1] mb-1">
+                            <label className="block text-[10px] font-semibold text-slate-600 dark:text-[#CBD5E1] mb-1">
                               Unit Price (₹) <span className="text-red-400">*</span>
                             </label>
                             <input
@@ -835,24 +835,24 @@ export default function AdminBillingPage() {
                               min={0}
                               value={item.unitPrice}
                               onChange={(e) => handleUpdateItem(item.id, "unitPrice", e.target.value)}
-                              className="w-full rounded-lg bg-[#080D1B] border border-[#26364D] px-3 py-2 text-[#F8FAFC] text-xs focus:border-[#2563EB] focus:outline-none transition-colors"
+                              className="w-full rounded-lg bg-[#080D1B] border border-slate-200 dark:border-[#26364D] px-3 py-2 text-slate-900 dark:text-[#F8FAFC] text-xs focus:border-[#2563EB] focus:outline-none transition-colors"
                             />
                           </div>
 
                           <div className="sm:col-span-3">
-                            <label className="block text-[10px] font-semibold text-[#CBD5E1] mb-1">Discount (₹)</label>
+                            <label className="block text-[10px] font-semibold text-slate-600 dark:text-[#CBD5E1] mb-1">Discount (₹)</label>
                             <input
                               type="number"
                               min={0}
                               value={item.discount}
                               onChange={(e) => handleUpdateItem(item.id, "discount", e.target.value)}
-                              className="w-full rounded-lg bg-[#080D1B] border border-[#26364D] px-3 py-2 text-[#F8FAFC] text-xs focus:border-[#2563EB] focus:outline-none transition-colors"
+                              className="w-full rounded-lg bg-[#080D1B] border border-slate-200 dark:border-[#26364D] px-3 py-2 text-slate-900 dark:text-[#F8FAFC] text-xs focus:border-[#2563EB] focus:outline-none transition-colors"
                             />
                           </div>
 
                           <div className="sm:col-span-3 text-right">
-                            <label className="block text-[10px] font-semibold text-[#CBD5E1] mb-1">Line Total</label>
-                            <span className="font-bold text-[#F8FAFC] text-xs block py-2">
+                            <label className="block text-[10px] font-semibold text-slate-600 dark:text-[#CBD5E1] mb-1">Line Total</label>
+                            <span className="font-bold text-slate-900 dark:text-[#F8FAFC] text-xs block py-2">
                               {formatRupees(Math.max(0, lineTotalCalculated))}
                             </span>
                           </div>
@@ -864,14 +864,14 @@ export default function AdminBillingPage() {
               </div>
 
               {/* 3. Global Discount & GST Configuration */}
-              <div className="p-6 rounded-2xl bg-[#111B32] border border-[#26364D] space-y-4">
-                <h3 className="font-display text-sm font-bold text-[#F8FAFC] border-b border-[#26364D] pb-3 flex items-center gap-2">
+              <div className="p-6 rounded-2xl bg-white dark:bg-[#111B32] border border-slate-200 dark:border-[#26364D] space-y-4">
+                <h3 className="font-display text-sm font-bold text-slate-900 dark:text-[#F8FAFC] border-b border-slate-200 dark:border-[#26364D] pb-3 flex items-center gap-2">
                   <Sparkles className="h-4 w-4 text-[#8B5CF6]" /> 3. Global Discount &amp; GST Configuration
                 </h3>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
                   <div>
-                    <label className="block text-[11px] font-semibold text-[#CBD5E1] mb-1.5">
+                    <label className="block text-[11px] font-semibold text-slate-600 dark:text-[#CBD5E1] mb-1.5">
                       Global Discount (₹)
                     </label>
                     <input
@@ -880,18 +880,18 @@ export default function AdminBillingPage() {
                       value={globalDiscount}
                       onChange={(e) => setGlobalDiscount(e.target.value)}
                       placeholder="0"
-                      className="w-full rounded-xl bg-[#17243B] border border-[#26364D] px-3.5 py-2.5 text-[#F8FAFC] text-xs focus:border-[#2563EB] focus:outline-none transition-colors"
+                      className="w-full rounded-xl bg-slate-50 dark:bg-[#17243B] border border-slate-200 dark:border-[#26364D] px-3.5 py-2.5 text-slate-900 dark:text-[#F8FAFC] text-xs focus:border-[#2563EB] focus:outline-none transition-colors"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-[#CBD5E1] mb-1.5">GST Application</label>
-                    <div className="flex items-center gap-2 bg-[#17243B] border border-[#26364D] p-1 rounded-xl">
+                    <label className="block text-[11px] font-semibold text-slate-600 dark:text-[#CBD5E1] mb-1.5">GST Application</label>
+                    <div className="flex items-center gap-2 bg-slate-50 dark:bg-[#17243B] border border-slate-200 dark:border-[#26364D] p-1 rounded-xl">
                       <button
                         type="button"
                         onClick={() => setGstEnabled(false)}
                         className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                          !gstEnabled ? "bg-rose-500/20 text-rose-400 border border-rose-500/30" : "text-[#94A3B8] hover:text-white"
+                          !gstEnabled ? "bg-rose-500/20 text-rose-400 border border-rose-500/30" : "text-slate-500 dark:text-[#94A3B8] hover:text-white"
                         }`}
                       >
                         GST OFF
@@ -900,7 +900,7 @@ export default function AdminBillingPage() {
                         type="button"
                         onClick={() => setGstEnabled(true)}
                         className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                          gstEnabled ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "text-[#94A3B8] hover:text-white"
+                          gstEnabled ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "text-slate-500 dark:text-[#94A3B8] hover:text-white"
                         }`}
                       >
                         GST ON (18%)
@@ -909,7 +909,7 @@ export default function AdminBillingPage() {
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-[#CBD5E1] mb-1.5">
+                    <label className="block text-[11px] font-semibold text-slate-600 dark:text-[#CBD5E1] mb-1.5">
                       GSTIN (Optional 15-chars)
                     </label>
                     <input
@@ -918,71 +918,71 @@ export default function AdminBillingPage() {
                       value={gstin}
                       onChange={(e) => setGstin(e.target.value.toUpperCase())}
                       placeholder="29ABCDE1234F1Z5"
-                      className="w-full rounded-xl bg-[#17243B] border border-[#26364D] px-3.5 py-2.5 text-[#F8FAFC] text-xs uppercase placeholder:text-[#94A3B8]/60 focus:border-[#2563EB] focus:outline-none transition-colors"
+                      className="w-full rounded-xl bg-slate-50 dark:bg-[#17243B] border border-slate-200 dark:border-[#26364D] px-3.5 py-2.5 text-slate-900 dark:text-[#F8FAFC] text-xs uppercase placeholder:text-slate-500 dark:text-[#94A3B8]/60 focus:border-[#2563EB] focus:outline-none transition-colors"
                     />
                   </div>
                 </div>
               </div>
 
               {/* 4. Payment Method & Status */}
-              <div className="p-6 rounded-2xl bg-[#111B32] border border-[#26364D] space-y-4">
-                <h3 className="font-display text-sm font-bold text-[#F8FAFC] border-b border-[#26364D] pb-3 flex items-center gap-2">
+              <div className="p-6 rounded-2xl bg-white dark:bg-[#111B32] border border-slate-200 dark:border-[#26364D] space-y-4">
+                <h3 className="font-display text-sm font-bold text-slate-900 dark:text-[#F8FAFC] border-b border-slate-200 dark:border-[#26364D] pb-3 flex items-center gap-2">
                   <Building className="h-4 w-4 text-[#2563EB]" /> 4. Payment Details
                 </h3>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
                   <div>
-                    <label className="block text-[11px] font-semibold text-[#CBD5E1] mb-1.5">Payment Method</label>
+                    <label className="block text-[11px] font-semibold text-slate-600 dark:text-[#CBD5E1] mb-1.5">Payment Method</label>
                     <select
                       value={paymentMethod}
                       onChange={(e: any) => setPaymentMethod(e.target.value)}
-                      className="w-full rounded-xl bg-[#17243B] border border-[#26364D] px-3.5 py-2.5 text-[#F8FAFC] text-xs focus:border-[#2563EB] focus:outline-none transition-colors"
+                      className="w-full rounded-xl bg-slate-50 dark:bg-[#17243B] border border-slate-200 dark:border-[#26364D] px-3.5 py-2.5 text-slate-900 dark:text-[#F8FAFC] text-xs focus:border-[#2563EB] focus:outline-none transition-colors"
                     >
-                      <option value="cash" className="bg-[#17243B] text-[#F8FAFC]">Cash</option>
-                      <option value="upi" className="bg-[#17243B] text-[#F8FAFC]">UPI / QR Code</option>
-                      <option value="bank_transfer" className="bg-[#17243B] text-[#F8FAFC]">Bank Transfer (NEFT / RTGS)</option>
-                      <option value="card" className="bg-[#17243B] text-[#F8FAFC]">Credit / Debit Card</option>
-                      <option value="other" className="bg-[#17243B] text-[#F8FAFC]">Other</option>
+                      <option value="cash" className="bg-slate-50 dark:bg-[#17243B] text-slate-900 dark:text-[#F8FAFC]">Cash</option>
+                      <option value="upi" className="bg-slate-50 dark:bg-[#17243B] text-slate-900 dark:text-[#F8FAFC]">UPI / QR Code</option>
+                      <option value="bank_transfer" className="bg-slate-50 dark:bg-[#17243B] text-slate-900 dark:text-[#F8FAFC]">Bank Transfer (NEFT / RTGS)</option>
+                      <option value="card" className="bg-slate-50 dark:bg-[#17243B] text-slate-900 dark:text-[#F8FAFC]">Credit / Debit Card</option>
+                      <option value="other" className="bg-slate-50 dark:bg-[#17243B] text-slate-900 dark:text-[#F8FAFC]">Other</option>
                     </select>
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-[#CBD5E1] mb-1.5">Payment Status</label>
+                    <label className="block text-[11px] font-semibold text-slate-600 dark:text-[#CBD5E1] mb-1.5">Payment Status</label>
                     <select
                       value={paymentStatus}
                       onChange={(e: any) => handlePaymentStatusChange(e.target.value)}
-                      className="w-full rounded-xl bg-[#17243B] border border-[#26364D] px-3.5 py-2.5 text-[#F8FAFC] text-xs focus:border-[#2563EB] focus:outline-none transition-colors"
+                      className="w-full rounded-xl bg-slate-50 dark:bg-[#17243B] border border-slate-200 dark:border-[#26364D] px-3.5 py-2.5 text-slate-900 dark:text-[#F8FAFC] text-xs focus:border-[#2563EB] focus:outline-none transition-colors"
                     >
-                      <option value="pending" className="bg-[#17243B] text-[#F8FAFC]">Pending (Unpaid)</option>
-                      <option value="paid" className="bg-[#17243B] text-[#F8FAFC]">Paid (Full)</option>
-                      <option value="partially_paid" className="bg-[#17243B] text-[#F8FAFC]">Partially Paid</option>
+                      <option value="pending" className="bg-slate-50 dark:bg-[#17243B] text-slate-900 dark:text-[#F8FAFC]">Pending (Unpaid)</option>
+                      <option value="paid" className="bg-slate-50 dark:bg-[#17243B] text-slate-900 dark:text-[#F8FAFC]">Paid (Full)</option>
+                      <option value="partially_paid" className="bg-slate-50 dark:bg-[#17243B] text-slate-900 dark:text-[#F8FAFC]">Partially Paid</option>
                     </select>
                   </div>
 
                   {paymentStatus === "partially_paid" && (
                     <div>
-                      <label className="block text-[11px] font-semibold text-[#CBD5E1] mb-1.5">Amount Paid (₹)</label>
+                      <label className="block text-[11px] font-semibold text-slate-600 dark:text-[#CBD5E1] mb-1.5">Amount Paid (₹)</label>
                       <input
                         type="number"
                         min={0}
                         value={amountPaid}
                         onChange={(e) => setAmountPaid(e.target.value)}
                         placeholder="0"
-                        className="w-full rounded-xl bg-[#17243B] border border-[#26364D] px-3.5 py-2.5 text-[#F8FAFC] text-xs focus:border-[#2563EB] focus:outline-none transition-colors"
+                        className="w-full rounded-xl bg-slate-50 dark:bg-[#17243B] border border-slate-200 dark:border-[#26364D] px-3.5 py-2.5 text-slate-900 dark:text-[#F8FAFC] text-xs focus:border-[#2563EB] focus:outline-none transition-colors"
                       />
                     </div>
                   )}
 
                   {paymentMethod === "upi" && (
                     <div>
-                      <label className="block text-[11px] font-semibold text-[#CBD5E1] mb-1.5">UPI Transaction ID</label>
+                      <label className="block text-[11px] font-semibold text-slate-600 dark:text-[#CBD5E1] mb-1.5">UPI Transaction ID</label>
                       <input
                         type="text"
                         maxLength={120}
                         value={paymentReference}
                         onChange={(e) => setPaymentReference(e.target.value)}
                         placeholder="Enter UPI transaction / reference ID"
-                        className="w-full rounded-xl bg-[#17243B] border border-[#26364D] px-3.5 py-2.5 text-[#F8FAFC] text-xs placeholder:text-[#94A3B8]/60 focus:border-[#2563EB] focus:outline-none transition-colors"
+                        className="w-full rounded-xl bg-slate-50 dark:bg-[#17243B] border border-slate-200 dark:border-[#26364D] px-3.5 py-2.5 text-slate-900 dark:text-[#F8FAFC] text-xs placeholder:text-slate-500 dark:text-[#94A3B8]/60 focus:border-[#2563EB] focus:outline-none transition-colors"
                       />
                     </div>
                   )}
@@ -990,36 +990,36 @@ export default function AdminBillingPage() {
                   {paymentMethod === "bank_transfer" && (
                     <>
                       <div>
-                        <label className="block text-[11px] font-semibold text-[#CBD5E1] mb-1.5">Transfer Type</label>
+                        <label className="block text-[11px] font-semibold text-slate-600 dark:text-[#CBD5E1] mb-1.5">Transfer Type</label>
                         <select
                           value={bankTransferType}
                           onChange={(e) => setBankTransferType(e.target.value as "neft" | "rtgs")}
-                          className="w-full rounded-xl bg-[#17243B] border border-[#26364D] px-3.5 py-2.5 text-[#F8FAFC] text-xs focus:border-[#2563EB] focus:outline-none transition-colors"
+                          className="w-full rounded-xl bg-slate-50 dark:bg-[#17243B] border border-slate-200 dark:border-[#26364D] px-3.5 py-2.5 text-slate-900 dark:text-[#F8FAFC] text-xs focus:border-[#2563EB] focus:outline-none transition-colors"
                         >
                           <option value="neft">NEFT</option>
                           <option value="rtgs">RTGS</option>
                         </select>
                       </div>
                       <div>
-                        <label className="block text-[11px] font-semibold text-[#CBD5E1] mb-1.5">Bank Name</label>
+                        <label className="block text-[11px] font-semibold text-slate-600 dark:text-[#CBD5E1] mb-1.5">Bank Name</label>
                         <input
                           type="text"
                           maxLength={120}
                           value={paymentBank}
                           onChange={(e) => setPaymentBank(e.target.value)}
                           placeholder="Enter bank name"
-                          className="w-full rounded-xl bg-[#17243B] border border-[#26364D] px-3.5 py-2.5 text-[#F8FAFC] text-xs placeholder:text-[#94A3B8]/60 focus:border-[#2563EB] focus:outline-none transition-colors"
+                          className="w-full rounded-xl bg-slate-50 dark:bg-[#17243B] border border-slate-200 dark:border-[#26364D] px-3.5 py-2.5 text-slate-900 dark:text-[#F8FAFC] text-xs placeholder:text-slate-500 dark:text-[#94A3B8]/60 focus:border-[#2563EB] focus:outline-none transition-colors"
                         />
                       </div>
                       <div>
-                        <label className="block text-[11px] font-semibold text-[#CBD5E1] mb-1.5">{bankTransferType.toUpperCase()} UTR / Transaction ID</label>
+                        <label className="block text-[11px] font-semibold text-slate-600 dark:text-[#CBD5E1] mb-1.5">{bankTransferType.toUpperCase()} UTR / Transaction ID</label>
                         <input
                           type="text"
                           maxLength={120}
                           value={paymentReference}
                           onChange={(e) => setPaymentReference(e.target.value)}
                           placeholder={`Enter ${bankTransferType.toUpperCase()} UTR`}
-                          className="w-full rounded-xl bg-[#17243B] border border-[#26364D] px-3.5 py-2.5 text-[#F8FAFC] text-xs placeholder:text-[#94A3B8]/60 focus:border-[#2563EB] focus:outline-none transition-colors"
+                          className="w-full rounded-xl bg-slate-50 dark:bg-[#17243B] border border-slate-200 dark:border-[#26364D] px-3.5 py-2.5 text-slate-900 dark:text-[#F8FAFC] text-xs placeholder:text-slate-500 dark:text-[#94A3B8]/60 focus:border-[#2563EB] focus:outline-none transition-colors"
                         />
                       </div>
                     </>
@@ -1028,36 +1028,36 @@ export default function AdminBillingPage() {
                   {paymentMethod === "card" && (
                     <>
                       <div>
-                        <label className="block text-[11px] font-semibold text-[#CBD5E1] mb-1.5">Card Type</label>
+                        <label className="block text-[11px] font-semibold text-slate-600 dark:text-[#CBD5E1] mb-1.5">Card Type</label>
                         <select
                           value={cardType}
                           onChange={(e) => setCardType(e.target.value as "debit" | "credit")}
-                          className="w-full rounded-xl bg-[#17243B] border border-[#26364D] px-3.5 py-2.5 text-[#F8FAFC] text-xs focus:border-[#2563EB] focus:outline-none transition-colors"
+                          className="w-full rounded-xl bg-slate-50 dark:bg-[#17243B] border border-slate-200 dark:border-[#26364D] px-3.5 py-2.5 text-slate-900 dark:text-[#F8FAFC] text-xs focus:border-[#2563EB] focus:outline-none transition-colors"
                         >
                           <option value="debit">Debit Card</option>
                           <option value="credit">Credit Card</option>
                         </select>
                       </div>
                       <div>
-                        <label className="block text-[11px] font-semibold text-[#CBD5E1] mb-1.5">Bank / Card Issuer</label>
+                        <label className="block text-[11px] font-semibold text-slate-600 dark:text-[#CBD5E1] mb-1.5">Bank / Card Issuer</label>
                         <input
                           type="text"
                           maxLength={120}
                           value={paymentBank}
                           onChange={(e) => setPaymentBank(e.target.value)}
                           placeholder="Enter bank / card issuer"
-                          className="w-full rounded-xl bg-[#17243B] border border-[#26364D] px-3.5 py-2.5 text-[#F8FAFC] text-xs placeholder:text-[#94A3B8]/60 focus:border-[#2563EB] focus:outline-none transition-colors"
+                          className="w-full rounded-xl bg-slate-50 dark:bg-[#17243B] border border-slate-200 dark:border-[#26364D] px-3.5 py-2.5 text-slate-900 dark:text-[#F8FAFC] text-xs placeholder:text-slate-500 dark:text-[#94A3B8]/60 focus:border-[#2563EB] focus:outline-none transition-colors"
                         />
                       </div>
                       <div>
-                        <label className="block text-[11px] font-semibold text-[#CBD5E1] mb-1.5">Card Transaction ID</label>
+                        <label className="block text-[11px] font-semibold text-slate-600 dark:text-[#CBD5E1] mb-1.5">Card Transaction ID</label>
                         <input
                           type="text"
                           maxLength={120}
                           value={paymentReference}
                           onChange={(e) => setPaymentReference(e.target.value)}
                           placeholder="Enter card transaction ID"
-                          className="w-full rounded-xl bg-[#17243B] border border-[#26364D] px-3.5 py-2.5 text-[#F8FAFC] text-xs placeholder:text-[#94A3B8]/60 focus:border-[#2563EB] focus:outline-none transition-colors"
+                          className="w-full rounded-xl bg-slate-50 dark:bg-[#17243B] border border-slate-200 dark:border-[#26364D] px-3.5 py-2.5 text-slate-900 dark:text-[#F8FAFC] text-xs placeholder:text-slate-500 dark:text-[#94A3B8]/60 focus:border-[#2563EB] focus:outline-none transition-colors"
                         />
                       </div>
                     </>
@@ -1070,7 +1070,7 @@ export default function AdminBillingPage() {
                 <button
                   type="button"
                   onClick={handleResetForm}
-                  className="px-5 py-2.5 rounded-xl bg-[#17243B] hover:bg-[#26364D] border border-[#26364D] text-[#CBD5E1] hover:text-white text-xs font-semibold transition-all"
+                  className="px-5 py-2.5 rounded-xl bg-slate-50 dark:bg-[#17243B] hover:bg-slate-200 dark:hover:bg-[#26364D] border border-slate-200 dark:border-[#26364D] text-slate-600 dark:text-[#CBD5E1] hover:text-white text-xs font-semibold transition-all"
                 >
                   Reset Form
                 </button>
@@ -1096,11 +1096,11 @@ export default function AdminBillingPage() {
             </div>
 
             {/* RIGHT COLUMN: LIVE INVOICE PREVIEW (5 cols) Sticky Desktop Panel */}
-            <div className="billing-preview lg:col-span-5 space-y-4 lg:sticky lg:top-4 lg:max-h-[calc(100vh-5rem)] lg:overflow-y-auto pr-1">
-              <div className="flex items-center justify-between bg-[#111B32] p-4 rounded-2xl border border-[#26364D]">
+            <div className="billing-preview lg:col-span-5 space-y-4">
+              <div className="flex items-center justify-between bg-white dark:bg-[#111B32] p-4 rounded-2xl border border-slate-200 dark:border-[#26364D]">
                 <div className="flex items-center gap-2">
                   <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-                  <span className="text-xs font-bold text-[#F8FAFC]">Live Invoice Preview</span>
+                  <span className="text-xs font-bold text-slate-900 dark:text-[#F8FAFC]">Live Invoice Preview</span>
                 </div>
 
                 <div className="flex items-center gap-1.5">
@@ -1108,7 +1108,7 @@ export default function AdminBillingPage() {
                     type="button"
                     onClick={() => handlePrint()}
                     title="Print Invoice"
-                    className="px-2.5 py-1.5 rounded-lg bg-[#17243B] hover:bg-[#26364D] border border-[#26364D] text-[#F8FAFC] text-xs flex items-center gap-1.5 transition-all"
+                    className="px-2.5 py-1.5 rounded-lg bg-slate-50 dark:bg-[#17243B] hover:bg-slate-200 dark:hover:bg-[#26364D] border border-slate-200 dark:border-[#26364D] text-slate-900 dark:text-[#F8FAFC] text-xs flex items-center gap-1.5 transition-all"
                   >
                     <Printer className="h-3.5 w-3.5" /> Print
                   </button>
@@ -1116,7 +1116,7 @@ export default function AdminBillingPage() {
                     type="button"
                     onClick={() => handleDownloadPdf(latestCreatedInvoice || viewingInvoice)}
                     title="Download PDF"
-                    className="px-2.5 py-1.5 rounded-lg bg-[#17243B] hover:bg-[#26364D] border border-[#26364D] text-[#F8FAFC] text-xs flex items-center gap-1.5 transition-all"
+                    className="px-2.5 py-1.5 rounded-lg bg-slate-50 dark:bg-[#17243B] hover:bg-slate-200 dark:hover:bg-[#26364D] border border-slate-200 dark:border-[#26364D] text-slate-900 dark:text-[#F8FAFC] text-xs flex items-center gap-1.5 transition-all"
                   >
                     <Download className="h-3.5 w-3.5" /> PDF
                   </button>
@@ -1124,7 +1124,7 @@ export default function AdminBillingPage() {
                     type="button"
                     onClick={() => handleShare(latestCreatedInvoice || viewingInvoice)}
                     title="Share Invoice"
-                    className="px-2.5 py-1.5 rounded-lg bg-[#17243B] hover:bg-[#26364D] border border-[#26364D] text-[#F8FAFC] text-xs flex items-center gap-1.5 transition-all"
+                    className="px-2.5 py-1.5 rounded-lg bg-slate-50 dark:bg-[#17243B] hover:bg-slate-200 dark:hover:bg-[#26364D] border border-slate-200 dark:border-[#26364D] text-slate-900 dark:text-[#F8FAFC] text-xs flex items-center gap-1.5 transition-all"
                   >
                     <Share2 className="h-3.5 w-3.5" /> Share
                   </button>
@@ -1328,47 +1328,47 @@ export default function AdminBillingPage() {
           <div className="billing-reveal billing-reveal--3 space-y-4">
             
             {/* Filters & Search Header */}
-            <div className="p-4 rounded-2xl bg-[#111B32] border border-[#26364D] flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="p-4 rounded-2xl bg-white dark:bg-[#111B32] border border-slate-200 dark:border-[#26364D] flex flex-col sm:flex-row items-center justify-between gap-4">
               
               {/* Search Input */}
               <div className="relative w-full sm:w-80">
-                <Search className="h-4 w-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[#94A3B8]" />
+                <Search className="h-4 w-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 dark:text-[#94A3B8]" />
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search Invoice #, Name, Mobile..."
-                  className="w-full rounded-xl bg-[#17243B] border border-[#26364D] pl-10 pr-4 py-2 text-[#F8FAFC] text-xs placeholder:text-[#94A3B8]/60 focus:border-[#2563EB] focus:outline-none transition-colors"
+                  className="w-full rounded-xl bg-slate-50 dark:bg-[#17243B] border border-slate-200 dark:border-[#26364D] pl-10 pr-4 py-2 text-slate-900 dark:text-[#F8FAFC] text-xs placeholder:text-slate-500 dark:text-[#94A3B8]/60 focus:border-[#2563EB] focus:outline-none transition-colors"
                 />
               </div>
 
               {/* Filters */}
               <div className="flex items-center gap-3 w-full sm:w-auto text-xs">
                 <div className="flex items-center gap-1.5">
-                  <Filter className="h-3.5 w-3.5 text-[#94A3B8]" />
-                  <span className="text-[#CBD5E1] text-[11px]">Status:</span>
+                  <Filter className="h-3.5 w-3.5 text-slate-500 dark:text-[#94A3B8]" />
+                  <span className="text-slate-600 dark:text-[#CBD5E1] text-[11px]">Status:</span>
                   <select
                     value={statusFilter}
                     onChange={(e) => setStatusFilter(e.target.value)}
-                    className="bg-[#17243B] text-[#F8FAFC] text-xs px-2.5 py-1.5 rounded-lg border border-[#26364D] focus:border-[#2563EB] focus:outline-none"
+                    className="bg-slate-50 dark:bg-[#17243B] text-slate-900 dark:text-[#F8FAFC] text-xs px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-[#26364D] focus:border-[#2563EB] focus:outline-none"
                   >
-                    <option value="all" className="bg-[#17243B] text-[#F8FAFC]">All Statuses</option>
-                    <option value="paid" className="bg-[#17243B] text-[#F8FAFC]">Paid</option>
-                    <option value="pending" className="bg-[#17243B] text-[#F8FAFC]">Pending</option>
-                    <option value="partially_paid" className="bg-[#17243B] text-[#F8FAFC]">Partially Paid</option>
+                    <option value="all" className="bg-slate-50 dark:bg-[#17243B] text-slate-900 dark:text-[#F8FAFC]">All Statuses</option>
+                    <option value="paid" className="bg-slate-50 dark:bg-[#17243B] text-slate-900 dark:text-[#F8FAFC]">Paid</option>
+                    <option value="pending" className="bg-slate-50 dark:bg-[#17243B] text-slate-900 dark:text-[#F8FAFC]">Pending</option>
+                    <option value="partially_paid" className="bg-slate-50 dark:bg-[#17243B] text-slate-900 dark:text-[#F8FAFC]">Partially Paid</option>
                   </select>
                 </div>
 
                 <div className="flex items-center gap-1.5">
-                  <span className="text-[#CBD5E1] text-[11px]">GST:</span>
+                  <span className="text-slate-600 dark:text-[#CBD5E1] text-[11px]">GST:</span>
                   <select
                     value={gstFilter}
                     onChange={(e) => setGstFilter(e.target.value)}
-                    className="bg-[#17243B] text-[#F8FAFC] text-xs px-2.5 py-1.5 rounded-lg border border-[#26364D] focus:border-[#2563EB] focus:outline-none"
+                    className="bg-slate-50 dark:bg-[#17243B] text-slate-900 dark:text-[#F8FAFC] text-xs px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-[#26364D] focus:border-[#2563EB] focus:outline-none"
                   >
-                    <option value="all" className="bg-[#17243B] text-[#F8FAFC]">All Invoices</option>
-                    <option value="enabled" className="bg-[#17243B] text-[#F8FAFC]">GST ON Only</option>
-                    <option value="disabled" className="bg-[#17243B] text-[#F8FAFC]">GST OFF Only</option>
+                    <option value="all" className="bg-slate-50 dark:bg-[#17243B] text-slate-900 dark:text-[#F8FAFC]">All Invoices</option>
+                    <option value="enabled" className="bg-slate-50 dark:bg-[#17243B] text-slate-900 dark:text-[#F8FAFC]">GST ON Only</option>
+                    <option value="disabled" className="bg-slate-50 dark:bg-[#17243B] text-slate-900 dark:text-[#F8FAFC]">GST OFF Only</option>
                   </select>
                 </div>
               </div>
@@ -1376,16 +1376,16 @@ export default function AdminBillingPage() {
             </div>
 
             {/* Table Container */}
-            <div className="rounded-2xl bg-[#111B32] border border-[#26364D] overflow-hidden">
+            <div className="rounded-2xl bg-white dark:bg-[#111B32] border border-slate-200 dark:border-[#26364D] overflow-hidden">
               {filteredHistory.length === 0 ? (
                 <div className="text-center py-16 space-y-3">
-                  <Receipt className="h-10 w-10 text-[#94A3B8] mx-auto" />
-                  <p className="text-xs text-[#94A3B8]">No billing invoices match the specified criteria.</p>
+                  <Receipt className="h-10 w-10 text-slate-500 dark:text-[#94A3B8] mx-auto" />
+                  <p className="text-xs text-slate-500 dark:text-[#94A3B8]">No billing invoices match the specified criteria.</p>
                 </div>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs text-left">
-                    <thead className="bg-[#17243B] border-b border-[#26364D] text-[#CBD5E1] uppercase text-[10px] font-bold tracking-wider">
+                    <thead className="bg-slate-50 dark:bg-[#17243B] border-b border-slate-200 dark:border-[#26364D] text-slate-600 dark:text-[#CBD5E1] uppercase text-[10px] font-bold tracking-wider">
                       <tr>
                         <th className="py-3.5 px-4">Invoice #</th>
                         <th className="py-3.5 px-4">Customer</th>
@@ -1397,7 +1397,7 @@ export default function AdminBillingPage() {
                         <th className="py-3.5 px-4 text-right">Actions</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-[#26364D]">
+                    <tbody className="divide-y divide-slate-200 dark:divide-[#26364D]">
                       {filteredHistory.map((inv) => {
                         const numStr = inv.invoiceNumber || inv.invoice_number;
                         const dateStr = inv.invoiceDate || inv.invoice_date;
@@ -1410,8 +1410,8 @@ export default function AdminBillingPage() {
                         const payStatus = inv.paymentStatus || inv.payment_status || "pending";
 
                         return (
-                          <tr key={inv.id} className="hover:bg-[#17243B]/40 transition-all">
-                            <td className="py-3.5 px-4 font-bold text-[#F8FAFC] flex items-center gap-2">
+                          <tr key={inv.id} className="hover:bg-slate-50 dark:bg-[#17243B]/40 transition-all">
+                            <td className="py-3.5 px-4 font-bold text-slate-900 dark:text-[#F8FAFC] flex items-center gap-2">
                               <span>{numStr}</span>
                               {inv.status === "cancelled" && (
                                 <span className="text-[9px] px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 font-normal">
@@ -1421,20 +1421,20 @@ export default function AdminBillingPage() {
                             </td>
 
                             <td className="py-3.5 px-4">
-                              <div className="font-semibold text-[#F8FAFC]">{custName}</div>
-                              <div className="text-[10px] text-[#94A3B8]">{mob}</div>
+                              <div className="font-semibold text-slate-900 dark:text-[#F8FAFC]">{custName}</div>
+                              <div className="text-[10px] text-slate-500 dark:text-[#94A3B8]">{mob}</div>
                             </td>
 
-                            <td className="py-3.5 px-4 text-[#CBD5E1] text-[11px]">
+                            <td className="py-3.5 px-4 text-slate-600 dark:text-[#CBD5E1] text-[11px]">
                               <div>{dateStr}</div>
-                              <div className="text-[9px] text-[#94A3B8]">{timeStr}</div>
+                              <div className="text-[9px] text-slate-500 dark:text-[#94A3B8]">{timeStr}</div>
                             </td>
 
-                            <td className="py-3.5 px-4 text-right font-medium text-[#F8FAFC]">
+                            <td className="py-3.5 px-4 text-right font-medium text-slate-900 dark:text-[#F8FAFC]">
                               {formatRupees(taxable)}
                             </td>
 
-                            <td className="py-3.5 px-4 text-right text-[#CBD5E1]">
+                            <td className="py-3.5 px-4 text-right text-slate-600 dark:text-[#CBD5E1]">
                               {gstTotal > 0 ? formatRupees(gstTotal) : "-"}
                             </td>
 
@@ -1462,7 +1462,7 @@ export default function AdminBillingPage() {
                                   type="button"
                                   onClick={() => setViewingInvoice(inv)}
                                   title="View Saved Invoice"
-                                  className="p-1.5 rounded-lg bg-[#17243B] hover:bg-[#26364D] text-[#F8FAFC] text-xs transition-colors"
+                                  className="p-1.5 rounded-lg bg-slate-50 dark:bg-[#17243B] hover:bg-slate-200 dark:hover:bg-[#26364D] text-slate-900 dark:text-[#F8FAFC] text-xs transition-colors"
                                 >
                                   <Eye className="h-3.5 w-3.5" />
                                 </button>
@@ -1473,7 +1473,7 @@ export default function AdminBillingPage() {
                                     setTimeout(() => handlePrint(inv), 100);
                                   }}
                                   title="Print Invoice"
-                                  className="p-1.5 rounded-lg bg-[#17243B] hover:bg-[#26364D] text-[#F8FAFC] text-xs transition-colors"
+                                  className="p-1.5 rounded-lg bg-slate-50 dark:bg-[#17243B] hover:bg-slate-200 dark:hover:bg-[#26364D] text-slate-900 dark:text-[#F8FAFC] text-xs transition-colors"
                                 >
                                   <Printer className="h-3.5 w-3.5" />
                                 </button>
@@ -1481,7 +1481,7 @@ export default function AdminBillingPage() {
                                   type="button"
                                   onClick={() => handleShare(inv)}
                                   title="Share Invoice Link"
-                                  className="p-1.5 rounded-lg bg-[#17243B] hover:bg-[#26364D] text-[#F8FAFC] text-xs transition-colors"
+                                  className="p-1.5 rounded-lg bg-slate-50 dark:bg-[#17243B] hover:bg-slate-200 dark:hover:bg-[#26364D] text-slate-900 dark:text-[#F8FAFC] text-xs transition-colors"
                                 >
                                   <Share2 className="h-3.5 w-3.5" />
                                 </button>
@@ -1507,19 +1507,19 @@ export default function AdminBillingPage() {
               onClick={() => setViewingInvoice(null)}
             />
 
-            <div className="billing-modal-card relative bg-[#111B32] border border-[#26364D] rounded-2xl max-w-2xl w-full p-6 space-y-4 my-8 shadow-2xl">
+            <div className="billing-modal-card relative bg-white dark:bg-[#111B32] border border-slate-200 dark:border-[#26364D] rounded-2xl max-w-2xl w-full p-6 space-y-4 my-8 shadow-2xl">
               
               {/* Modal Header */}
-              <div className="flex items-center justify-between border-b border-[#26364D] pb-3">
+              <div className="flex items-center justify-between border-b border-slate-200 dark:border-[#26364D] pb-3">
                 <div className="flex items-center gap-2">
                   <Receipt className="h-5 w-5 text-[#2563EB]" />
-                  <h3 className="font-display text-sm font-bold text-[#F8FAFC]">
+                  <h3 className="font-display text-sm font-bold text-slate-900 dark:text-[#F8FAFC]">
                     Invoice Details — {viewingInvoice.invoiceNumber || viewingInvoice.invoice_number}
                   </h3>
                 </div>
                 <button
                   onClick={() => setViewingInvoice(null)}
-                  className="p-1 rounded-lg bg-[#17243B] hover:bg-[#26364D] text-[#94A3B8] hover:text-white transition-colors"
+                  className="p-1 rounded-lg bg-slate-50 dark:bg-[#17243B] hover:bg-slate-200 dark:hover:bg-[#26364D] text-slate-500 dark:text-[#94A3B8] hover:text-white transition-colors"
                 >
                   <X className="h-4 w-4" />
                 </button>
@@ -1532,14 +1532,14 @@ export default function AdminBillingPage() {
 
               {/* Modal Action Buttons */}
               <div className="flex items-center justify-between gap-3 pt-2">
-                <div className="text-[10px] text-[#94A3B8]">
-                  Created by: <strong className="text-[#F8FAFC]">{viewingInvoice.createdBy || "Admin"}</strong>
+                <div className="text-[10px] text-slate-500 dark:text-[#94A3B8]">
+                  Created by: <strong className="text-slate-900 dark:text-[#F8FAFC]">{viewingInvoice.createdBy || "Admin"}</strong>
                 </div>
 
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => handlePrint(viewingInvoice)}
-                    className="px-4 py-2 rounded-xl bg-[#17243B] hover:bg-[#26364D] border border-[#26364D] text-[#F8FAFC] text-xs font-semibold flex items-center gap-1.5 transition-all"
+                    className="px-4 py-2 rounded-xl bg-slate-50 dark:bg-[#17243B] hover:bg-slate-200 dark:hover:bg-[#26364D] border border-slate-200 dark:border-[#26364D] text-slate-900 dark:text-[#F8FAFC] text-xs font-semibold flex items-center gap-1.5 transition-all"
                   >
                     <Printer className="h-3.5 w-3.5" /> Print
                   </button>

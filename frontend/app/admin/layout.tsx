@@ -235,7 +235,7 @@ export default function AdminLayout({
   };
 
   return (
-    <div className="admin-portal relative flex min-h-screen overflow-hidden bg-[#F8FAFC] dark:bg-[#070B1A] text-[#0F172A] dark:text-[#F8FAFC]">
+    <div className="admin-portal relative flex h-screen h-[100dvh] overflow-hidden bg-[#F8FAFC] dark:bg-[#070B1A] text-[#0F172A] dark:text-[#F8FAFC]">
       {/* Auto-logout warning overlay */}
       {showWarning && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
@@ -400,7 +400,7 @@ export default function AdminLayout({
       </aside>
 
       {/* Main dashboard content container */}
-      <div className="flex-1 flex flex-col min-w-0 max-h-screen overflow-hidden print:max-h-none print:overflow-visible">
+      <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden print:h-auto print:overflow-visible">
         {/* Header Navigation */}
         <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center justify-between border-b border-slate-200 dark:border-white/10 bg-white/95 dark:bg-[#0B0F1E]/95 px-4 backdrop-blur-xl print:hidden md:px-8">
           <div className="flex items-center gap-4">
@@ -459,7 +459,7 @@ export default function AdminLayout({
         </header>
 
         {/* Content Body */}
-        <main className="flex-1 overflow-y-auto bg-[#F8FAFC] dark:bg-[#070B1A] p-4 text-[#0F172A] dark:text-[#F8FAFC] scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-700 print:overflow-visible print:bg-white print:p-0 md:p-8">
+        <main className="flex-1 overflow-y-auto overscroll-y-contain bg-[#F8FAFC] dark:bg-[#070B1A] p-4 text-[#0F172A] dark:text-[#F8FAFC] scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-700 print:overflow-visible print:bg-white print:p-0 md:p-8">
           <Suspense
             fallback={
               <div className="w-full h-full flex items-center justify-center">
