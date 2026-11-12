@@ -45,12 +45,42 @@ export default function CustomerReviewsPage() {
   const [newReviewComment, setNewReviewComment] = useState("");
   const [newReviewRating, setNewReviewRating] = useState(5);
   const [newReviewProduct, setNewReviewProduct] = useState("Samsung 980 PRO 1TB NVMe SSD");
+  const [isManualProduct, setIsManualProduct] = useState(false);
+  const [manualProductName, setManualProductName] = useState("");
+  const [productOptions, setProductOptions] = useState<string[]>([
+    "Samsung 980 PRO 1TB NVMe SSD",
+    "Lenovo ThinkPad T490 (Refurbished)",
+    "NexLapTech ROG Slayer R15 Gaming PC",
+    "Dell Latitude 5440 Pro Laptop",
+    "EVM 512GB NVMe M.2 SSD",
+    "Dell Latitude 7420 (Core i7 11th Gen)",
+    "Lenovo ThinkPad T14 Gen 2 (Ryzen 7 Pro)",
+    "HP EliteBook 840 G8 (Core i5 11th Gen)",
+    "Apple MacBook Pro 14\" M1 Pro",
+    "Dell OptiPlex 7090 Micro Desktop",
+    "Crucial 16GB DDR4 3200MHz Laptop RAM",
+    "Laptop Chip-Level Motherboard Repair",
+    "Broken Screen & Display Replacement",
+    "Custom Gaming & Workstation PC Assembly",
+  ]);
   const [successMsg, setSuccessMsg] = useState("");
 
   const loadReviews = async () => {
     setLoading(true);
     setLoadError("");
     try {
+      try {
+        const prodRes = await fetch("/api/products", { cache: "no-store" });
+        if (prodRes.ok) {
+          const prodData = await prodRes.json();
+          const items = Array.isArray(prodData) ? prodData : (prodData.products || []);
+          const titles = items.map((p: any) => p.name || p.title).filter(Boolean);
+          if (titles.length > 0) {
+            setProductOptions((prev) => Array.from(new Set([...titles, ...prev])));
+          }
+        }
+      } catch {}
+
       const response = await fetch("/api/reviews?sort=newest&limit=100", { cache: "no-store" });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Unable to load reviews.");
@@ -105,6 +135,15 @@ export default function CustomerReviewsPage() {
   const handleWriteSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!reviewerName.trim() || !reviewerCity.trim() || !newReviewTitle.trim() || !newReviewComment.trim()) return;
+    const chosenProduct = isManualProduct
+      ? manualProductName.trim()
+      : (newReviewProduct === "__custom__" ? manualProductName.trim() : newReviewProduct.trim());
+
+    if (!chosenProduct) {
+      setLoadError("Please select or enter the product name.");
+      return;
+    }
+
     try {
       const response = await fetch("/api/reviews", {
         method: "POST",
@@ -112,7 +151,7 @@ export default function CustomerReviewsPage() {
         body: JSON.stringify({
           customer_name: reviewerName.trim(),
           city: reviewerCity.trim(),
-          product_purchased: newReviewProduct,
+          product_purchased: chosenProduct,
           overall_experience: newReviewTitle.trim(),
           review_message: newReviewComment.trim(),
           rating: newReviewRating,
@@ -130,9 +169,9 @@ export default function CustomerReviewsPage() {
 
   const filteredReviews = reviews.filter((r) => filterRating === "all" || r.rating === filterRating);
 
-  const avgRating = (
-    reviews.reduce((acc, r) => acc + r.rating, 0) / (reviews.length || 1)
-  ).toFixed(1);
+  const avgRating = reviews.length > 0
+    ? (reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length).toFixed(1)
+    : "0.0";
 
   return (
     <>
@@ -221,7 +260,16 @@ export default function CustomerReviewsPage() {
           <div className="space-y-4">
             {loadError && <p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">{loadError}</p>}
             {loading && <p role="status" className="py-8 text-center text-sm text-readable-secondary">Loading published reviews...</p>}
-            {!loading && !filteredReviews.length && (
+            {!loading && !reviews.length && (
+              <div className="futuristic-card p-12 text-center rounded-2xl space-y-2">
+                <MessageSquare className="h-10 w-10 text-slate-400 mx-auto mb-2 opacity-60" />
+                <p className="text-base font-bold text-slate-900 dark:text-white">No customer reviews yet.</p>
+                <p className="text-xs text-readable-secondary max-w-md mx-auto">
+                  Genuine customer feedback will appear here after customers submit their reviews.
+                </p>
+              </div>
+            )}
+            {!loading && reviews.length > 0 && !filteredReviews.length && (
               <p className="futuristic-card p-8 text-center text-sm text-readable-secondary rounded-2xl">
                 No published reviews match this rating yet.
               </p>
@@ -319,19 +367,60 @@ export default function CustomerReviewsPage() {
                       className="futuristic-input w-full rounded-xl px-3.5 py-2.5 text-xs" />
                   </label>
                 </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Select Product *</label>
-                  <select
-                    value={newReviewProduct}
-                    onChange={(e) => setNewReviewProduct(e.target.value)}
-                    className="futuristic-input w-full rounded-xl px-3.5 py-2.5 text-xs bg-slate-50 dark:bg-[#0B0718]"
-                  >
-                    <option value="Samsung 980 PRO 1TB NVMe SSD">Samsung 980 PRO 1TB NVMe SSD</option>
-                    <option value="Lenovo ThinkPad T490 (Refurbished)">Lenovo ThinkPad T490 (Refurbished)</option>
-                    <option value="NexLapTech ROG Slayer R15 Gaming PC">NexLapTech ROG Slayer R15 Gaming PC</option>
-                    <option value="Dell Latitude 5440 Pro Laptop">Dell Latitude 5440 Pro Laptop</option>
-                    <option value="EVM 512GB NVMe M.2 SSD">EVM 512GB NVMe M.2 SSD</option>
-                  </select>
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                      Product or Service *
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const next = !isManualProduct;
+                        setIsManualProduct(next);
+                        if (next && !manualProductName && newReviewProduct && newReviewProduct !== "__custom__") {
+                          setManualProductName(newReviewProduct);
+                        }
+                      }}
+                      className="text-[11px] font-semibold text-nex-blue hover:text-nex-blueLight flex items-center gap-1 transition-colors underline decoration-dotted"
+                    >
+                      {isManualProduct ? "📋 Choose from list" : "✏️ Enter product manually"}
+                    </button>
+                  </div>
+
+                  {isManualProduct ? (
+                    <div className="space-y-1">
+                      <input
+                        type="text"
+                        required
+                        autoFocus
+                        value={manualProductName}
+                        onChange={(e) => setManualProductName(e.target.value)}
+                        placeholder="Type product or service name (e.g. Dell XPS 15, Custom Gaming PC, Screen Repair...)"
+                        className="futuristic-input w-full rounded-xl px-3.5 py-2.5 text-xs bg-slate-50 dark:bg-[#0B0718] border-nex-blue/40"
+                      />
+                      <p className="text-[10px] text-nex-mist">
+                        You can type any laptop model, desktop, component, or repair service.
+                      </p>
+                    </div>
+                  ) : (
+                    <select
+                      value={newReviewProduct}
+                      onChange={(e) => {
+                        if (e.target.value === "__custom__") {
+                          setIsManualProduct(true);
+                          if (!manualProductName) setManualProductName("");
+                        } else {
+                          setNewReviewProduct(e.target.value);
+                        }
+                      }}
+                      className="futuristic-input w-full rounded-xl px-3.5 py-2.5 text-xs bg-slate-50 dark:bg-[#0B0718]"
+                    >
+                      {productOptions.map((opt) => (
+                        <option key={opt} value={opt}>{opt}</option>
+                      ))}
+                      <option value="__custom__">✏️ Other (Enter manually)...</option>
+                    </select>
+                  )}
                 </div>
 
                 <div className="space-y-1">

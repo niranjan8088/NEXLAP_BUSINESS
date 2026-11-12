@@ -48,7 +48,7 @@ async function resolveAuthenticatedUser() {
     if (matchedUser && matchedUser.full_name && matchedUser.full_name !== "Demo Customer") {
       decodedName = matchedUser.full_name;
     }
-  } catch {}
+  } catch { }
 
   if (!decodedName && email) {
     const prefix = email.split("@")[0];
@@ -83,13 +83,24 @@ export async function GET() {
       registeredUser = users.find(
         (u: any) => u.id === authUser.id || (authUser.email && u.email?.toLowerCase() === authUser.email.toLowerCase())
       );
-    } catch {}
+    } catch { }
+
+    const isCleanName = (n?: string | null) => {
+      if (!n || typeof n !== "string") return false;
+      const l = n.trim().toLowerCase();
+      return l.length > 0 && !l.includes("demo") && l !== "customer";
+    };
+
+    const emailPrefix = authUser.email ? authUser.email.split("@")[0] : "";
+    const emailDerivedName = emailPrefix
+      ? emailPrefix.charAt(0).toUpperCase() + emailPrefix.slice(1)
+      : "Customer";
 
     const resolvedName =
-      (registeredUser?.full_name && registeredUser.full_name !== "Demo Customer" ? registeredUser.full_name : null) ||
-      (profile?.full_name && profile.full_name !== "Demo Customer" ? profile.full_name : null) ||
-      authUser.name ||
-      "Customer";
+      (isCleanName(registeredUser?.full_name) ? registeredUser.full_name : null) ||
+      (isCleanName(profile?.full_name) ? profile.full_name : null) ||
+      (isCleanName(authUser.name) ? authUser.name : null) ||
+      emailDerivedName;
 
     if (!profile) {
       // First-time visit: initialize with user's real registered details
@@ -97,24 +108,27 @@ export async function GET() {
         id: authUser.id,
         email: authUser.email,
         full_name: resolvedName,
-        phone: registeredUser?.phone || "9876543210",
-        date_of_birth: registeredUser?.date_of_birth || "1998-05-20",
+        phone: registeredUser?.phone || "",
+        date_of_birth: registeredUser?.date_of_birth || "",
         avatar_url: "",
-        gender: "Not Specified",
-        address: "Padmanabhanagar",
-        city: "Bengaluru",
-        state: "Karnataka",
-        pincode: "560070",
-        country: "India",
+        gender: registeredUser?.gender || "Not Specified",
+        address: registeredUser?.address || "",
+        city: registeredUser?.city || "",
+        state: registeredUser?.state || "",
+        pincode: registeredUser?.pincode || "",
+        country: registeredUser?.country || "India",
         role: "user",
         status: "active",
       };
       profile = await dbHelper.profiles.update(authUser.id, initialProfile);
-    } else if (profile.full_name === "Demo Customer" || !profile.full_name) {
+    } else if (!isCleanName(profile.full_name)) {
       // Clean up legacy placeholder
       profile = await dbHelper.profiles.update(authUser.id, {
         full_name: resolvedName,
       });
+      try {
+        await dbHelper.users.update(authUser.id, { full_name: resolvedName });
+      } catch { }
     }
 
     // Strip sensitive internal fields
@@ -235,7 +249,7 @@ export async function PUT(request: Request) {
     // Keep dbHelper.users in sync as well
     try {
       await dbHelper.users.update(authUser.id, updatesWithAuthEmail);
-    } catch {}
+    } catch { }
 
     // Strip sensitive fields
     const { password, reset_token, reset_token_expiry, ...safeProfile } = updated;

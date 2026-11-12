@@ -202,7 +202,13 @@ export async function POST(request: Request) {
     }
 
     // Clean up any legacy "Demo Customer" placeholder on this account
-    if (account.full_name === "Demo Customer" || !account.full_name) {
+    const isCleanAccountName = (n?: string | null) => {
+      if (!n || typeof n !== "string") return false;
+      const l = n.trim().toLowerCase();
+      return l.length > 0 && !l.includes("demo") && l !== "customer";
+    };
+
+    if (!isCleanAccountName(account.full_name)) {
       const emailPrefix = account.email ? account.email.split("@")[0] : "Customer";
       account.full_name = emailPrefix.charAt(0).toUpperCase() + emailPrefix.slice(1);
       try {
@@ -218,15 +224,15 @@ export async function POST(request: Request) {
           id: account.id,
           email: account.email,
           full_name: account.full_name || "Customer",
-          phone: account.phone || "9876543210",
-          date_of_birth: account.date_of_birth || "1998-05-20",
+          phone: account.phone || "",
+          date_of_birth: account.date_of_birth || "",
           role: "user",
           status: "active",
-          city: "Bengaluru",
-          state: "Karnataka",
+          city: "",
+          state: "",
           country: "India",
         });
-      } else if (existingProfile.full_name === "Demo Customer") {
+      } else if (!isCleanAccountName(existingProfile.full_name)) {
         await dbHelper.profiles.update(account.id, {
           full_name: account.full_name,
         });

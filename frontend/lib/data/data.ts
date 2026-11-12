@@ -162,7 +162,7 @@ export const products: Product[] = [
     sku: "SAM-SSD-980P",
     title: "Samsung 980 PRO PCIe 4.0 NVMe M.2 SSD",
     description: "Next-gen flagship PCIe 4.0 high-speed NVMe SSD for high-performance computing, workstation, and gaming storage upgrades.",
-    image: "/images/poster-products.png",
+    image: "/images/poster-products.webp",
     category: "storage",
     brand: "Samsung",
     price: 15000,
@@ -528,8 +528,8 @@ export const faqs: FAQItem[] = [
 ];
 
 export const galleryImages = [
-  { src: "/assets/nexlaptech-logo.png", alt: "NEXLAPTECH Logo" },
-  { src: "/images/poster-products.png", alt: "NexLapTech product range — desktops, laptops, accessories, CCTV" },
-  { src: "/images/poster-services.png", alt: "NexLapTech service range — repair, networking, AMC and more" },
-  { src: "/assets/nexlaptech-logo.png", alt: "NEXLAPTECH Logo" },
+  { src: "/assets/nexlaptech-logo.webp", alt: "NEXLAPTECH Logo" },
+  { src: "/images/poster-products.webp", alt: "NexLapTech product range — desktops, laptops, accessories, CCTV" },
+  { src: "/images/poster-services.webp", alt: "NexLapTech service range — repair, networking, AMC and more" },
+  { src: "/assets/nexlaptech-logo.webp", alt: "NEXLAPTECH Logo" },
 ];

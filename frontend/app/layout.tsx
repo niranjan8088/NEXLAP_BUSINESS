@@ -25,14 +25,12 @@ const batmanForever = localFont({
 const plusJakartaSans = Plus_Jakarta_Sans({
   subsets: ["latin"],
   variable: "--font-heading-fallback",
-  weight: ["600", "700", "800"],
   display: "swap",
 });
 
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-body",
-  weight: ["400", "500", "600"],
   display: "swap",
 });
 
@@ -119,7 +117,7 @@ const jsonLd = {
   "@context": "https://schema.org",
   "@type": "ElectronicsStore",
   name: business.name,
-  image: `${SITE_URL}/assets/nexlaptech-logo.png`,
+  image: `${SITE_URL}/assets/nexlaptech-logo.webp`,
   "@id": SITE_URL,
   url: SITE_URL,
   telephone: business.phones[0],

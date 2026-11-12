@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
 import MarketplaceHome from "@/components/MarketplaceHome";
+import { dbHelper } from "@/lib/dbHelper";
+import { getSafeImageSrc } from "@/lib/utils";
+import type { Product } from "@/lib/data";
 
 export const metadata: Metadata = {
   title: "NEXLAPTECH | Laptops, Components & Accessories",
@@ -13,12 +15,45 @@ export default async function HomePage() {
   const resellerSession = cookieStore.get("nexbyte_reseller_session")?.value;
   const userSession = cookieStore.get("nexbyte_customer_session")?.value;
 
-  // Keep the storefront as the public home while exposing active portals in its header.
+  let initialProducts: Product[] = [];
+  let initialSettings: any = null;
+
+  try {
+    const [allProducts, fullSettings] = await Promise.all([
+      dbHelper.products.list().catch(() => []),
+      dbHelper.storeSettings.get().catch(() => null),
+    ]);
+
+    const available = (allProducts || []).filter(
+      (product: any) => product.status !== "hide" && product.status !== "deleted" && product.status !== "pending"
+    );
+    initialProducts = available.sort((left: any, right: any) => Number(right.featured) - Number(left.featured));
+    initialSettings = fullSettings;
+  } catch {
+    // Graceful fallback to client fetching
+  }
+
+  const lcpHeroImage = initialProducts[0]?.image ? getSafeImageSrc(initialProducts[0].image) : null;
+
   return (
-    <MarketplaceHome
-      hasAdminSession={Boolean(adminSession)}
-      hasResellerSession={Boolean(resellerSession)}
-      hasUserSession={Boolean(userSession)}
-    />
+    <>
+      {lcpHeroImage && (
+        <link
+          rel="preload"
+          as="image"
+          href={lcpHeroImage}
+          type="image/webp"
+          // @ts-ignore React 19 / Next 15 fetchPriority attribute
+          fetchPriority="high"
+        />
+      )}
+      <MarketplaceHome
+        hasAdminSession={Boolean(adminSession)}
+        hasResellerSession={Boolean(resellerSession)}
+        hasUserSession={Boolean(userSession)}
+        initialProducts={initialProducts}
+        initialSettings={initialSettings}
+      />
+    </>
   );
 }

@@ -40,9 +40,9 @@ export default function Footer() {
 
           {/* Quick Links */}
           <div>
-            <h4 className="font-display text-xs font-bold uppercase tracking-wider text-slate-100 dark:text-slate-200">
+            <h3 className="font-display text-xs font-bold uppercase tracking-wider text-slate-100 dark:text-slate-200">
               Quick Links
-            </h4>
+            </h3>
             <ul className="mt-3.5 flex flex-col gap-2 text-xs text-slate-300">
               <li><Link href="/" className="hover:text-indigo-400 dark:hover:text-cyan-400 transition-colors">Home</Link></li>
               <li><Link href="/products" className="hover:text-indigo-400 dark:hover:text-cyan-400 transition-colors">Shop Hardware</Link></li>
@@ -54,9 +54,9 @@ export default function Footer() {
 
           {/* Customer Links */}
           <div>
-            <h4 className="font-display text-xs font-bold uppercase tracking-wider text-slate-100 dark:text-slate-200">
+            <h3 className="font-display text-xs font-bold uppercase tracking-wider text-slate-100 dark:text-slate-200">
               Customer Support
-            </h4>
+            </h3>
             <ul className="mt-3.5 flex flex-col gap-2 text-xs text-slate-300">
               <li><Link href="/contact" className="hover:text-indigo-400 dark:hover:text-cyan-400 transition-colors">Get Help &amp; Contact</Link></li>
               <li><Link href="/training" className="hover:text-indigo-400 dark:hover:text-cyan-400 transition-colors">Training Programs</Link></li>
@@ -68,9 +68,9 @@ export default function Footer() {
 
           {/* Contact & Service Areas */}
           <div>
-            <h4 className="font-display text-xs font-bold uppercase tracking-wider text-slate-100 dark:text-slate-200">
+            <h3 className="font-display text-xs font-bold uppercase tracking-wider text-slate-100 dark:text-slate-200">
               Contact &amp; Service Areas
-            </h4>
+            </h3>
             <ul className="mt-3.5 flex flex-col gap-2.5 text-xs text-slate-300">
               {business.phones.map((phone, i) => (
                 <li key={phone}>

@@ -18,6 +18,8 @@ export default function FeedbackPage() {
   const [city, setCity] = useState("");
   const [serviceUsed, setServiceUsed] = useState("");
   const [productPurchased, setProductPurchased] = useState("");
+  const [isManualProduct, setIsManualProduct] = useState(false);
+  const [manualProduct, setManualProduct] = useState("");
   const [overallExperience, setOverallExperience] = useState("");
   const [message, setMessage] = useState("");
   const [recommend, setRecommend] = useState(true);
@@ -73,8 +75,12 @@ export default function FeedbackPage() {
       formData.append("phone", phone);
       formData.append("email", email);
       formData.append("city", city);
+      const finalProduct = isManualProduct
+        ? manualProduct.trim()
+        : (productPurchased === "__custom__" ? manualProduct.trim() : productPurchased);
+
       formData.append("service_used", serviceUsed);
-      formData.append("product_purchased", productPurchased);
+      formData.append("product_purchased", finalProduct);
       formData.append("overall_experience", overallExperience);
       formData.append("rating", rating.toString());
       formData.append("review_message", message);
@@ -265,22 +271,58 @@ export default function FeedbackPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <label htmlFor="feedback-product" className="text-sm font-semibold text-slate-800">
-                      Product Purchased <span className="text-xs font-normal text-slate-500">(If applicable)</span>
-                    </label>
-                    <select
-                      id="feedback-product"
-                      value={productPurchased}
-                      onChange={(e) => setProductPurchased(e.target.value)}
-                      className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
-                    >
-                      <option value="">Select a product category</option>
-                      {products.map((p) => (
-                        <option key={p.id} value={p.title}>
-                          {p.title}
-                        </option>
-                      ))}
-                    </select>
+                    <div className="flex items-center justify-between">
+                      <label htmlFor="feedback-product" className="text-sm font-semibold text-slate-800">
+                        Product Purchased <span className="text-xs font-normal text-slate-500">(If applicable)</span>
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const next = !isManualProduct;
+                          setIsManualProduct(next);
+                          if (next && !manualProduct && productPurchased && productPurchased !== "__custom__") {
+                            setManualProduct(productPurchased);
+                          }
+                        }}
+                        className="text-xs font-semibold text-blue-600 hover:text-blue-700 underline"
+                      >
+                        {isManualProduct ? "Choose from list" : "Enter manually"}
+                      </button>
+                    </div>
+
+                    {isManualProduct ? (
+                      <input
+                        id="feedback-product"
+                        type="text"
+                        value={manualProduct}
+                        onChange={(e) => setManualProduct(e.target.value)}
+                        placeholder="Type product name (e.g. Dell XPS 15, HP Victus, 1TB NVMe SSD...)"
+                        className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                        autoFocus
+                      />
+                    ) : (
+                      <select
+                        id="feedback-product"
+                        value={productPurchased}
+                        onChange={(e) => {
+                          if (e.target.value === "__custom__") {
+                            setIsManualProduct(true);
+                            if (!manualProduct) setManualProduct("");
+                          } else {
+                            setProductPurchased(e.target.value);
+                          }
+                        }}
+                        className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                      >
+                        <option value="">Select a product category</option>
+                        {products.map((p) => (
+                          <option key={p.id} value={p.title}>
+                            {p.title}
+                          </option>
+                        ))}
+                        <option value="__custom__">Other (Enter manually)...</option>
+                      </select>
+                    )}
                   </div>
                 </div>
 

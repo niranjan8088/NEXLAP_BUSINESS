@@ -21,8 +21,11 @@ export async function GET() {
     const notifications = await dbHelper.notifications.list();
     const ownNotifications = notifications.filter(
       (n: any) =>
-        n.user_id === authUser.id ||
+        (n.user_id && n.user_id === authUser.id) ||
+        (n.recipient_user_id && n.recipient_user_id === authUser.id) ||
         (n.customer_email && n.customer_email.toLowerCase() === authUser.email.toLowerCase()) ||
+        (n.recipient_email && n.recipient_email.toLowerCase() === authUser.email.toLowerCase()) ||
+        n.recipient_role === "user" ||
         n.type === "general"
     );
 

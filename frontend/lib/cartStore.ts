@@ -66,7 +66,7 @@ export const useCartStore = create<CartStore>()(
               productId: product.id,
               title: product.title,
               price: Number(product.price) || 0,
-              image: product.image || "/images/poster-products.png",
+              image: product.image || "/images/poster-products.webp",
               category: product.category || "Hardware",
               quantity: 1,
               variantId: product.variantId,

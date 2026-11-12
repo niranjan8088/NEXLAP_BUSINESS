@@ -22,6 +22,9 @@ export default function CustomerOrdersPage() {
 
   useEffect(() => {
     fetchOrders();
+    const handleRealtime = () => fetchOrders();
+    window.addEventListener("nexbyte-realtime", handleRealtime);
+    return () => window.removeEventListener("nexbyte-realtime", handleRealtime);
   }, []);
 
   const fetchOrders = async () => {
@@ -44,8 +47,9 @@ export default function CustomerOrdersPage() {
     const s = (status || "").toLowerCase();
     if (s.includes("delivered")) return 3;
     if (s.includes("out for delivery")) return 2;
-    if (s.includes("processing") || s.includes("dispatched") || s.includes("shipped")) return 1;
-    return 0; // Confirmed
+    if (s.includes("processing") || s.includes("dispatched") || s.includes("shipped") || s.includes("packed")) return 1;
+    if (s.includes("cancel") || s.includes("refund")) return -1;
+    return 0; // Confirmed / Order Received
   };
 
   return (
@@ -256,6 +260,26 @@ export default function CustomerOrdersPage() {
                 </div>
               ))}
             </div>
+
+            {/* Order Timeline History */}
+            {Array.isArray(selectedOrder.order_timeline) && selectedOrder.order_timeline.length > 0 && (
+              <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-white/10">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Order Event History</h4>
+                <div className="space-y-1.5">
+                  {selectedOrder.order_timeline.map((evt: any, i: number) => (
+                    <div key={i} className="flex items-start justify-between text-xs p-2 rounded-xl bg-slate-50 dark:bg-white/[0.02]">
+                      <div className="space-y-0.5">
+                        <span className="font-bold text-slate-800 dark:text-slate-200 capitalize">{evt.status?.replace(/_/g, ' ')}</span>
+                        {evt.note && <p className="text-[11px] text-slate-500">{evt.note}</p>}
+                      </div>
+                      <span className="text-[10px] text-slate-400 font-mono">
+                        {new Date(evt.timestamp || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Total Summary */}
             <div className="pt-2 border-t border-slate-100 dark:border-white/10 flex justify-between items-center text-xs font-bold">

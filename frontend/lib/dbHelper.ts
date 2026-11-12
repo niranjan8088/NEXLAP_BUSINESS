@@ -219,31 +219,7 @@ if (!globalRef.__nexbyteMockDb) {
         created_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString()
       }
     ],
-    reviews: [
-      {
-        id: "rev-1",
-        customer_name: "Anil Murthy",
-        phone: "9845321045",
-        email: "anil.m@gmail.com",
-        city: "Tumkur",
-        service_used: "Laptop Repair",
-        product_purchased: "",
-        overall_experience: "Excellent repair service. Repaired my Lenovo laptop hinge within 3 hours.",
-        rating: 5,
-        review_message: "Fast turn-around, reasonable price, clean work. Highly recommended branch in Tumkur.",
-        recommend: true,
-        image_urls: [],
-        status: "approved",
-        verified: true,
-        featured: false,
-        source: "public_form",
-        likes_count: 5,
-        helpful_count: 3,
-        admin_reply: null,
-        admin_reply_at: null,
-        created_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString()
-      }
-    ],
+    reviews: [],
     internships: [
       {
         id: "int-1",
@@ -304,7 +280,7 @@ if (!globalRef.__nexbyteMockDb) {
       }
     ],
     gallery: [
-      { id: "gal-1", title: "Store Front", url: "/images/poster-products.png", category: "store", visible: true, created_at: new Date().toISOString() }
+      { id: "gal-1", title: "Store Front", url: "/images/poster-products.webp", category: "store", visible: true, created_at: new Date().toISOString() }
     ],
     cms_content: {
       hero: {
@@ -317,7 +293,7 @@ if (!globalRef.__nexbyteMockDb) {
         title: "NexLapTech — Hardware, Repairs & IT Training",
         description: "NexLapTech offers premium laptops, gaming PCs, servers, bulk hardware supply, CCTV installation, software support, and IT academy training.",
         keywords: "laptop repair, gaming PC, computer service, bulk supply, IT training, CCTV installation, NexLapTech",
-        og_image: "/images/poster-products.png",
+        og_image: "/images/poster-products.webp",
       },
       footer: {
         tagline: "Your trusted partner for premium IT solutions.",
@@ -338,7 +314,7 @@ if (!globalRef.__nexbyteMockDb) {
         registrationId: "NBT-TR-2026-001",
         certificateId: "NBT-TR-2026-001",
         studentName: "Niranjan M",
-        photoUrl: "/assets/nexlaptech-logo.png",
+        photoUrl: "/assets/nexlaptech-logo.webp",
         courseTitle: "Full Stack Web Development",
         trainingType: "Advanced Web Technologies",
         internshipType: "N/A",
@@ -390,7 +366,7 @@ if (!globalRef.__nexbyteMockDb) {
       {
         id: "m-1",
         title: "Logo Horizontal",
-        url: "/assets/nexlaptech-logo.png",
+        url: "/assets/nexlaptech-logo.webp",
         fileType: "image/png",
         created_at: new Date().toISOString()
       }
@@ -654,7 +630,7 @@ if (!globalRef.__nexbyteMockDb) {
             unitPrice: 10620,
             price: 10620,
             total: 10620,
-            image: "/images/poster-products.png",
+            image: "/images/poster-products.webp",
           }
         ],
         shipping_address: {
@@ -1189,7 +1165,7 @@ export const dbHelper = {
       if (normalizedImages.length > 0 && !normalizedImages.some((i: any) => i.is_primary)) {
         normalizedImages[0].is_primary = true;
       }
-      const primaryUrl = normalizedImages.find((i: any) => i.is_primary)?.url || prod.image || "/images/poster-products.png";
+      const primaryUrl = normalizedImages.find((i: any) => i.is_primary)?.url || prod.image || "/images/poster-products.webp";
 
       const payload = {
         status: "show",
@@ -1289,7 +1265,7 @@ export const dbHelper = {
           normalizedImages[0].is_primary = true;
         }
         updates.images = normalizedImages;
-        updates.image = normalizedImages.find((i: any) => i.is_primary)?.url || normalizedImages[0]?.url || updates.image || "/images/poster-products.png";
+        updates.image = normalizedImages.find((i: any) => i.is_primary)?.url || normalizedImages[0]?.url || updates.image || "/images/poster-products.webp";
       }
 
       updates.updated_at = new Date().toISOString();
@@ -1647,41 +1623,286 @@ export const dbHelper = {
   notifications: {
     async list() {
       if (supabase) {
-        const { data } = await supabase.from("notifications").select("*").order("created_at", { ascending: false });
-        return data || [];
+        try {
+          const { data } = await supabase.from("notifications").select("*").order("created_at", { ascending: false });
+          if (data && data.length > 0) return data;
+        } catch {
+          // fallback to mock data
+        }
       }
-      return getMockData("notifications");
+      return getMockData("notifications") || [];
     },
     async create(notify: any) {
+      const newNotify = {
+        id: notify.id || `n-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+        title: notify.title || "Notification",
+        message: notify.message || "",
+        type: notify.type || "system_alert",
+        priority: notify.priority || "normal",
+        status: notify.status || "unread",
+        reference_id: notify.reference_id || notify.referenceId || null,
+        reference_type: notify.reference_type || notify.referenceType || null,
+        recipient_role: notify.recipient_role || notify.recipientRole || "admin",
+        recipient_user_id: notify.recipient_user_id || notify.recipientUserId || null,
+        recipient_name: notify.recipient_name || notify.recipientName || null,
+        recipient_email: notify.recipient_email || notify.recipientEmail || null,
+        recipient_phone: notify.recipient_phone || notify.recipientPhone || null,
+        channels: notify.channels || {
+          in_app: { status: "delivered", delivered_at: new Date().toISOString() },
+          whatsapp: { status: "not_configured" },
+          email: { status: "not_configured" },
+        },
+        metadata: notify.metadata || {},
+        created_at: notify.created_at || new Date().toISOString(),
+        read_at: notify.read_at || null,
+        archived_at: notify.archived_at || null,
+      };
+
       if (supabase) {
-        const { data } = await supabase.from("notifications").insert([notify]).select().single();
-        return data;
+        try {
+          const { data } = await supabase.from("notifications").insert([newNotify]).select().single();
+          if (data) return data;
+        } catch {
+          // fallback
+        }
       }
-      const list = getMockData("notifications");
-      const newNotify = { id: `n-${Date.now()}`, status: "unread", created_at: new Date().toISOString(), ...notify };
+      const list = getMockData("notifications") || [];
       saveMockData("notifications", [newNotify, ...list]);
       notifyDataChange("notifications", "insert", newNotify);
       return newNotify;
     },
     async markAllRead() {
       if (supabase) {
-        await supabase.from("notifications").update({ status: "read" }).eq("status", "unread");
-        return true;
+        try {
+          await supabase.from("notifications").update({ status: "read", read_at: new Date().toISOString() }).eq("status", "unread");
+        } catch {}
       }
-      const list = getMockData("notifications");
-      const updated = list.map((n) => ({ ...n, status: "read" }));
+      const list = getMockData("notifications") || [];
+      const updated = list.map((n: any) => ({ ...n, status: "read", read_at: n.read_at || new Date().toISOString() }));
       saveMockData("notifications", updated);
       notifyDataChange("notifications", "update", {});
       return true;
     },
     async markRead(id: string) {
       if (supabase) {
-        await supabase.from("notifications").update({ status: "read" }).eq("id", id);
-        return true;
+        try {
+          await supabase.from("notifications").update({ status: "read", read_at: new Date().toISOString() }).eq("id", id);
+        } catch {}
       }
-      const list = getMockData("notifications");
-      const updated = list.map((n) => (n.id === id ? { ...n, status: "read" } : n));
+      const list = getMockData("notifications") || [];
+      const updated = list.map((n: any) => (n.id === id ? { ...n, status: "read", read_at: new Date().toISOString() } : n));
       saveMockData("notifications", updated);
+      notifyDataChange("notifications", "update", { id, status: "read" });
+      return true;
+    },
+    async markUnread(id: string) {
+      if (supabase) {
+        try {
+          await supabase.from("notifications").update({ status: "unread", read_at: null }).eq("id", id);
+        } catch {}
+      }
+      const list = getMockData("notifications") || [];
+      const updated = list.map((n: any) => (n.id === id ? { ...n, status: "unread", read_at: null } : n));
+      saveMockData("notifications", updated);
+      notifyDataChange("notifications", "update", { id, status: "unread" });
+      return true;
+    },
+    async archive(id: string) {
+      if (supabase) {
+        try {
+          await supabase.from("notifications").update({ status: "archived", archived_at: new Date().toISOString() }).eq("id", id);
+        } catch {}
+      }
+      const list = getMockData("notifications") || [];
+      const updated = list.map((n: any) => (n.id === id ? { ...n, status: "archived", archived_at: new Date().toISOString() } : n));
+      saveMockData("notifications", updated);
+      notifyDataChange("notifications", "update", { id, status: "archived" });
+      return true;
+    },
+    async archiveAllRead() {
+      const list = getMockData("notifications") || [];
+      const updated = list.map((n: any) => n.status === "read" ? { ...n, status: "archived", archived_at: new Date().toISOString() } : n);
+      saveMockData("notifications", updated);
+      notifyDataChange("notifications", "update", {});
+      return true;
+    },
+    async delete(id: string) {
+      if (supabase) {
+        try {
+          await supabase.from("notifications").delete().eq("id", id);
+        } catch {}
+      }
+      const list = getMockData("notifications") || [];
+      const filtered = list.filter((n: any) => n.id !== id);
+      saveMockData("notifications", filtered);
+      notifyDataChange("notifications", "delete", { id });
+      return true;
+    },
+    async clearOlderThan(days: number) {
+      const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
+      const list = getMockData("notifications") || [];
+      const filtered = list.filter((n: any) => {
+        const created = new Date(n.created_at).getTime();
+        if (n.priority === "urgent" || n.priority === "high") return true;
+        return created >= cutoff;
+      });
+      saveMockData("notifications", filtered);
+      return list.length - filtered.length;
+    },
+    async getSettings() {
+      const settings = getMockData("notification_settings");
+      if (settings && typeof settings === "object" && !Array.isArray(settings)) return settings;
+      return {
+        enabledCategories: {
+          order: true,
+          booking: true,
+          laptop_enquiry: true,
+          customer_registration: true,
+          payment_success: true,
+          payment_failure: true,
+          order_status: true,
+          shipment_delivery: true,
+          repair_status: true,
+          low_stock: true,
+          out_of_stock: true,
+          customer_message: true,
+          review: true,
+          warranty_request: true,
+          system_alert: true,
+          security_alert: true,
+          admin_activity: true,
+        },
+        channels: {
+          in_app: true,
+          email: true,
+          whatsapp: true,
+        },
+        priorityAlertsOnly: false,
+        soundEnabled: true,
+        desktopNotifications: false,
+        quietHours: {
+          enabled: false,
+          start: "22:00",
+          end: "08:00",
+        },
+        retentionDays: 90,
+        adminAlertEmail: "admin@nexbyte.com",
+        adminAlertPhone: "+91 80889 79706",
+        lowStockThreshold: 5,
+        updated_at: new Date().toISOString(),
+      };
+    },
+    async updateSettings(settings: any) {
+      const current = await this.getSettings();
+      const updated = { ...current, ...settings, updated_at: new Date().toISOString() };
+      saveMockData("notification_settings", updated);
+      notifyDataChange("notification_settings", "update", updated);
+      return updated;
+    },
+    async listTemplates() {
+      const templates = getMockData("notification_templates");
+      if (Array.isArray(templates) && templates.length > 0) return templates;
+      return [
+        {
+          id: "tpl-order-confirm",
+          name: "Order Confirmation",
+          category: "order",
+          channels: ["in_app", "email", "whatsapp"],
+          title: "Order #{{order_id}} Confirmed",
+          message: "Hello {{customer_name}}, thank you for your order #{{order_id}} of ₹{{amount}}. We are preparing your hardware shipment.",
+          variables: ["customer_name", "order_id", "amount"],
+          is_active: true,
+        },
+        {
+          id: "tpl-payment-confirm",
+          name: "Payment Confirmation",
+          category: "payment_success",
+          channels: ["in_app", "email", "whatsapp"],
+          title: "Payment Received for #{{order_id}}",
+          message: "We have successfully received payment of ₹{{amount}} for order #{{order_id}}. Transaction Reference: {{reference_id}}.",
+          variables: ["customer_name", "order_id", "amount", "reference_id"],
+          is_active: true,
+        },
+        {
+          id: "tpl-booking-confirm",
+          name: "Service Booking Confirmation",
+          category: "booking",
+          channels: ["in_app", "email", "whatsapp"],
+          title: "Service Booking #{{booking_id}} Scheduled",
+          message: "Hi {{customer_name}}, your service appointment for '{{service_name}}' is scheduled on {{date}}. Our certified technician will assist you.",
+          variables: ["customer_name", "booking_id", "service_name", "date"],
+          is_active: true,
+        },
+        {
+          id: "tpl-repair-update",
+          name: "Repair Progress Update",
+          category: "repair_status",
+          channels: ["in_app", "email", "whatsapp"],
+          title: "Repair Update: {{service_name}} (#{{booking_id}})",
+          message: "Hello {{customer_name}}, your device repair (#{{booking_id}}) is now: {{status}}. Diagnostic notes: {{notes}}.",
+          variables: ["customer_name", "booking_id", "service_name", "status", "notes"],
+          is_active: true,
+        },
+        {
+          id: "tpl-delivery-update",
+          name: "Shipment Out for Delivery",
+          category: "shipment_delivery",
+          channels: ["in_app", "whatsapp"],
+          title: "Order #{{order_id}} Out for Delivery!",
+          message: "Great news {{customer_name}}! Your package with tracking code {{tracking_id}} is out for delivery today. Please keep ₹{{amount}} ready if COD.",
+          variables: ["customer_name", "order_id", "tracking_id", "amount"],
+          is_active: true,
+        },
+        {
+          id: "tpl-enquiry-response",
+          name: "Customer Enquiry Response",
+          category: "laptop_enquiry",
+          channels: ["in_app", "whatsapp", "email"],
+          title: "Quotation for {{product_title}} (#{{reference_id}})",
+          message: "Hi {{customer_name}}, regarding your enquiry for {{product_title}}, we have matched verified stock within your budget (₹{{amount}}). View quotation: {{action_url}}",
+          variables: ["customer_name", "reference_id", "product_title", "amount", "action_url"],
+          is_active: true,
+        },
+        {
+          id: "tpl-low-stock-alert",
+          name: "Low-Stock Hardware Alert",
+          category: "low_stock",
+          channels: ["in_app", "email"],
+          title: "Low Stock Alert: {{product_title}} ({{sku}})",
+          message: "Warning: SKU {{sku}} ({{product_title}}) is down to {{stock}} units on-hand, which is below safety threshold ({{threshold}}). Restock recommended.",
+          variables: ["product_title", "sku", "stock", "threshold"],
+          is_active: true,
+        },
+      ];
+    },
+    async saveTemplate(tpl: any) {
+      const templates = await this.listTemplates();
+      const existingIdx = templates.findIndex((t: any) => t.id === tpl.id);
+      let updated: any[];
+      if (existingIdx >= 0) {
+        updated = [...templates];
+        updated[existingIdx] = { ...updated[existingIdx], ...tpl, updated_at: new Date().toISOString() };
+      } else {
+        const newTpl = {
+          id: tpl.id || `tpl-${Date.now()}`,
+          name: tpl.name || "Untitled Template",
+          category: tpl.category || "order",
+          channels: tpl.channels || ["in_app"],
+          title: tpl.title || "",
+          message: tpl.message || "",
+          variables: tpl.variables || [],
+          is_active: tpl.is_active !== undefined ? tpl.is_active : true,
+          created_at: new Date().toISOString(),
+        };
+        updated = [newTpl, ...templates];
+      }
+      saveMockData("notification_templates", updated);
+      return updated;
+    },
+    async deleteTemplate(id: string) {
+      const templates = await this.listTemplates();
+      const updated = templates.filter((t: any) => t.id !== id);
+      saveMockData("notification_templates", updated);
       return true;
     }
   },
@@ -1937,6 +2158,29 @@ export const dbHelper = {
         created_at: new Date().toISOString(),
         ...review,
       };
+
+      // Backend Duplicate Prevention Guard
+      const existingReviews: any[] = supabase
+        ? (await supabase.from("reviews").select("id,customer_id,email,phone,product_id,order_id,booking_id,submitter_fingerprint,review_message,created_at").then((r: any) => r.data || []))
+        : getMockData("reviews");
+
+      const isDuplicate = existingReviews.some((r: any) => {
+        if (r.id === payload.id) return true;
+        const sameCustomer =
+          (payload.customer_id && r.customer_id === payload.customer_id) ||
+          (payload.email && r.email && r.email.toLowerCase() === payload.email.toLowerCase()) ||
+          (payload.phone && r.phone && r.phone === payload.phone);
+        if (sameCustomer) {
+          if (payload.order_id && r.order_id === payload.order_id) return true;
+          if (payload.booking_id && r.booking_id === payload.booking_id) return true;
+          if (payload.product_id && r.product_id === payload.product_id) return true;
+        }
+        return false;
+      });
+
+      if (isDuplicate) {
+        throw new Error("Duplicate review detected: Customer has already submitted a review for this purchase/service.");
+      }
 
       if (supabase) {
         const { data, error } = await supabase.from("reviews").insert([payload]).select().single();
@@ -2468,6 +2712,26 @@ export const dbHelper = {
       const list = await this.list();
       return list.find((c) => c.phone === phone) || null;
     },
+    async getById(id: string) {
+      if (supabase) {
+        const { data } = await supabase.from("customers").select("*").or(`id.eq.${id},customerId.eq.${id}`).single();
+        return data || null;
+      }
+      const list = getMockData("customers");
+      return list.find((c: any) => c.id === id || c.customerId === id) || null;
+    },
+    async delete(id: string) {
+      if (supabase) {
+        const { error } = await supabase.from("customers").delete().or(`id.eq.${id},customerId.eq.${id}`);
+        if (error) throw error;
+        return true;
+      }
+      const list = getMockData("customers");
+      const filtered = list.filter((c: any) => c.id !== id && c.customerId !== id);
+      saveMockData("customers", filtered);
+      notifyDataChange("customers", "delete", { id });
+      return true;
+    },
     async create(cust: any) {
       const custId = `CUST-${Math.floor(1000 + Math.random() * 9000)}`;
       const newCust = {
@@ -2871,16 +3135,27 @@ export const dbHelper = {
     async record(tx: any) {
       const payload = {
         id: `tx-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
-        reseller_id: tx.reseller_id || tx.resellerId,
-        listing_id: tx.listing_id || tx.listingId,
+        product_id: tx.product_id || tx.productId || null,
+        variant_id: tx.variant_id || tx.variantId || null,
+        sku: tx.sku || null,
+        product_title: tx.product_title || tx.productTitle || null,
+        reseller_id: tx.reseller_id || tx.resellerId || null,
+        listing_id: tx.listing_id || tx.listingId || null,
         type: tx.type || "adjustment",
         quantity: Number(tx.quantity) || 0,
+        previous_stock: typeof tx.previous_stock === "number" ? tx.previous_stock : (typeof tx.previousStock === "number" ? tx.previousStock : null),
+        new_stock: typeof tx.new_stock === "number" ? tx.new_stock : (typeof tx.newStock === "number" ? tx.newStock : null),
         reason: tx.reason || "Inventory update",
+        admin_name: tx.admin_name || tx.adminName || "Admin",
         created_at: new Date().toISOString()
       };
 
       if (supabase) {
-        await supabase.from("inventory_transactions").insert([payload]);
+        try {
+          await supabase.from("inventory_transactions").insert([payload]);
+        } catch {
+          // fallback to local mock store
+        }
       }
 
       const list = getMockData("inventory_transactions") || [];
@@ -2891,6 +3166,21 @@ export const dbHelper = {
     async listByReseller(resellerId: string) {
       const list = getMockData("inventory_transactions") || [];
       return list.filter((t: any) => t.reseller_id === resellerId || t.resellerId === resellerId);
+    },
+
+    async listAll(limit = 100) {
+      const list = getMockData("inventory_transactions") || [];
+      return list.slice(0, limit);
+    },
+
+    async listByProduct(productId: string) {
+      const list = getMockData("inventory_transactions") || [];
+      return list.filter((t: any) => t.product_id === productId || t.productId === productId);
+    },
+
+    async listBySku(sku: string) {
+      const list = getMockData("inventory_transactions") || [];
+      return list.filter((t: any) => (t.sku || "").toLowerCase() === (sku || "").toLowerCase());
     }
   },
 
@@ -2980,7 +3270,25 @@ export const dbHelper = {
       return savedData;
     },
     async update(id: string, updates: any) {
-      const payload = { ...updates, updated_at: new Date().toISOString() };
+      const now = new Date().toISOString();
+      const list = getMockData("orders");
+      const existing = list.find((o: any) => o.id === id || o.order_id === id) || {};
+
+      let timeline = Array.isArray(existing.order_timeline) ? [...existing.order_timeline] : [];
+      if (updates.status && updates.status !== existing.status) {
+        timeline.push({
+          status: updates.status,
+          timestamp: now,
+          note: updates.notes || `Order status updated to ${updates.status}`,
+        });
+      }
+
+      const payload = {
+        ...updates,
+        order_timeline: timeline,
+        updated_at: now,
+      };
+
       if (supabase) {
         try {
           const { data, error } = await supabase.from("orders").update(payload).or(`id.eq.${id},order_id.eq.${id}`).select().single();
@@ -2990,11 +3298,29 @@ export const dbHelper = {
           }
         } catch {}
       }
-      const list = getMockData("orders");
+
       const updated = list.map((o: any) => (o.id === id || o.order_id === id) ? { ...o, ...payload } : o);
       saveMockData("orders", updated);
       const found = updated.find((o: any) => o.id === id || o.order_id === id);
       notifyDataChange("orders", "update", found);
+
+      // Create customer notification if status changed
+      if (updates.status && updates.status !== existing.status) {
+        try {
+          const ordNum = found?.order_number || found?.order_id || found?.id || id;
+          await dbHelper.notifications.create({
+            title: `📦 Order #${ordNum} Update`,
+            message: `Your order status is now: ${updates.status}.`,
+            type: "order_status",
+            recipient_role: "user",
+            recipient_user_id: found?.user_id || null,
+            recipient_email: found?.customer_email || found?.email || null,
+            reference_type: "order",
+            reference_id: found?.id || id,
+          });
+        } catch {}
+      }
+
       return found;
     }
   },
@@ -3197,6 +3523,59 @@ export const dbHelper = {
 
   // --- MESSAGES SECTION ---
   messages: {
+    async listAll() {
+      if (supabase) {
+        try {
+          const { data, error } = await supabase.from("messages").select("*").order("created_at", { ascending: false });
+          if (!error && Array.isArray(data)) return data;
+        } catch {}
+      }
+      const list = getMockData("messages");
+      return list.sort((a: any, b: any) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
+    },
+    async sendAdminMessage(params: { customerId?: string; customerEmail?: string; customerName?: string; message: string; subject?: string }) {
+      const payload = {
+        id: `msg-${Date.now()}`,
+        user_id: params.customerId || null,
+        customer_id: params.customerId || null,
+        customer_email: params.customerEmail || "",
+        customer_name: params.customerName || "Customer",
+        subject: params.subject || "Message from Support Team",
+        message: params.message,
+        sender: "admin",
+        sender_name: "NexLapTech Support",
+        recipient: "customer",
+        status: "delivered",
+        created_at: new Date().toISOString(),
+      };
+      const list = getMockData("messages");
+      saveMockData("messages", [...list, payload]);
+
+      let savedData: any = payload;
+      if (supabase) {
+        try {
+          const { data, error } = await supabase.from("messages").insert([payload]).select().single();
+          if (!error && data) savedData = data;
+        } catch {}
+      }
+
+      notifyDataChange("messages", "insert", savedData);
+
+      try {
+        await dbHelper.notifications.create({
+          title: "💬 New Message from Support Team",
+          message: params.message.substring(0, 100),
+          type: "customer_message",
+          recipient_role: "user",
+          recipient_user_id: params.customerId || null,
+          recipient_email: params.customerEmail || null,
+          reference_type: "message",
+          reference_id: savedData.id,
+        });
+      } catch {}
+
+      return savedData;
+    },
     async getByUser(userId: string, userEmail?: string) {
       const cleanEmail = (userEmail || "").trim().toLowerCase();
       const cleanId = (userId || "").trim();

@@ -28,9 +28,22 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Vote type must be 'like' or 'helpful'." }, { status: 400 });
   }
 
-  // If Supabase URL is not configured, simulate success
+  // If Supabase URL is not configured, update local dbHelper
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
-    return NextResponse.json({ success: true, count: 1 });
+    try {
+      const { dbHelper } = await import("@/lib/dbHelper");
+      const list = await dbHelper.reviews.list();
+      const rev = list.find((r: any) => String(r.id) === String(review_id));
+      if (!rev) {
+        return NextResponse.json({ error: "Review not found." }, { status: 404 });
+      }
+      const field = vote_type === "like" ? "likes_count" : "helpful_count";
+      const newCount = (Number(rev[field]) || 0) + 1;
+      await dbHelper.reviews.update(review_id, { [field]: newCount });
+      return NextResponse.json({ success: true, count: newCount });
+    } catch {
+      return NextResponse.json({ success: true, count: 1 });
+    }
   }
 
   try {

@@ -135,7 +135,7 @@ export default function CustomerCartPage() {
                   <div className="flex items-center space-x-4">
                     <div className="relative w-16 h-16 bg-slate-50 dark:bg-white/[0.03] rounded-xl overflow-hidden border border-slate-100 dark:border-white/5 p-1 flex-shrink-0">
                       <Image
-                        src={item.image || "/images/poster-products.png"}
+                        src={item.image || "/images/poster-products.webp"}
                         alt={item.title || "Cart item"}
                         fill
                         className="object-contain p-1"

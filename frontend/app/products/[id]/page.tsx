@@ -95,7 +95,7 @@ function extractImageUrls(product: any): string[] {
     }
   }
   if (urls.length === 0) {
-    urls.push("/images/poster-products.png");
+    urls.push("/images/poster-products.webp");
   }
   return urls;
 }
@@ -306,7 +306,7 @@ export default function ProductDetailPage({
 
         // Images set
         const imagesList = extractImageUrls(customerProduct);
-        setSelectedImage(imagesList[0] || "/images/poster-products.png");
+        setSelectedImage(imagesList[0] || "/images/poster-products.webp");
 
         // Variants initialization
         if (activeVariants.length > 0) {
@@ -553,7 +553,7 @@ export default function ProductDetailPage({
       id: product.id,
       title: `${product.title}${variantTitle}`,
       price: finalPrice,
-      image: getSafeImageSrc(selectedImage || product.image, "/images/poster-products.png"),
+      image: getSafeImageSrc(selectedImage || product.image, "/images/poster-products.webp"),
       category: product.category,
       variantId: selectedVariant?.id,
       variantSku: selectedVariant?.sku,
@@ -584,7 +584,7 @@ export default function ProductDetailPage({
       id: product.id,
       title: `${product.title}${variantTitle}`,
       price: finalPrice,
-      image: getSafeImageSrc(selectedImage || product.image, "/images/poster-products.png"),
+      image: getSafeImageSrc(selectedImage || product.image, "/images/poster-products.webp"),
       category: product.category,
       variantId: selectedVariant?.id,
       variantSku: selectedVariant?.sku,
@@ -727,12 +727,12 @@ export default function ProductDetailPage({
           <div className="lg:col-span-6 futuristic-card p-4 sm:p-6 sticky top-24">
             <div className="relative aspect-square w-full bg-slate-50 dark:bg-white/[0.03] rounded-xl overflow-hidden mb-4 group flex items-center justify-center border border-slate-100 dark:border-white/5">
               <Image
-                src={getSafeImageSrc(selectedImage, "/images/poster-products.png")}
+                src={getSafeImageSrc(selectedImage, "/images/poster-products.webp")}
                 alt={product.title || product.name || "Product"}
                 fill
                 priority
                 className="object-contain p-6 transition-transform duration-300 group-hover:scale-105"
-                onError={() => setSelectedImage("/images/poster-products.png")}
+                onError={() => setSelectedImage("/images/poster-products.webp")}
               />
 
               {/* Wishlist Floating Button */}
@@ -771,7 +771,7 @@ export default function ProductDetailPage({
                     }`}
                   >
                     <Image
-                      src={getSafeImageSrc(imgUrl, "/images/poster-products.png")}
+                      src={getSafeImageSrc(imgUrl, "/images/poster-products.webp")}
                       alt={`Thumbnail ${idx + 1}`}
                       fill
                       className="object-contain p-1"
@@ -864,7 +864,7 @@ export default function ProductDetailPage({
                             if (isAvailable) {
                               setSelectedVariant(variant);
                               setQuantity(1);
-                              setSelectedImage(getSafeImageSrc(variant.image || product.image, "/images/poster-products.png"));
+                              setSelectedImage(getSafeImageSrc(variant.image || product.image, "/images/poster-products.webp"));
                             }
                           }}
                           disabled={!isAvailable}
@@ -1343,7 +1343,7 @@ export default function ProductDetailPage({
                 >
                   <div className="relative aspect-square w-full bg-slate-50 rounded-lg overflow-hidden mb-3 p-2">
                     <Image
-                      src={getSafeImageSrc(sim.image, "/images/poster-products.png")}
+                      src={getSafeImageSrc(sim.image, "/images/poster-products.webp")}
                       alt={sim.title || sim.name || "Similar product"}
                       fill
                       className="object-contain p-2 group-hover:scale-105 transition"
@@ -1375,7 +1375,7 @@ export default function ProductDetailPage({
           </button>
           <div className="relative max-w-4xl max-h-[85vh] w-full h-full flex items-center justify-center p-4">
             <Image
-              src={getSafeImageSrc(selectedImage, "/images/poster-products.png")}
+              src={getSafeImageSrc(selectedImage, "/images/poster-products.webp")}
               alt="Zoomed product view"
               fill
               className="object-contain"

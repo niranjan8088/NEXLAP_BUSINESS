@@ -342,7 +342,12 @@ export default function CustomerDashboardPage() {
     return "Good evening";
   };
 
-  const firstName = profile?.full_name ? profile.full_name.split(" ")[0] : "there";
+  const isDemo = !profile?.full_name || profile.full_name.toLowerCase().includes("demo") || profile.full_name.trim().toLowerCase() === "customer";
+  const firstName = !isDemo
+    ? profile.full_name.split(" ")[0]
+    : profile?.email
+    ? profile.email.split("@")[0].charAt(0).toUpperCase() + profile.email.split("@")[0].slice(1)
+    : "there";
 
   // Dynamic Admin-Configurable KPI Cards
   const ALL_KPI_MAP: Record<string, { id: string; label: string; value: number; sub: string; subColor: string; icon: any; iconBg: string; iconColor: string; link: string; defaultOrder: number }> = {
@@ -461,7 +466,7 @@ export default function CustomerDashboardPage() {
                         alt={flyer.title}
                         fill
                         className="object-contain drop-shadow-md"
-                        onError={(e: any) => { e.target.src = "/images/poster-products.png"; }}
+                        onError={(e: any) => { e.target.src = "/images/poster-products.webp"; }}
                       />
                     </div>
                   )}

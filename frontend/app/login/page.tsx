@@ -121,7 +121,7 @@ function LoginPageContent() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#070B1A] text-[#0F172A] dark:text-[#F8FAFC] transition-colors">
+    <main className="min-h-screen bg-[#F8FAFC] dark:bg-[#070B1A] text-[#0F172A] dark:text-[#F8FAFC] transition-colors">
       <div className="mx-auto flex min-h-screen max-w-6xl items-center px-4 py-10 sm:px-6 lg:px-8">
         <div className="grid w-full overflow-hidden rounded-[28px] border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0B0718] shadow-2xl lg:grid-cols-[1.15fr_0.85fr]">
           <aside className="relative hidden overflow-hidden bg-gradient-to-br from-[#070B1A] via-[#0B0718] to-indigo-950 p-8 text-white lg:flex lg:flex-col lg:justify-between border-r border-slate-200 dark:border-white/10">
@@ -172,7 +172,7 @@ function LoginPageContent() {
             </div>
 
             <div className="mb-6">
-              <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.2em] text-cyan-600 dark:text-cyan-400">Secure sign in</p>
+              <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.2em] text-cyan-800 dark:text-cyan-300">Secure sign in</p>
               <h2 className="heading-h1">Welcome back</h2>
               <p className="mt-2 text-sm text-readable-secondary">Select your account role and continue to your portal.</p>
             </div>
@@ -191,10 +191,10 @@ function LoginPageContent() {
                       setSelectedRole(value as "user" | "reseller" | "admin");
                       setErrorMsg("");
                     }}
-                    className={`flex flex-col items-center justify-center rounded-xl px-2 py-3 text-[11px] font-bold transition-all ${
+                    className={`flex flex-col items-center justify-center min-h-[48px] rounded-xl px-2 py-3 text-[11px] font-bold transition-all ${
                       selectedRole === value
-                        ? "bg-white dark:bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 shadow-sm ring-1 ring-cyan-500/30"
-                        : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                        ? "bg-white dark:bg-cyan-500/20 text-cyan-800 dark:text-cyan-300 shadow-sm ring-1 ring-cyan-500/30"
+                        : "text-slate-700 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white"
                     }`}
                   >
                     <Icon className="mb-1 h-4 w-4" />
@@ -226,7 +226,7 @@ function LoginPageContent() {
             {showForgot ? (
               <form onSubmit={handleForgotSubmit} className="space-y-4">
                 <div className="text-center">
-                  <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20">
+                  <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-cyan-500/10 text-cyan-800 dark:text-cyan-300 border border-cyan-500/20">
                     <HelpCircle className="h-6 w-6" />
                   </div>
                   <h3 className="text-sm font-extrabold uppercase tracking-[0.18em] text-slate-900 dark:text-white">Forgot password</h3>
@@ -292,7 +292,7 @@ function LoginPageContent() {
                 <div>
                   <div className="mb-1.5 flex items-center justify-between">
                     <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Password</label>
-                    <button type="button" onClick={() => setShowForgot(true)} className="text-[11px] font-semibold text-cyan-600 dark:text-cyan-400 hover:underline">
+                    <button type="button" onClick={() => setShowForgot(true)} className="text-[11px] font-semibold text-cyan-800 dark:text-cyan-300 hover:underline">
                       Forgot?
                     </button>
                   </div>
@@ -306,7 +306,12 @@ function LoginPageContent() {
                       placeholder="Enter your password"
                       className="futuristic-input w-full rounded-xl py-3 pl-10 pr-11 text-sm"
                     />
-                    <button type="button" onClick={() => setShowPassword((current) => !current)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200">
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((current) => !current)}
+                      aria-label={showPassword ? "Hide password" : "Show password"}
+                      className="absolute right-1 top-1/2 -translate-y-1/2 flex h-11 w-11 items-center justify-center rounded-lg text-slate-600 hover:text-slate-800 dark:text-slate-300 dark:hover:text-white"
+                    >
                       {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                   </div>
@@ -318,7 +323,7 @@ function LoginPageContent() {
                     Remember me
                   </label>
 
-                  <Link href="/signup" className="text-sm font-semibold text-cyan-600 dark:text-cyan-400 hover:underline">
+                  <Link href="/signup" className="text-sm font-semibold text-cyan-800 dark:text-cyan-300 hover:underline">
                     Need an account?
                   </Link>
                 </div>
@@ -343,7 +348,7 @@ function LoginPageContent() {
                 </p>
               ) : (
                 <p>
-                  Back to <Link href="/" className="font-bold text-cyan-600 dark:text-cyan-400 hover:underline">customer website</Link>
+                  Back to <Link href="/" className="font-bold text-cyan-800 dark:text-cyan-300 hover:underline">customer website</Link>
                 </p>
               )}
 
@@ -355,7 +360,7 @@ function LoginPageContent() {
           </div>
         </div>
       </div>
-    </div>
+    </main>
   );
 }
 

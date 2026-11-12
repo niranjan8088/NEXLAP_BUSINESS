@@ -4,17 +4,132 @@ import { dbHelper } from "@/lib/dbHelper";
 
 class ProductVariantValidationError extends Error {}
 
-/** GET /api/admin/products — Returns full product list for admin with costPrice */
+/** GET /api/admin/products — Returns product list for admin with search, filter, and pagination */
 export async function GET(request: NextRequest) {
   try {
     await requireRole(["admin", "reseller"]);
-    const products = await dbHelper.products.list();
-    return NextResponse.json({ products });
+    const allProducts = await dbHelper.products.list();
+
+    const { searchParams } = new URL(request.url);
+    const q = (searchParams.get("q") || searchParams.get("search") || "").trim().toLowerCase();
+    const statusParam = searchParams.get("status") || "all";
+    const categoryParam = searchParams.get("category") || "";
+    const brandParam = (searchParams.get("brand") || "").trim().toLowerCase();
+    const pageParam = searchParams.get("page");
+    const limitParam = searchParams.get("limit");
+    const sortBy = searchParams.get("sortBy") || "created_at";
+    const sortOrder = searchParams.get("sortOrder") || "desc";
+
+    // 1. Compute summary counts across all items
+    const counts = {
+      all: allProducts.filter((p: any) => p.status !== "deleted").length,
+      active: allProducts.filter((p: any) => (!p.status || p.status === "show") && (p.stock === undefined || p.stock > 0)).length,
+      pending_approval: allProducts.filter((p: any) => p.approval_status === "pending" || p.status === "pending").length,
+      hidden: allProducts.filter((p: any) => p.status === "hide" && p.approval_status !== "pending").length,
+      out_of_stock: allProducts.filter((p: any) => p.stock === 0 && p.status !== "deleted").length,
+      trash: allProducts.filter((p: any) => p.status === "deleted").length,
+    };
+
+    // 2. Filter products
+    let filtered = allProducts.filter((p: any) => {
+      // Search query filter
+      if (q) {
+        const titleMatch = (p.title || "").toLowerCase().includes(q);
+        const descMatch = (p.description || "").toLowerCase().includes(q);
+        const catMatch = (p.category || "").toLowerCase().includes(q);
+        const brandMatch = (p.brand || "").toLowerCase().includes(q);
+        const skuMatch = (p.sku || "").toLowerCase().includes(q);
+        if (!titleMatch && !descMatch && !catMatch && !brandMatch && !skuMatch) {
+          return false;
+        }
+      }
+
+      // Category filter
+      if (categoryParam && categoryParam !== "all" && p.category !== categoryParam) {
+        return false;
+      }
+
+      // Brand filter
+      if (brandParam && (p.brand || "").toLowerCase() !== brandParam) {
+        return false;
+      }
+
+      // Status filter
+      if (statusParam === "active") {
+        return (!p.status || p.status === "show") && (p.stock === undefined || p.stock > 0);
+      }
+      if (statusParam === "hidden") {
+        return p.status === "hide" && p.approval_status !== "pending";
+      }
+      if (statusParam === "out_of_stock") {
+        return p.stock === 0 && p.status !== "deleted";
+      }
+      if (statusParam === "pending_approval") {
+        return p.approval_status === "pending" || p.status === "pending";
+      }
+      if (statusParam === "trash") {
+        return p.status === "deleted";
+      }
+      // "all" excludes soft-deleted trash items
+      return p.status !== "deleted";
+    });
+
+    // 3. Sort
+    filtered.sort((a: any, b: any) => {
+      let comparison = 0;
+      if (sortBy === "price") {
+        comparison = (Number(a.price) || 0) - (Number(b.price) || 0);
+      } else if (sortBy === "stock") {
+        comparison = (Number(a.stock) || 0) - (Number(b.stock) || 0);
+      } else if (sortBy === "title") {
+        comparison = (a.title || "").localeCompare(b.title || "");
+      } else {
+        const timeA = new Date(a.created_at || a.createdAt || 0).getTime();
+        const timeB = new Date(b.created_at || b.createdAt || 0).getTime();
+        comparison = timeA - timeB;
+      }
+      return sortOrder === "asc" ? comparison : -comparison;
+    });
+
+    const total = filtered.length;
+
+    // 4. Pagination
+    let pagedProducts = filtered;
+    let page = 1;
+    let limit = total;
+    let totalPages = 1;
+
+    if (pageParam !== null || limitParam !== null) {
+      page = Math.max(1, parseInt(pageParam || "1", 10) || 1);
+      const parsedLimit = parseInt(limitParam || "20", 10);
+      limit = parsedLimit > 0 ? parsedLimit : 20;
+      totalPages = Math.max(1, Math.ceil(total / limit));
+      if (page > totalPages && totalPages > 0) page = totalPages;
+      const start = (page - 1) * limit;
+      pagedProducts = filtered.slice(start, start + limit);
+    }
+
+    return NextResponse.json(
+      {
+        products: pagedProducts,
+        total,
+        totalPages,
+        page,
+        limit,
+        counts,
+      },
+      {
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate",
+        },
+      }
+    );
   } catch (err) {
     const { status, message } = authErrorResponse(err);
     return NextResponse.json({ error: message }, { status });
   }
 }
+
 
 /** POST /api/admin/products — Create a new product with full attributes */
 export async function POST(request: NextRequest) {
@@ -196,7 +311,7 @@ export async function POST(request: NextRequest) {
 
     // Normalize images
     const normalizedImages = Array.isArray(images) ? images : [];
-    const primaryImage = normalizedImages.find((img: any) => img.is_primary)?.url || normalizedImages[0]?.url || "/images/poster-products.png";
+    const primaryImage = normalizedImages.find((img: any) => img.is_primary)?.url || normalizedImages[0]?.url || "/images/poster-products.webp";
 
     const payload = {
       sku: cleanSku,

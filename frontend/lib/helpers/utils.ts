@@ -4,7 +4,7 @@ export function cn(...inputs: ClassValue[]) {
   return clsx(inputs);
 }
 
-export function getSafeImageSrc(src: any, fallback = "/images/poster-products.png"): string {
+export function getSafeImageSrc(src: any, fallback = "/images/poster-products.webp"): string {
   if (!src || typeof src !== "string") return fallback;
   const trimmed = src.trim();
   if (!trimmed || trimmed === "undefined" || trimmed === "null") return fallback;

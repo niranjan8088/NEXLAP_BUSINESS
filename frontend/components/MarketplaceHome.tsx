@@ -30,6 +30,8 @@ interface MarketplaceHomeProps {
   hasAdminSession?: boolean;
   hasResellerSession?: boolean;
   hasUserSession?: boolean;
+  initialProducts?: Product[];
+  initialSettings?: any;
 }
 
 const categories = [
@@ -47,14 +49,17 @@ export default function MarketplaceHome({
   hasAdminSession = false,
   hasResellerSession = false,
   hasUserSession = false,
+  initialProducts = [],
+  initialSettings = null,
 }: MarketplaceHomeProps) {
   const router = useRouter();
   const addToCart = useCartStore((store) => store.addItem);
-  const [products, setProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<Product[]>(initialProducts);
   const [search, setSearch] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!initialProducts || initialProducts.length === 0);
 
   useEffect(() => {
+    if (initialProducts && initialProducts.length > 0) return;
     let active = true;
     fetch("/api/public/products?sortBy=newest")
       .then(async (response) => {
@@ -92,9 +97,10 @@ export default function MarketplaceHome({
     hasAdminSession && { label: "Admin console", href: "/admin" },
   ].filter(Boolean) as { label: string; href: string }[];
 
-  const [storeSettings, setStoreSettings] = useState<any>(null);
+  const [storeSettings, setStoreSettings] = useState<any>(initialSettings);
 
   useEffect(() => {
+    if (initialSettings) return;
     fetch("/api/public/settings")
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
@@ -165,7 +171,16 @@ export default function MarketplaceHome({
                 </Link>
               </div>
               {products[0]?.image ? (
-                <img src={getSafeImageSrc(products[0].image)} alt={products[0].title} className="absolute -bottom-2 -right-3 h-[85%] w-[55%] object-contain drop-shadow-2xl" />
+                <img
+                  src={getSafeImageSrc(products[0].image)}
+                  alt={products[0].title}
+                  width={400}
+                  height={300}
+                  // @ts-ignore
+                  fetchPriority="high"
+                  decoding="async"
+                  className="absolute -bottom-2 -right-3 h-[85%] w-[55%] object-contain drop-shadow-2xl"
+                />
               ) : (
                 <Laptop aria-hidden="true" className="absolute -bottom-7 -right-5 h-48 w-48 text-indigo-400/20 dark:text-cyan-400/20 sm:h-64 sm:w-64" strokeWidth={0.8} />
               )}
@@ -231,6 +246,10 @@ export default function MarketplaceHome({
                   <img
                     src={getSafeImageSrc(banner.imageUrl)}
                     alt={banner.title}
+                    loading="lazy"
+                    decoding="async"
+                    width={128}
+                    height={128}
                     className="absolute -bottom-4 -right-4 h-32 w-32 object-contain opacity-90 transition-transform duration-300 group-hover:scale-105"
                   />
                 )}
@@ -271,17 +290,25 @@ export default function MarketplaceHome({
                   <article key={product.id} className="futuristic-card p-0 group flex min-w-0 flex-col overflow-hidden hover:-translate-y-0.5 hover:border-cyan-500/40 dark:hover:border-cyan-400/40 hover:shadow-lg transition-all duration-200">
                     <Link href={`/products/${product.id}`} className="relative flex aspect-[4/3] items-center justify-center overflow-hidden bg-slate-50 dark:bg-white/[0.02] p-4 border-b border-slate-100 dark:border-white/5">
                       {discount > 0 && <span className="absolute left-3 top-3 z-10 rounded-full bg-indigo-600 dark:bg-cyan-500 px-2.5 py-0.5 text-[10px] font-bold text-white dark:text-slate-950">{discount}% OFF</span>}
-                      <img src={getSafeImageSrc(product.image)} alt={product.title} loading="lazy" className="h-full w-full object-contain transition-transform duration-300 group-hover:scale-105" />
+                      <img
+                        src={getSafeImageSrc(product.image)}
+                        alt={product.title}
+                        loading="lazy"
+                        decoding="async"
+                        width={300}
+                        height={225}
+                        className="h-full w-full object-contain transition-transform duration-300 group-hover:scale-105"
+                      />
                     </Link>
                     <div className="flex flex-1 flex-col p-3.5 sm:p-4">
                       <div className="mb-1 flex items-center justify-between gap-2">
                         <span className="truncate text-[10px] font-bold uppercase tracking-wider text-indigo-600 dark:text-cyan-400">{product.brand || product.category.replaceAll("_", " ")}</span>
-                        <span className="inline-flex shrink-0 items-center gap-1 text-[10px] font-bold text-emerald-600 dark:text-emerald-400"><ShieldCheck className="h-3 w-3" /> Verified</span>
+                        <span className="inline-flex shrink-0 items-center gap-1 text-[10px] font-bold text-emerald-700 dark:text-emerald-400"><ShieldCheck className="h-3 w-3" /> Verified</span>
                       </div>
                       <Link href={`/products/${product.id}`} className="line-clamp-2 min-h-10 text-sm font-bold leading-5 text-slate-900 dark:text-slate-100 hover:text-indigo-600 dark:hover:text-cyan-400">{product.title}</Link>
                       <div className="mt-3 flex items-baseline gap-2">
                         <span className="font-display text-lg font-extrabold text-slate-950 dark:text-slate-50">₹{price.toLocaleString("en-IN")}</span>
-                        {comparePrice > price && <span className="text-xs text-slate-400 line-through">₹{comparePrice.toLocaleString("en-IN")}</span>}
+                        {comparePrice > price && <span className="text-xs text-slate-500 dark:text-slate-400 line-through">₹{comparePrice.toLocaleString("en-IN")}</span>}
                       </div>
                       <button onClick={() => addToCart({ id: product.id, title: product.title, price, image: product.image, category: product.category })} className="futuristic-btn-primary mt-3 w-full">
                         <ShoppingBag className="h-3.5 w-3.5" /> Add to cart

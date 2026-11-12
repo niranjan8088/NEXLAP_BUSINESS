@@ -308,8 +308,8 @@ export default function ReviewsContainer({
       {reviews.length === 0 ? (
         <div className="text-center py-16 rounded-2xl glass-panel">
           <MessageSquare className="h-10 w-10 text-nex-mist mx-auto mb-4" />
-          <p className="text-base text-white font-medium">No reviews found matching this filter.</p>
-          <p className="text-xs text-nex-mist mt-1">Be the first to submit a review on our feedback page!</p>
+          <p className="text-base text-white font-medium">No customer reviews yet.</p>
+          <p className="text-xs text-nex-mist mt-1 max-w-md mx-auto">Genuine customer feedback will appear here after customers submit their reviews.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">

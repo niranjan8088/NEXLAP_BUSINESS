@@ -189,7 +189,7 @@ export default function Navbar() {
             {/* Search Trigger */}
             <button
               onClick={() => setSearchOpen(true)}
-              aria-label="Smart Search"
+              aria-label="Search products & services..."
               className="flex items-center gap-2 rounded-full border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/5 px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-white/10 transition-colors"
             >
               <Search className="h-3.5 w-3.5 text-slate-400 dark:text-slate-400" />
@@ -308,6 +308,7 @@ export default function Navbar() {
             {/* Mobile Menu Toggle Button */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              aria-label={mobileMenuOpen ? "Close navigation menu" : "Open navigation menu"}
               className="lg:hidden flex h-9 w-9 items-center justify-center rounded-full border border-neutral-200 dark:border-neutral-800 bg-neutral-100 dark:bg-neutral-900 text-black dark:text-white"
             >
               {mobileMenuOpen ? <X className="h-4.5 w-4.5" /> : <Menu className="h-4.5 w-4.5" />}
@@ -371,8 +372,8 @@ export default function Navbar() {
           <Link
             href={isAuthenticated ? "/customer" : "/"}
             className={cn(
-              "flex flex-col items-center gap-0.5 py-1 text-[10px] font-bold transition-colors",
-              isActive("/") ? "text-indigo-600 dark:text-cyan-400" : "text-slate-500 dark:text-slate-400"
+              "flex flex-col items-center justify-center min-h-[48px] px-1 gap-0.5 py-1 text-[10px] font-bold transition-colors",
+              isActive("/") ? "text-indigo-600 dark:text-cyan-400" : "text-slate-600 dark:text-slate-300"
             )}
           >
             <Home className="h-5 w-5" />
@@ -382,8 +383,8 @@ export default function Navbar() {
           <Link
             href="/products"
             className={cn(
-              "flex flex-col items-center gap-0.5 py-1 text-[10px] font-bold transition-colors",
-              isActive("/products") ? "text-indigo-600 dark:text-cyan-400" : "text-slate-500 dark:text-slate-400"
+              "flex flex-col items-center justify-center min-h-[48px] px-1 gap-0.5 py-1 text-[10px] font-bold transition-colors",
+              isActive("/products") ? "text-indigo-600 dark:text-cyan-400" : "text-slate-600 dark:text-slate-300"
             )}
           >
             <ShoppingBag className="h-5 w-5" />
@@ -393,8 +394,8 @@ export default function Navbar() {
           <Link
             href="/services"
             className={cn(
-              "flex flex-col items-center gap-0.5 py-1 text-[10px] font-bold transition-colors",
-              isActive("/services") ? "text-indigo-600 dark:text-cyan-400" : "text-slate-500 dark:text-slate-400"
+              "flex flex-col items-center justify-center min-h-[48px] px-1 gap-0.5 py-1 text-[10px] font-bold transition-colors",
+              isActive("/services") ? "text-indigo-600 dark:text-cyan-400" : "text-slate-600 dark:text-slate-300"
             )}
           >
             <Wrench className="h-5 w-5" />
@@ -404,8 +405,8 @@ export default function Navbar() {
           <Link
             href="/customer/requests"
             className={cn(
-              "flex flex-col items-center gap-0.5 py-1 text-[10px] font-bold transition-colors",
-              isActive("/customer/requests") ? "text-indigo-600 dark:text-cyan-400" : "text-slate-500 dark:text-slate-400"
+              "flex flex-col items-center justify-center min-h-[48px] px-1 gap-0.5 py-1 text-[10px] font-bold transition-colors",
+              isActive("/customer/requests") ? "text-indigo-600 dark:text-cyan-400" : "text-slate-600 dark:text-slate-300"
             )}
           >
             <Package className="h-5 w-5" />
@@ -415,8 +416,8 @@ export default function Navbar() {
           <Link
             href={isAuthenticated ? "/customer/profile" : "/customer/signin"}
             className={cn(
-              "flex flex-col items-center gap-0.5 py-1 text-[10px] font-bold transition-colors",
-              isActive("/customer/profile") || isActive("/customer/signin") ? "text-indigo-600 dark:text-cyan-400" : "text-slate-500 dark:text-slate-400"
+              "flex flex-col items-center justify-center min-h-[48px] px-1 gap-0.5 py-1 text-[10px] font-bold transition-colors",
+              isActive("/customer/profile") || isActive("/customer/signin") ? "text-indigo-600 dark:text-cyan-400" : "text-slate-600 dark:text-slate-300"
             )}
           >
             <User className="h-5 w-5" />

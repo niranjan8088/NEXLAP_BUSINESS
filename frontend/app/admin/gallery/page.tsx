@@ -82,7 +82,7 @@ export default function AdminGalleryPage() {
             <div key={item.id} className={`glass-panel rounded-2xl bg-nex-ink border overflow-hidden transition-all ${item.visible ? "border-white/5" : "border-white/[0.02] opacity-50"}`}>
               <div className="aspect-video bg-white/[0.02] flex items-center justify-center overflow-hidden">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={item.url} alt={item.title} className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).src = "/images/poster-products.png"; }} />
+                <img src={item.url} alt={item.title} className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).src = "/images/poster-products.webp"; }} />
               </div>
               <div className="p-4">
                 <h3 className="text-xs font-semibold text-white truncate">{item.title}</h3>

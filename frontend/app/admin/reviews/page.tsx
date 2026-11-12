@@ -1,12 +1,5 @@
-import type { Metadata } from "next";
 import { dbHelper } from "@/lib/dbHelper";
 import AdminReviewsContainer from "@/components/AdminReviewsContainer";
-
-export const metadata: Metadata = {
-  title: "Admin Reviews Feed | NEXLAPTECH Console",
-  robots: "noindex, nofollow",
-};
-
 
 async function getAllReviews() {
   try {
@@ -23,4 +16,3 @@ export default async function AdminReviewsPage() {
 
   return <AdminReviewsContainer initialReviews={reviews} />;
 }
-

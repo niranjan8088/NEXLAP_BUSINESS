@@ -281,7 +281,7 @@ export default function HeroParallax({
                 fill
                 className="object-contain drop-shadow-[0_20px_35px_rgba(8,145,178,0.25)]"
                 priority
-                onError={(e: any) => { e.target.src = "/images/poster-products.png"; }}
+                onError={(e: any) => { e.target.src = "/images/poster-products.webp"; }}
               />
             </div>
           </div>

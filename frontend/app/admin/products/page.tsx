@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo, useDeferredValue } from "react";
+
 import {
   ShoppingBag,
   Search,
@@ -20,7 +21,11 @@ import {
   ArrowRight,
   AlertCircle,
   Check,
-  Loader2
+  Loader2,
+  ChevronLeft,
+  ChevronRight,
+  Copy,
+  Filter,
 } from "lucide-react";
 import { dbHelper } from "@/lib/dbHelper";
 import Image from "next/image";
@@ -136,6 +141,11 @@ export default function AdminProductsManager() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "hidden" | "out_of_stock" | "pending_approval" | "trash">("all");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(15);
+  const [copiedSku, setCopiedSku] = useState<string | null>(null);
+  const deferredSearch = useDeferredValue(search);
   
   // Modals
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -336,7 +346,7 @@ export default function AdminProductsManager() {
     } else {
       setProductImages([{
         id: `img-primary-${Date.now()}`,
-        url: p.image || "/images/poster-products.png",
+        url: p.image || "/images/poster-products.webp",
         is_primary: true,
         sort_order: 1,
         alt_text: p.title || "Product Image"
@@ -697,7 +707,7 @@ export default function AdminProductsManager() {
         uploadedImages[0].is_primary = true;
       }
 
-      const primaryImageUrl = uploadedImages.find((img) => img.is_primary)?.url || uploadedImages[0]?.url || "/images/poster-products.png";
+      const primaryImageUrl = uploadedImages.find((img) => img.is_primary)?.url || uploadedImages[0]?.url || "/images/poster-products.webp";
 
       const payload = {
         sku: cleanSku,
@@ -844,13 +854,33 @@ export default function AdminProductsManager() {
 
   const handleToggleStatus = async (p: any) => {
     const nextStatus = p.status === "show" ? "hide" : "show";
-    await dbHelper.products.update(p.id, { status: nextStatus });
-    loadProducts();
+    // Optimistic UI update
+    setProducts((prev) => prev.map((item) => item.id === p.id ? { ...item, status: nextStatus } : item));
+    try {
+      await dbHelper.products.update(p.id, { status: nextStatus });
+    } catch {
+      loadProducts();
+    }
   };
 
   const handleToggleFeatured = async (p: any) => {
-    await dbHelper.products.update(p.id, { featured: !p.featured });
-    loadProducts();
+    const nextFeatured = !p.featured;
+    // Optimistic UI update
+    setProducts((prev) => prev.map((item) => item.id === p.id ? { ...item, featured: nextFeatured } : item));
+    try {
+      await dbHelper.products.update(p.id, { featured: nextFeatured });
+    } catch {
+      loadProducts();
+    }
+  };
+
+  const handleCopySku = (skuText: string) => {
+    if (!skuText) return;
+    navigator.clipboard?.writeText(skuText);
+    setCopiedSku(skuText);
+    setTimeout(() => {
+      setCopiedSku((curr) => (curr === skuText ? null : curr));
+    }, 1500);
   };
 
   // Bulk Delete Action
@@ -879,88 +909,165 @@ export default function AdminProductsManager() {
     }
   };
 
-  // Filter calculations
-  const filteredProducts = products.filter((p) => {
-    const searchLower = search.toLowerCase();
-    const matchesSearch =
-      p.title.toLowerCase().includes(searchLower) ||
-      (p.description || "").toLowerCase().includes(searchLower) ||
-      p.category.toLowerCase().includes(searchLower);
+  // Realtime counts for quick filter indicators
+  const counts = useMemo(() => ({
+    all: products.filter((p) => p.status !== "deleted").length,
+    active: products.filter((p) => (!p.status || p.status === "show") && (p.stock === undefined || p.stock > 0)).length,
+    pending_approval: products.filter((p) => p.approval_status === "pending" || p.status === "pending").length,
+    hidden: products.filter((p) => p.status === "hide" && p.approval_status !== "pending").length,
+    out_of_stock: products.filter((p) => p.stock === 0 && p.status !== "deleted").length,
+    trash: products.filter((p) => p.status === "deleted").length,
+  }), [products]);
 
-    if (!matchesSearch) return false;
+  // Responsive deferred search and filtering
+  const filteredProducts = useMemo(() => {
+    const q = deferredSearch.trim().toLowerCase();
+    return products.filter((p) => {
+      if (q) {
+        const titleMatch = (p.title || "").toLowerCase().includes(q);
+        const descMatch = (p.description || "").toLowerCase().includes(q);
+        const catMatch = (p.category || "").toLowerCase().includes(q);
+        const brandMatch = (p.brand || "").toLowerCase().includes(q);
+        const skuMatch = (p.sku || "").toLowerCase().includes(q);
+        if (!titleMatch && !descMatch && !catMatch && !brandMatch && !skuMatch) return false;
+      }
 
-    if (statusFilter === "active") return (!p.status || p.status === "show") && (p.stock === undefined || p.stock > 0);
-    if (statusFilter === "hidden") return p.status === "hide" && p.approval_status !== "pending";
-    if (statusFilter === "out_of_stock") return p.stock === 0;
-    if (statusFilter === "pending_approval") return p.approval_status === "pending" || p.status === "pending";
-    if (statusFilter === "trash") return p.status === "deleted";
-    return p.status !== "deleted"; // "all" excludes soft-deleted trash items
-  });
+      if (categoryFilter !== "all" && p.category !== categoryFilter) {
+        return false;
+      }
 
-  const pendingCount = products.filter((p) => p.approval_status === "pending" || p.status === "pending").length;
+      if (statusFilter === "active") return (!p.status || p.status === "show") && (p.stock === undefined || p.stock > 0);
+      if (statusFilter === "hidden") return p.status === "hide" && p.approval_status !== "pending";
+      if (statusFilter === "out_of_stock") return p.stock === 0 && p.status !== "deleted";
+      if (statusFilter === "pending_approval") return p.approval_status === "pending" || p.status === "pending";
+      if (statusFilter === "trash") return p.status === "deleted";
+      return p.status !== "deleted"; // "all" excludes soft-deleted trash items
+    });
+  }, [products, deferredSearch, statusFilter, categoryFilter]);
+
+  // Reset to first page when search or filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [deferredSearch, statusFilter, categoryFilter]);
+
+  // Paginated product slice
+  const effectivePageSize = pageSize === 0 ? filteredProducts.length || 1 : pageSize;
+  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / effectivePageSize));
+  const paginatedProducts = useMemo(() => {
+    if (pageSize === 0) return filteredProducts;
+    const start = (currentPage - 1) * pageSize;
+    return filteredProducts.slice(start, start + pageSize);
+  }, [filteredProducts, currentPage, pageSize]);
+
+  const pendingCount = counts.pending_approval;
   const compressedUploadBytes = productImages.reduce((total, image) => total + (image.file?.size || 0), 0);
 
   return (
-    <div className="admin-products-light space-y-6">
+    <div className="admin-products space-y-5 max-w-full overflow-x-hidden">
       
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      {/* ── HEADER ───────────────────────────────────────────────────────────── */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-white/5 pb-4">
         <div>
-          <h1 className="font-display text-2xl font-bold text-white">Products Catalog</h1>
-          <p className="text-xs text-nex-mist mt-0.5">Manage systems supply chains, pricing points, reseller submissions, and galleries.</p>
+          <div className="flex items-center gap-2.5">
+            <div className="h-10 w-10 rounded-xl bg-nex-blue/10 border border-nex-blue/20 text-nex-blueLight flex items-center justify-center shrink-0">
+              <ShoppingBag className="h-5 w-5" />
+            </div>
+            <div>
+              <h1 className="font-display text-2xl font-bold text-white tracking-tight">Products Catalog</h1>
+              <p className="text-xs text-nex-mist mt-0.5">
+                {counts.all} total products &bull; {counts.active} active on store &bull; {counts.out_of_stock} out of stock
+              </p>
+            </div>
+          </div>
         </div>
-        <div className="flex gap-2">
+
+        <div className="flex flex-wrap items-center gap-2">
           <ProductCatalogImport onImported={loadProducts} />
           {selectedIds.length > 0 && (
             <button
               onClick={handleBulkDelete}
-              className="btn-secondary !py-2.5 !px-4 text-xs bg-red-500/10 border-red-500/20 text-red-400 hover:bg-red-500/20"
+              className="btn-secondary !py-2.5 !px-3.5 text-xs bg-red-500/10 border-red-500/20 text-red-400 hover:bg-red-500/20 min-h-[44px] flex items-center gap-1.5 cursor-pointer"
+              aria-label={`Bulk delete ${selectedIds.length} selected items`}
             >
-              Bulk Delete ({selectedIds.length})
+              <Trash2 className="h-4 w-4" /> Bulk Delete ({selectedIds.length})
             </button>
           )}
           <button
             onClick={handleOpenAdd}
-            className="btn-primary !py-2.5 !px-4 text-xs flex items-center gap-1.5"
+            className="btn-primary !py-2.5 !px-4 text-xs flex items-center justify-center gap-2 min-h-[44px] cursor-pointer shadow-glow-blue"
+            aria-label="Add new product item"
           >
             <PlusCircle className="h-4 w-4" /> Add Product Item
           </button>
         </div>
       </div>
 
-      {/* Search & Status Filter Strip */}
-      <div className="glass-panel p-5 rounded-2xl border border-white/5 bg-nex-ink flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="relative w-full max-w-md">
-          <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-nex-mist" />
-          <input
-            type="text"
-            placeholder="Search systems title or category..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full rounded-xl bg-nex-black border border-white/[0.08] pl-10 pr-4 py-2.5 text-xs text-white focus:outline-none"
-          />
+      {/* ── SEARCH & FILTER CONTROLS ────────────────────────────────────────── */}
+      <div className="glass-panel p-4 rounded-2xl border border-white/5 bg-nex-ink space-y-3">
+        <div className="flex flex-col md:flex-row md:items-center gap-3 justify-between">
+          
+          {/* Search bar with clear button */}
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-nex-mist pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Search title, SKU, brand, or category..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full rounded-xl bg-nex-black border border-white/10 pl-10 pr-9 py-2.5 text-xs text-white placeholder-nex-mist/60 focus:outline-none focus:border-nex-blue transition-colors min-h-[44px]"
+              aria-label="Search products"
+            />
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch("")}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-nex-mist hover:text-white rounded-lg min-h-[32px] min-w-[32px] flex items-center justify-center cursor-pointer"
+                aria-label="Clear search query"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+
+          {/* Category Dropdown Filter */}
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="relative w-full sm:w-auto">
+              <select
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value)}
+                className="w-full sm:w-56 rounded-xl bg-nex-black border border-white/10 px-3 py-2.5 text-xs text-white focus:outline-none focus:border-nex-blue cursor-pointer min-h-[44px]"
+                aria-label="Filter by product category"
+              >
+                <option value="all">All Categories ({CATEGORIES.length})</option>
+                {CATEGORIES.map((c) => (
+                  <option key={c.val} value={c.val}>{c.label}</option>
+                ))}
+              </select>
+            </div>
+          </div>
         </div>
 
-        {/* Status Filter Pills */}
-        <div className="flex flex-wrap items-center gap-1.5 bg-nex-black p-1 rounded-xl border border-white/10 text-xs">
+        {/* Status Filter Horizontal Scroll Bar */}
+        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pb-1 text-xs whitespace-nowrap -mx-1 px-1">
           {[
-            { id: "all", label: "All Items" },
-            { id: "active", label: "Active" },
-            { id: "pending_approval", label: `Pending (${pendingCount})` },
-            { id: "hidden", label: "Hidden" },
-            { id: "out_of_stock", label: "Out of Stock" },
-            { id: "trash", label: "Trash" },
+            { id: "all", label: `All Items (${counts.all})` },
+            { id: "active", label: `Active (${counts.active})` },
+            { id: "pending_approval", label: `Pending (${counts.pending_approval})` },
+            { id: "hidden", label: `Hidden (${counts.hidden})` },
+            { id: "out_of_stock", label: `Out of Stock (${counts.out_of_stock})` },
+            { id: "trash", label: `Trash (${counts.trash})` },
           ].map((pill) => (
             <button
               key={pill.id}
               onClick={() => setStatusFilter(pill.id as any)}
-              className={`px-3 py-1.5 rounded-lg font-semibold transition-all cursor-pointer ${
+              className={`px-3 py-2 rounded-xl font-semibold transition-all cursor-pointer min-h-[40px] flex items-center shrink-0 ${
                 statusFilter === pill.id
                   ? "bg-nex-blue text-white shadow-glow-blue font-bold"
-                  : pill.id === "pending_approval" && pendingCount > 0
-                  ? "bg-amber-500/20 text-amber-300 font-bold"
-                  : "text-nex-mist hover:text-white hover:bg-white/5"
+                  : pill.id === "pending_approval" && counts.pending_approval > 0
+                  ? "bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30"
+                  : "text-nex-mist hover:text-white bg-white/5 hover:bg-white/10 border border-white/5"
               }`}
+              aria-label={`Filter by ${pill.label}`}
             >
               {pill.label}
             </button>
@@ -968,190 +1075,533 @@ export default function AdminProductsManager() {
         </div>
       </div>
 
-      {/* Catalog Table */}
+      {/* ── PRODUCTS VIEW (EMPTY / MOBILE CARDS / DESKTOP TABLE) ──────────────── */}
       {filteredProducts.length === 0 ? (
-        <div className="text-center py-20 glass-panel rounded-2xl">
-          <ShoppingBag className="h-10 w-10 text-nex-mist mx-auto mb-3" />
-          <p className="text-xs text-white">No products found matching criteria.</p>
+        <div className="text-center py-16 glass-panel rounded-2xl border border-white/5 bg-nex-ink space-y-3">
+          <ShoppingBag className="h-10 w-10 text-nex-mist mx-auto opacity-60" />
+          <p className="text-sm font-semibold text-white">No products found matching criteria.</p>
+          <p className="text-xs text-nex-mist max-w-sm mx-auto">
+            Try adjusting your search query, selecting &quot;All Items&quot;, or removing category filters.
+          </p>
+          {(search || categoryFilter !== "all" || statusFilter !== "all") && (
+            <button
+              onClick={() => {
+                setSearch("");
+                setCategoryFilter("all");
+                setStatusFilter("all");
+              }}
+              className="btn-secondary !py-2 !px-4 text-xs mt-2 cursor-pointer min-h-[44px]"
+            >
+              Reset All Filters
+            </button>
+          )}
         </div>
       ) : (
-        <div className="glass-panel rounded-2xl border border-white/5 bg-nex-ink overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs text-left text-white border-collapse">
-              <thead>
-                <tr className="border-b border-white/10 bg-white/[0.01] text-nex-mist font-semibold">
-                  <th className="py-3 px-5 w-12">
-                    <input
-                      type="checkbox"
-                      checked={selectedIds.length === filteredProducts.length && filteredProducts.length > 0}
-                      onChange={toggleSelectAll}
-                      className="rounded bg-nex-black border-white/20 text-nex-blue"
-                    />
-                  </th>
-                  <th className="py-3 px-4">Item Details</th>
-                  <th className="py-3 px-4">Category</th>
-                  <th className="py-3 px-4">Pricing &amp; Stock</th>
-                  <th className="py-3 px-4">Badges</th>
-                  <th className="py-3 px-5 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredProducts.map((p) => {
-                  const imageCount = p.images?.length || (p.image ? 1 : 0);
-                  return (
-                    <tr key={p.id} className="border-b border-white/[0.03] hover:bg-white/[0.01] transition-colors">
-                      
-                      {/* Checkbox */}
-                      <td className="py-4 px-5">
+        <>
+          {/* 1. Mobile Cards Layout (< 1024px) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:hidden gap-3.5">
+            {paginatedProducts.map((p) => {
+              const imageCount = p.images?.length || (p.image ? 1 : 0);
+              const isSelected = selectedIds.includes(p.id);
+              const categoryObj = CATEGORIES.find((c) => c.val === p.category);
+              const categoryLabel = categoryObj ? categoryObj.label.replace(/^[0-9]+\.\s*/, "").split("(")[0].trim() : p.category;
+              const hasDiscount = p.compareAtPrice && p.compareAtPrice > p.price;
+              const discountPct = hasDiscount ? Math.round(((p.compareAtPrice - p.price) / p.compareAtPrice) * 100) : (p.discount || 0);
+
+              return (
+                <div
+                  key={p.id}
+                  className={`p-4 rounded-2xl border transition-all space-y-3.5 flex flex-col justify-between ${
+                    isSelected
+                      ? "bg-nex-blue/10 border-nex-blue/40 shadow-glow-blue"
+                      : "bg-nex-ink border-white/10 hover:border-white/20"
+                  }`}
+                >
+                  <div className="space-y-3">
+                    {/* Top Row: Checkbox + Thumbnail + Title + SKU */}
+                    <div className="flex items-start gap-3">
+                      <label className="min-h-[44px] min-w-[36px] flex items-center justify-center cursor-pointer shrink-0 -ml-1">
                         <input
                           type="checkbox"
-                          checked={selectedIds.includes(p.id)}
+                          checked={isSelected}
                           onChange={() => toggleSelect(p.id)}
-                          className="rounded bg-nex-black border-white/20 text-nex-blue"
+                          className="h-4 w-4 rounded bg-nex-black border-white/20 text-nex-blue focus:ring-0 cursor-pointer"
+                          aria-label={`Select ${p.title}`}
                         />
-                      </td>
+                      </label>
 
-                      {/* Image & Title */}
-                      <td className="py-4 px-4">
-                        <div className="flex items-center gap-3">
-                          <div className="relative h-11 w-11 rounded-lg overflow-hidden bg-white/5 border border-white/10 shrink-0 p-1 flex items-center justify-center">
-                            <Image src={getSafeImageSrc(p.image)} alt={p.title || "Product"} width={36} height={36} className="object-contain" />
-                            {imageCount > 1 && (
-                              <span className="absolute bottom-0.5 right-0.5 bg-black/80 text-white text-[8px] font-bold px-1 rounded">
-                                {imageCount}
+                      {/* Product Thumbnail */}
+                      <div className="relative h-14 w-14 rounded-xl overflow-hidden bg-white/5 border border-white/10 shrink-0 p-1 flex items-center justify-center">
+                        <Image
+                          src={getSafeImageSrc(p.image)}
+                          alt={p.title || "Product"}
+                          width={48}
+                          height={48}
+                          className="object-contain max-h-full max-w-full"
+                          loading="lazy"
+                        />
+                        {imageCount > 1 && (
+                          <span className="absolute bottom-1 right-1 bg-black/80 text-white text-[9px] font-bold px-1 rounded">
+                            {imageCount}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Title & SKU */}
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-xs text-white leading-snug line-clamp-2">
+                          {p.title}
+                        </h3>
+                        <div className="flex items-center gap-1.5 mt-1">
+                          <button
+                            type="button"
+                            onClick={() => handleCopySku(p.sku)}
+                            className="inline-flex items-center gap-1 font-mono text-[10px] text-nex-blueLight bg-nex-blue/10 border border-nex-blue/20 px-2 py-0.5 rounded cursor-pointer hover:bg-nex-blue/20"
+                            title="Click to copy SKU"
+                            aria-label={`Copy SKU ${p.sku}`}
+                          >
+                            {copiedSku === p.sku ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
+                            <span>{p.sku || "NO-SKU"}</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Metadata: Category, Condition, Brand */}
+                    <div className="flex flex-wrap items-center gap-1.5 text-[10px]">
+                      <span className="px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-white/80 font-medium">
+                        {categoryLabel}
+                      </span>
+                      {p.brand && (
+                        <span className="px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-white/80 font-medium">
+                          {p.brand}
+                        </span>
+                      )}
+                      <span className="px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-nex-mist capitalize">
+                        {p.condition?.replace("_", " ") || "New"}
+                      </span>
+                    </div>
+
+                    {/* Pricing & Stock Status */}
+                    <div className="flex items-baseline justify-between gap-2 pt-1 border-t border-white/5">
+                      <div>
+                        <div className="flex items-baseline gap-1.5">
+                          <span className="text-sm font-bold text-white">
+                            Rs. {(p.price ?? 0).toLocaleString("en-IN")}
+                          </span>
+                          {hasDiscount && (
+                            <span className="text-[10px] text-nex-mist line-through">
+                              Rs. {p.compareAtPrice.toLocaleString("en-IN")}
+                            </span>
+                          )}
+                          {discountPct > 0 && (
+                            <span className="text-[9px] font-extrabold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.2 rounded">
+                              {discountPct}% OFF
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-[10px] text-nex-mist block mt-0.5">
+                          GST Invoice included
+                        </span>
+                      </div>
+
+                      {/* Stock Badge */}
+                      <div className="text-right">
+                        {p.stock === 0 ? (
+                          <span className="px-2 py-0.5 rounded-md bg-rose-500/10 border border-rose-500/20 text-rose-400 text-[10px] font-bold">
+                            Out of Stock
+                          </span>
+                        ) : p.stock <= 5 ? (
+                          <span className="px-2 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/20 text-amber-300 text-[10px] font-bold">
+                            Low Stock ({p.stock})
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-bold">
+                            In Stock ({p.stock})
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Status Badges Row */}
+                    <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                      {(p.approval_status === "pending" || p.status === "pending") && (
+                        <span className="rounded bg-amber-500/20 border border-amber-500/30 px-2 py-0.5 text-[9px] text-amber-300 font-extrabold uppercase animate-pulse">
+                          Pending Approval
+                        </span>
+                      )}
+                      {p.seller_id && (
+                        <span className="rounded bg-purple-500/10 border border-purple-500/20 px-2 py-0.5 text-[9px] text-purple-300 font-bold uppercase">
+                          Reseller
+                        </span>
+                      )}
+                      {p.featured && (
+                        <span className="rounded bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 text-[9px] text-amber-400 font-bold uppercase flex items-center gap-0.5">
+                          <Star className="h-2.5 w-2.5 fill-amber-400" /> Featured
+                        </span>
+                      )}
+                      {p.latest && (
+                        <span className="rounded bg-nex-blue/20 border border-nex-blue/30 px-2 py-0.5 text-[9px] text-nex-blueLight font-bold uppercase flex items-center gap-0.5">
+                          <Zap className="h-2.5 w-2.5" /> Latest
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Actions Footer */}
+                  <div className="flex items-center justify-between border-t border-white/5 pt-3">
+                    {p.status === "deleted" ? (
+                      <button
+                        onClick={() => handleRestore(p.id)}
+                        className="w-full min-h-[44px] px-3 rounded-xl bg-green-500/10 border border-green-500/20 hover:bg-green-500/20 text-green-400 text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer"
+                        aria-label={`Restore product ${p.title}`}
+                      >
+                        <RotateCcw className="h-4 w-4" /> Restore Product to Catalog
+                      </button>
+                    ) : (p.approval_status === "pending" || p.status === "pending") ? (
+                      <div className="grid grid-cols-2 gap-2 w-full">
+                        <button
+                          onClick={() => handleApproveProduct(p)}
+                          className="min-h-[44px] px-2 rounded-xl bg-emerald-500/20 border border-emerald-500/30 hover:bg-emerald-500/30 text-emerald-300 text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer"
+                          aria-label={`Approve ${p.title}`}
+                        >
+                          <Check className="h-4 w-4" /> Approve
+                        </button>
+                        <button
+                          onClick={() => handleRejectProduct(p)}
+                          className="min-h-[44px] px-2 rounded-xl bg-red-500/20 border border-red-500/30 hover:bg-red-500/30 text-red-300 text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer"
+                          aria-label={`Reject ${p.title}`}
+                        >
+                          <X className="h-4 w-4" /> Reject
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between w-full">
+                        <div className="flex items-center gap-1.5">
+                          {/* Featured Star */}
+                          <button
+                            type="button"
+                            onClick={() => handleToggleFeatured(p)}
+                            className={`min-h-[44px] min-w-[44px] rounded-xl border flex items-center justify-center transition-colors cursor-pointer ${
+                              p.featured
+                                ? "bg-amber-500/20 text-amber-400 border-amber-500/30"
+                                : "bg-white/5 text-white/40 border-white/5 hover:bg-white/10 hover:text-white"
+                            }`}
+                            aria-label={p.featured ? `Remove ${p.title} from featured` : `Mark ${p.title} as featured`}
+                          >
+                            <Star className={`h-4 w-4 ${p.featured ? "fill-amber-400" : ""}`} />
+                          </button>
+
+                          {/* Visibility Eye */}
+                          <button
+                            type="button"
+                            onClick={() => handleToggleStatus(p)}
+                            className={`min-h-[44px] min-w-[44px] rounded-xl border flex items-center justify-center transition-colors cursor-pointer ${
+                              p.status === "show"
+                                ? "bg-green-500/20 text-green-400 border-green-500/30"
+                                : "bg-white/5 text-white/40 border-white/5 hover:bg-white/10 hover:text-white"
+                            }`}
+                            aria-label={p.status === "show" ? `Hide ${p.title} from store` : `Publish ${p.title} to store`}
+                          >
+                            {p.status === "show" ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                          </button>
+                        </div>
+
+                        <div className="flex items-center gap-1.5">
+                          {/* Edit button */}
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEdit(p)}
+                            className="min-h-[44px] px-3.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 text-white text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer"
+                            aria-label={`Edit ${p.title}`}
+                          >
+                            <Edit className="h-3.5 w-3.5" /> Edit
+                          </button>
+
+                          {/* Delete button */}
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(p.id)}
+                            className="min-h-[44px] min-w-[44px] rounded-xl bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 text-red-400 flex items-center justify-center cursor-pointer"
+                            aria-label={`Move ${p.title} to trash`}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* 2. Desktop Table Layout (>= 1024px) */}
+          <div className="hidden lg:block glass-panel rounded-2xl border border-white/5 bg-nex-ink overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs text-left text-white border-collapse">
+                <thead>
+                  <tr className="border-b border-white/10 bg-white/[0.01] text-nex-mist font-semibold">
+                    <th className="py-3 px-5 w-12">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.length === filteredProducts.length && filteredProducts.length > 0}
+                        onChange={toggleSelectAll}
+                        className="rounded bg-nex-black border-white/20 text-nex-blue cursor-pointer"
+                        aria-label="Select all products"
+                      />
+                    </th>
+                    <th className="py-3 px-4">Item Details</th>
+                    <th className="py-3 px-4">Category</th>
+                    <th className="py-3 px-4">Pricing &amp; Stock</th>
+                    <th className="py-3 px-4">Badges</th>
+                    <th className="py-3 px-5 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {paginatedProducts.map((p) => {
+                    const imageCount = p.images?.length || (p.image ? 1 : 0);
+                    return (
+                      <tr key={p.id} className="border-b border-white/[0.03] hover:bg-white/[0.01] transition-colors">
+                        
+                        {/* Checkbox */}
+                        <td className="py-4 px-5">
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.includes(p.id)}
+                            onChange={() => toggleSelect(p.id)}
+                            className="rounded bg-nex-black border-white/20 text-nex-blue cursor-pointer"
+                            aria-label={`Select ${p.title}`}
+                          />
+                        </td>
+
+                        {/* Image & Title */}
+                        <td className="py-4 px-4">
+                          <div className="flex items-center gap-3">
+                            <div className="relative h-11 w-11 rounded-lg overflow-hidden bg-white/5 border border-white/10 shrink-0 p-1 flex items-center justify-center">
+                              <Image src={getSafeImageSrc(p.image)} alt={p.title || "Product"} width={36} height={36} className="object-contain" loading="lazy" />
+                              {imageCount > 1 && (
+                                <span className="absolute bottom-0.5 right-0.5 bg-black/80 text-white text-[8px] font-bold px-1 rounded">
+                                  {imageCount}
+                                </span>
+                              )}
+                            </div>
+                            <div>
+                              <div className="font-semibold text-white truncate max-w-[220px]">{p.title}</div>
+                              <div className="flex items-center gap-2 mt-0.5">
+                                <span className="text-[10px] text-nex-mist capitalize">{p.condition?.replace("_", " ")}</span>
+                                <span className="text-[10px] text-nex-blueLight font-mono">[{p.sku || "NO-SKU"}]</span>
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* Category */}
+                        <td className="py-4 px-4 font-semibold text-white/80">
+                          {CATEGORIES.find((c) => c.val === p.category)?.label || p.category}
+                        </td>
+
+                        {/* Pricing */}
+                        <td className="py-4 px-4">
+                          <div className="font-semibold text-white">Rs. {(p.price ?? 0).toLocaleString("en-IN")}</div>
+                          <div className="text-[10px] text-nex-mist mt-0.5">
+                            Stock: <span className={p.stock === 0 ? "text-rose-400 font-bold" : p.stock <= 5 ? "text-amber-400 font-bold" : "text-emerald-400 font-bold"}>{p.stock}</span>
+                          </div>
+                        </td>
+
+                        {/* Flags & Status Badges */}
+                        <td className="py-4 px-4 space-y-1">
+                          <div className="flex flex-wrap gap-1.5">
+                            {(p.approval_status === "pending" || p.status === "pending") && (
+                              <span className="rounded bg-amber-500/20 border border-amber-500/30 px-2 py-0.5 text-[8px] text-amber-300 font-extrabold uppercase animate-pulse">
+                                Pending Approval
+                              </span>
+                            )}
+                            {p.approval_status === "approved" && (
+                              <span className="rounded bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 text-[8px] text-emerald-400 font-bold uppercase">
+                                Approved
+                              </span>
+                            )}
+                            {p.approval_status === "rejected" && (
+                              <span className="rounded bg-red-500/10 border border-red-500/20 px-2 py-0.5 text-[8px] text-red-400 font-bold uppercase">
+                                Rejected
+                              </span>
+                            )}
+                            {p.seller_id && (
+                              <span className="rounded bg-purple-500/10 border border-purple-500/20 px-2 py-0.5 text-[8px] text-purple-300 font-bold uppercase">
+                                Reseller
+                              </span>
+                            )}
+                            {p.featured && (
+                              <span className="rounded bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 text-[8px] text-amber-400 font-bold uppercase flex items-center gap-0.5">
+                                <Star className="h-2.5 w-2.5 fill-amber-400" /> Featured
+                              </span>
+                            )}
+                            {p.latest && (
+                              <span className="rounded bg-nex-blue/20 border border-nex-blue/30 px-2 py-0.5 text-[8px] text-nex-blueLight font-bold uppercase flex items-center gap-0.5">
+                                <Zap className="h-2.5 w-2.5" /> Latest
                               </span>
                             )}
                           </div>
-                          <div>
-                            <div className="font-semibold text-white truncate max-w-[180px]">{p.title}</div>
-                            <div className="text-[10px] text-nex-mist mt-0.5 capitalize">{p.condition?.replace("_", " ")}</div>
-                          </div>
-                        </div>
-                      </td>
+                        </td>
 
-                      {/* Category */}
-                      <td className="py-4 px-4 font-semibold text-white/80">
-                        {CATEGORIES.find((c) => c.val === p.category)?.label || p.category}
-                      </td>
+                        {/* Actions */}
+                        <td className="py-4 px-5 text-right space-x-1.5">
+                          {p.status === "deleted" ? (
+                            <button
+                              onClick={() => handleRestore(p.id)}
+                              className="h-8 px-3 rounded-lg bg-green-500/10 border border-green-500/20 hover:bg-green-500/20 text-green-400 text-xs font-semibold inline-flex items-center gap-1 cursor-pointer"
+                              aria-label={`Restore ${p.title}`}
+                            >
+                              <RotateCcw className="h-3.5 w-3.5" /> Restore
+                            </button>
+                          ) : (p.approval_status === "pending" || p.status === "pending") ? (
+                            <div className="inline-flex items-center gap-1.5">
+                              <button
+                                onClick={() => handleApproveProduct(p)}
+                                className="h-7 px-2.5 rounded-lg bg-emerald-500/20 border border-emerald-500/30 hover:bg-emerald-500/30 text-emerald-300 text-[11px] font-bold inline-flex items-center gap-1 cursor-pointer"
+                                aria-label={`Approve ${p.title}`}
+                              >
+                                <Check className="h-3.5 w-3.5" /> Approve
+                              </button>
+                              <button
+                                onClick={() => handleRejectProduct(p)}
+                                className="h-7 px-2.5 rounded-lg bg-red-500/20 border border-red-500/30 hover:bg-red-500/30 text-red-300 text-[11px] font-bold inline-flex items-center gap-1 cursor-pointer"
+                                aria-label={`Reject ${p.title}`}
+                              >
+                                <X className="h-3.5 w-3.5" /> Reject
+                              </button>
+                            </div>
+                          ) : (
+                            <>
+                              <button
+                                onClick={() => handleToggleFeatured(p)}
+                                className={`h-8 w-8 rounded-full border border-transparent inline-flex items-center justify-center cursor-pointer ${
+                                  p.featured
+                                    ? "bg-amber-500/10 text-amber-400 hover:bg-amber-500/20"
+                                    : "bg-white/5 text-white/40 hover:bg-white/10"
+                                }`}
+                                aria-label={p.featured ? `Remove ${p.title} from featured` : `Mark ${p.title} as featured`}
+                              >
+                                <Star className={`h-3.5 w-3.5 ${p.featured ? "fill-amber-400" : ""}`} />
+                              </button>
+                              <button
+                                onClick={() => handleToggleStatus(p)}
+                                className={`h-8 w-8 rounded-full border border-transparent inline-flex items-center justify-center cursor-pointer ${
+                                  p.status === "show"
+                                    ? "bg-green-500/10 text-green-400 hover:bg-green-500/20"
+                                    : "bg-white/5 text-white/40 hover:bg-white/10"
+                                }`}
+                                aria-label={p.status === "show" ? `Hide ${p.title} from website` : `Show ${p.title} on website`}
+                              >
+                                {p.status === "show" ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+                              </button>
+                              <button
+                                onClick={() => handleOpenEdit(p)}
+                                className="h-8 w-8 rounded-full bg-white/5 border border-transparent hover:border-white/10 hover:bg-white/10 inline-flex items-center justify-center text-white cursor-pointer"
+                                aria-label={`Edit ${p.title}`}
+                              >
+                                <Edit className="h-3.5 w-3.5" />
+                              </button>
+                              <button
+                                onClick={() => handleDelete(p.id)}
+                                className="h-8 w-8 rounded-full bg-red-500/10 border border-transparent hover:border-red-500/20 hover:bg-red-500/20 inline-flex items-center justify-center text-red-400 cursor-pointer"
+                                aria-label={`Move ${p.title} to trash`}
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            </>
+                          )}
+                        </td>
 
-                      {/* Pricing */}
-                      <td className="py-4 px-4">
-                        <div className="font-semibold text-white">Rs. {(p.price ?? 0).toLocaleString("en-IN")}</div>
-                        <div className="text-[10px] text-nex-mist mt-0.5">Stock: <span className="text-white font-bold">{p.stock}</span></div>
-                      </td>
-
-                      {/* Flags & Status Badges */}
-                      <td className="py-4 px-4 space-y-1">
-                        <div className="flex flex-wrap gap-1.5">
-                          {(p.approval_status === "pending" || p.status === "pending") && (
-                            <span className="rounded bg-amber-500/20 border border-amber-500/30 px-2 py-0.5 text-[8px] text-amber-300 font-extrabold uppercase animate-pulse">
-                              Pending Approval
-                            </span>
-                          )}
-                          {p.approval_status === "approved" && (
-                            <span className="rounded bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 text-[8px] text-emerald-400 font-bold uppercase">
-                              Approved
-                            </span>
-                          )}
-                          {p.approval_status === "rejected" && (
-                            <span className="rounded bg-red-500/10 border border-red-500/20 px-2 py-0.5 text-[8px] text-red-400 font-bold uppercase">
-                              Rejected
-                            </span>
-                          )}
-                          {p.seller_id && (
-                            <span className="rounded bg-purple-500/10 border border-purple-500/20 px-2 py-0.5 text-[8px] text-purple-300 font-bold uppercase">
-                              Reseller
-                            </span>
-                          )}
-                          {p.featured && (
-                            <span className="rounded bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 text-[8px] text-amber-400 font-bold uppercase flex items-center gap-0.5">
-                              <Star className="h-2.5 w-2.5 fill-amber-400" /> Featured
-                            </span>
-                          )}
-                          {p.latest && (
-                            <span className="rounded bg-nex-blue/20 border border-nex-blue/30 px-2 py-0.5 text-[8px] text-nex-blueLight font-bold uppercase flex items-center gap-0.5">
-                              <Zap className="h-2.5 w-2.5" /> Latest
-                            </span>
-                          )}
-                        </div>
-                      </td>
-
-                      {/* Actions */}
-                      <td className="py-4 px-5 text-right space-x-1.5">
-                        {p.status === "deleted" ? (
-                          <button
-                            onClick={() => handleRestore(p.id)}
-                            className="h-8 px-3 rounded-lg bg-green-500/10 border border-green-500/20 hover:bg-green-500/20 text-green-400 text-xs font-semibold inline-flex items-center gap-1"
-                            title="Restore Product to Catalog"
-                          >
-                            <RotateCcw className="h-3.5 w-3.5" /> Restore
-                          </button>
-                        ) : (p.approval_status === "pending" || p.status === "pending") ? (
-                          <div className="inline-flex items-center gap-1.5">
-                            <button
-                              onClick={() => handleApproveProduct(p)}
-                              className="h-7 px-2.5 rounded-lg bg-emerald-500/20 border border-emerald-500/30 hover:bg-emerald-500/30 text-emerald-300 text-[11px] font-bold inline-flex items-center gap-1"
-                              title="Approve Reseller Product"
-                            >
-                              <Check className="h-3.5 w-3.5" /> Approve
-                            </button>
-                            <button
-                              onClick={() => handleRejectProduct(p)}
-                              className="h-7 px-2.5 rounded-lg bg-red-500/20 border border-red-500/30 hover:bg-red-500/30 text-red-300 text-[11px] font-bold inline-flex items-center gap-1"
-                              title="Reject Reseller Product"
-                            >
-                              <X className="h-3.5 w-3.5" /> Reject
-                            </button>
-                          </div>
-                        ) : (
-                          <>
-                            <button
-                              onClick={() => handleToggleFeatured(p)}
-                              className={`h-8 w-8 rounded-full border border-transparent flex items-center justify-center inline-flex ${
-                                p.featured
-                                  ? "bg-amber-500/10 text-amber-400 hover:bg-amber-500/20"
-                                  : "bg-white/5 text-white/40 hover:bg-white/10"
-                              }`}
-                              title={p.featured ? "Remove from Featured" : "Mark as Featured"}
-                            >
-                              <Star className={`h-3.5 w-3.5 ${p.featured ? "fill-amber-400" : ""}`} />
-                            </button>
-                            <button
-                              onClick={() => handleToggleStatus(p)}
-                              className={`h-8 w-8 rounded-full border border-transparent flex items-center justify-center inline-flex ${
-                                p.status === "show"
-                                  ? "bg-green-500/10 text-green-400 hover:bg-green-500/20"
-                                  : "bg-white/5 text-white/40 hover:bg-white/10"
-                              }`}
-                              title={p.status === "show" ? "Hide from website" : "Show on website"}
-                            >
-                              {p.status === "show" ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
-                            </button>
-                            <button
-                              onClick={() => handleOpenEdit(p)}
-                              className="h-8 w-8 rounded-full bg-white/5 border border-transparent hover:border-white/10 hover:bg-white/10 flex items-center justify-center inline-flex text-white"
-                              title="Edit Details"
-                            >
-                              <Edit className="h-3.5 w-3.5" />
-                            </button>
-                            <button
-                              onClick={() => handleDelete(p.id)}
-                              className="h-8 w-8 rounded-full bg-red-500/10 border border-transparent hover:border-red-500/20 hover:bg-red-500/20 flex items-center justify-center inline-flex text-red-400"
-                              title="Move to Trash"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </button>
-                          </>
-                        )}
-                      </td>
-
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
+
+          {/* 3. Responsive Pagination Controls */}
+          {filteredProducts.length > 0 && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-2 py-3 text-xs text-nex-mist">
+              <div className="flex items-center gap-2">
+                <span>
+                  Showing {pageSize === 0 ? 1 : Math.min((currentPage - 1) * pageSize + 1, filteredProducts.length)} to{" "}
+                  {pageSize === 0 ? filteredProducts.length : Math.min(currentPage * pageSize, filteredProducts.length)} of {filteredProducts.length} items
+                </span>
+                <span className="text-white/20">&bull;</span>
+                <label className="flex items-center gap-1.5">
+                  <span className="text-[11px]">Per page:</span>
+                  <select
+                    value={pageSize}
+                    onChange={(e) => {
+                      setPageSize(Number(e.target.value));
+                      setCurrentPage(1);
+                    }}
+                    className="bg-nex-black border border-white/10 rounded-lg px-2 py-1 text-xs text-white focus:outline-none cursor-pointer min-h-[32px]"
+                    aria-label="Items per page"
+                  >
+                    <option value={10}>10</option>
+                    <option value={15}>15</option>
+                    <option value={25}>25</option>
+                    <option value={50}>50</option>
+                    <option value={0}>All ({filteredProducts.length})</option>
+                  </select>
+                </label>
+              </div>
+
+              {pageSize > 0 && totalPages > 1 && (
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className="p-2 rounded-lg bg-white/5 border border-white/10 text-white disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white/10 transition-colors min-h-[40px] min-w-[40px] flex items-center justify-center cursor-pointer"
+                    aria-label="Previous page"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+
+                  {Array.from({ length: totalPages }, (_, i) => i + 1)
+                    .filter((page) => page === 1 || page === totalPages || Math.abs(page - currentPage) <= 1)
+                    .map((page, idx, arr) => {
+                      const prevPage = arr[idx - 1];
+                      const showEllipsis = prevPage && page - prevPage > 1;
+                      return (
+                        <div key={page} className="flex items-center">
+                          {showEllipsis && <span className="px-1 text-nex-mist">...</span>}
+                          <button
+                            type="button"
+                            onClick={() => setCurrentPage(page)}
+                            className={`min-h-[40px] min-w-[40px] rounded-lg text-xs font-bold transition-all flex items-center justify-center cursor-pointer ${
+                              currentPage === page
+                                ? "bg-nex-blue text-white shadow-glow-blue"
+                                : "bg-white/5 text-nex-mist hover:text-white hover:bg-white/10 border border-white/5"
+                            }`}
+                            aria-label={`Go to page ${page}`}
+                            aria-current={currentPage === page ? "page" : undefined}
+                          >
+                            {page}
+                          </button>
+                        </div>
+                      );
+                    })}
+
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                    className="p-2 rounded-lg bg-white/5 border border-white/10 text-white disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white/10 transition-colors min-h-[40px] min-w-[40px] flex items-center justify-center cursor-pointer"
+                    aria-label="Next page"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </>
       )}
 
       {/* Add / Edit modal */}
@@ -1159,20 +1609,30 @@ export default function AdminProductsManager() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/85 backdrop-blur-sm" onClick={() => !uploading && setIsModalOpen(false)} />
           
-          <div className="glass-panel relative w-full max-w-2xl overflow-y-auto max-h-[90vh] rounded-2xl border border-white/10 bg-nex-ink p-6 shadow-glow-blue sm:p-8">
-            <button
-              onClick={() => !uploading && setIsModalOpen(false)}
-              className="absolute right-4 top-4 text-white/50 hover:text-white"
-              disabled={uploading}
-            >
-              <X className="h-5 w-5" />
-            </button>
+          <div className="glass-panel relative w-full max-w-3xl max-h-[92vh] flex flex-col rounded-2xl border border-white/10 bg-nex-ink shadow-glow-blue overflow-hidden z-10">
+            {/* Sticky Modal Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-white/10 bg-nex-ink shrink-0">
+              <div>
+                <h3 className="font-display text-base font-bold text-white">
+                  {editingProduct ? "Modify Product Specifications" : "Register New Product Item"}
+                </h3>
+                <p className="text-[11px] text-nex-mist mt-0.5">
+                  Configure hardware details, multi-channel pricing, warranty, and variants.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => !uploading && setIsModalOpen(false)}
+                className="min-h-[44px] min-w-[44px] rounded-xl bg-white/5 hover:bg-white/10 text-white/70 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+                disabled={uploading}
+                aria-label="Close product modal"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
 
-            <h3 className="font-display text-base font-bold text-white mb-6">
-              {editingProduct ? "Modify Product Specifications" : "Register New Product Item"}
-            </h3>
-
-            <form onSubmit={handleFormSubmit} className="space-y-4">
+            {/* Scrollable Form Body */}
+            <form onSubmit={handleFormSubmit} className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 {/* SKU */}
                 <div className="space-y-1 sm:col-span-1">
@@ -1882,7 +2342,7 @@ export default function AdminProductsManager() {
                               src={img.url}
                               alt={img.alt_text || `Product image ${index + 1}`}
                               className="h-full w-full object-contain"
-                              onError={(e) => { (e.target as HTMLImageElement).src = "/images/poster-products.png"; }}
+                              onError={(e) => { (e.target as HTMLImageElement).src = "/images/poster-products.webp"; }}
                             />
                             {img.file && (
                               <span className="absolute bottom-1 right-1 bg-nex-blue/90 text-white text-[8px] font-bold px-1 rounded">
@@ -1981,24 +2441,32 @@ export default function AdminProductsManager() {
                 </label>
               </div>
 
-              <div className="pt-4 border-t border-white/5 flex justify-end gap-2 text-xs">
+              {/* Sticky Footer for Mobile & Desktop */}
+              <div className="sticky bottom-0 -mx-4 -mb-4 sm:-mx-6 sm:-mb-6 mt-6 p-4 border-t border-white/10 bg-nex-ink/95 backdrop-blur-md flex items-center justify-end gap-3 shrink-0">
                 <button
                   type="button"
                   onClick={() => !uploading && setIsModalOpen(false)}
-                  className="btn-secondary !py-2 !px-4"
+                  className="btn-secondary !py-2.5 !px-5 min-h-[44px] text-xs font-semibold cursor-pointer"
                   disabled={uploading || compressingImages}
+                  aria-label="Cancel editing"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  disabled={uploading}
-                  className="btn-primary !py-2 !px-5 flex items-center gap-1.5"
+                  disabled={uploading || compressingImages}
+                  className="btn-primary !py-2.5 !px-6 min-h-[44px] text-xs font-bold flex items-center gap-2 cursor-pointer shadow-glow-blue"
+                  aria-label="Save product item"
                 >
                   {uploading ? (
                     <>
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      <Loader2 className="h-4 w-4 animate-spin" />
                       Uploading...
+                    </>
+                  ) : compressingImages ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Compressing WebP...
                     </>
                   ) : (
                     "Save Product"

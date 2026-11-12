@@ -163,7 +163,7 @@ export default function AdminSettingsDashboard() {
     title: "",
     subtitle: "",
     badge: "SPECIAL",
-    imageUrl: "/images/poster-products.png",
+    imageUrl: "/images/poster-products.webp",
     destinationUrl: "/products",
     placement: "homepage_hero",
     device: "all",
@@ -417,7 +417,7 @@ export default function AdminSettingsDashboard() {
       title: newFlyer.title || "Special Tech Promotion",
       subtitle: newFlyer.subtitle || "",
       badge: newFlyer.badge || "DEAL",
-      imageUrl: newFlyer.imageUrl || "/images/poster-products.png",
+      imageUrl: newFlyer.imageUrl || "/images/poster-products.webp",
       destinationUrl: newFlyer.destinationUrl || "/products",
       placement: newFlyer.placement || "homepage_hero",
       device: newFlyer.device || "all",
@@ -431,7 +431,7 @@ export default function AdminSettingsDashboard() {
       title: "",
       subtitle: "",
       badge: "HOT DEAL",
-      imageUrl: "/images/poster-products.png",
+      imageUrl: "/images/poster-products.webp",
       destinationUrl: "/products",
       placement: "homepage_hero",
       device: "all",
@@ -1301,14 +1301,14 @@ export default function AdminSettingsDashboard() {
                     type="text"
                     value={settings.backgroundEffects?.mediaUrl || ""}
                     onChange={(e) => updateBackgroundEffects({ mediaUrl: e.target.value })}
-                    placeholder="/images/poster-products.png or https://..."
+                    placeholder="/images/poster-products.webp or https://..."
                     className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900 px-3.5 py-2.5 text-xs font-mono"
                   />
                   <div className="flex items-center gap-2 text-[11px] text-slate-500">
                     <span>Quick media pick:</span>
                     <button
                       type="button"
-                      onClick={() => updateBackgroundEffects({ mediaUrl: "/images/poster-products.png", mediaType: "image" })}
+                      onClick={() => updateBackgroundEffects({ mediaUrl: "/images/poster-products.webp", mediaType: "image" })}
                       className="px-2 py-0.5 rounded bg-white dark:bg-white/10 border text-[10px] font-bold"
                     >
                       Poster Products
@@ -1362,7 +1362,7 @@ export default function AdminSettingsDashboard() {
                       >
                         <div className="flex items-center gap-3 min-w-0">
                           <img
-                            src={flyer.imageUrl || "/images/poster-products.png"}
+                            src={flyer.imageUrl || "/images/poster-products.webp"}
                             alt={flyer.title}
                             className="h-12 w-16 object-cover rounded-xl border border-slate-200 dark:border-white/10 shrink-0"
                           />
@@ -2486,7 +2486,7 @@ export default function AdminSettingsDashboard() {
                   type="text"
                   value={newFlyer.imageUrl}
                   onChange={(e) => setNewFlyer({ ...newFlyer, imageUrl: e.target.value })}
-                  placeholder="/images/poster-products.png or URL"
+                  placeholder="/images/poster-products.webp or URL"
                   className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 px-3 py-2 text-xs font-mono"
                 />
               </div>

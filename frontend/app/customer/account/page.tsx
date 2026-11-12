@@ -935,7 +935,7 @@ export default function CustomerAccountPortal() {
                   {favorites.map((p: any) => (
                     <div key={p.id} className="p-4 rounded-2xl bg-white/[0.02] border border-white/[0.06] space-y-3">
                       <div className="relative h-36 w-full rounded-xl overflow-hidden bg-black/40">
-                        <Image src={p.image || "/images/poster-products.png"} alt={p.title || p.name || "Product"} fill className="object-contain p-2" />
+                        <Image src={p.image || "/images/poster-products.webp"} alt={p.title || p.name || "Product"} fill className="object-contain p-2" />
                       </div>
                       <div>
                         <h4 className="text-xs font-bold text-white truncate">{p.title}</h4>

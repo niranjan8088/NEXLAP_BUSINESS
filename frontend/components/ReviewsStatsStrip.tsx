@@ -11,7 +11,7 @@ type Props = {
 };
 
 export default function ReviewsStatsStrip({ averageRating, totalCount }: Props) {
-  const happyCustomersCount = Math.max(100, totalCount);
+  const happyCustomersCount = totalCount;
 
   return (
     <div className="relative border-b border-white/[0.06] bg-white/[0.01] py-8 backdrop-blur-sm">

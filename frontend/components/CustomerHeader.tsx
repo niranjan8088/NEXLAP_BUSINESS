@@ -102,6 +102,17 @@ export default function CustomerHeader({ onOpenMobileMenu }: CustomerHeaderProps
     }
   };
 
+  const isDemoName = (n?: string | null) => {
+    if (!n || typeof n !== "string") return true;
+    const l = n.trim().toLowerCase();
+    return !l || l.includes("demo") || l === "customer";
+  };
+  const headerDisplayName = !isDemoName(userProfile?.full_name)
+    ? userProfile?.full_name
+    : userProfile?.email
+    ? userProfile.email.split("@")[0].charAt(0).toUpperCase() + userProfile.email.split("@")[0].slice(1)
+    : "Customer";
+
   const getPageTitle = () => {
     // Exact match first
     if (PAGE_TITLES[pathname]) return PAGE_TITLES[pathname];
@@ -219,18 +230,18 @@ export default function CustomerHeader({ onOpenMobileMenu }: CustomerHeaderProps
                     {userProfile.avatar_url ? (
                       <Image
                         src={userProfile.avatar_url}
-                        alt={userProfile.full_name || "Customer"}
+                        alt={headerDisplayName}
                         fill
                         className="object-cover"
                       />
-                    ) : getCustomerInitials(userProfile.full_name) ? (
-                      <span>{getCustomerInitials(userProfile.full_name)}</span>
+                    ) : getCustomerInitials(headerDisplayName) ? (
+                      <span>{getCustomerInitials(headerDisplayName)}</span>
                     ) : (
                       <User className="h-4 w-4 text-white" />
                     )}
                   </div>
                   <span className="hidden md:inline font-bold truncate">
-                    Customer
+                    {headerDisplayName}
                   </span>
                   <ChevronDown className={cn("h-3.5 w-3.5 transition-transform text-[#94A3B8]", userDropdownOpen && "rotate-180")} />
                 </button>
@@ -247,7 +258,7 @@ export default function CustomerHeader({ onOpenMobileMenu }: CustomerHeaderProps
                       {/* User info */}
                       <div className="px-3 py-2.5 border-b border-[#E2E8F0] dark:border-[#263247] mb-1">
                         <p className="font-bold text-xs text-[#111827] dark:text-[#F8FAFC] truncate">
-                          {userProfile.full_name || "NEXLAPTECH Customer"}
+                          {headerDisplayName}
                         </p>
                         <p className="text-[10px] text-[#64748B] dark:text-[#94A3B8] truncate mt-0.5">{userProfile.email}</p>
                       </div>

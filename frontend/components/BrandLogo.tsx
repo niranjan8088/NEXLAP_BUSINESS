@@ -3,8 +3,8 @@
 import { useState } from "react";
 import Image from "next/image";
 
-const BADGE_LOGO_PATH = "/assets/nexlaptech-logo.png";
-const HORIZONTAL_LOGO_PATH = "/assets/nexlaptech-horizontal.png";
+const BADGE_LOGO_PATH = "/assets/nexlaptech-logo.webp";
+const HORIZONTAL_LOGO_PATH = "/assets/nexlaptech-horizontal.webp";
 
 interface BrandLogoProps {
   width?: number;

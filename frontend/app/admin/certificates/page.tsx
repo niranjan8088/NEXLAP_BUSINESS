@@ -19,7 +19,7 @@ export default function AdminCertificatesPage() {
 
   const [regId, setRegId] = useState("");
   const [studentName, setStudentName] = useState("");
-  const [photoUrl, setPhotoUrl] = useState("/assets/nexlaptech-logo.png");
+  const [photoUrl, setPhotoUrl] = useState("/assets/nexlaptech-logo.webp");
   const [courseTitle, setCourseTitle] = useState("");
   const [trainingType, setTrainingType] = useState("");
   const [internshipType, setInternshipType] = useState("Hybrid");

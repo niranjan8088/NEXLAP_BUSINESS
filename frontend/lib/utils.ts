@@ -4,7 +4,7 @@ export function cn(...inputs: ClassValue[]) {
   return clsx(inputs);
 }
 
-export function getSafeImageSrc(src: any, fallback = "/images/poster-products.png"): string {
+export function getSafeImageSrc(src: any, fallback = "/images/poster-products.webp"): string {
   let url = src;
   if (src && typeof src === "object") {
     url = src.url || src.src || src.storage_path || "";
@@ -12,6 +12,16 @@ export function getSafeImageSrc(src: any, fallback = "/images/poster-products.pn
   if (!url || typeof url !== "string") return fallback;
   const trimmed = url.trim();
   if (!trimmed || trimmed === "undefined" || trimmed === "null" || trimmed === "[object Object]") return fallback;
+
+  // Seamlessly deliver WebP versions for public assets
+  if (trimmed === "/images/poster-products.webp") return "/images/poster-products.webp";
+  if (trimmed === "/images/poster-services.webp") return "/images/poster-services.webp";
+  if (trimmed === "/assets/nexlaptech-logo.webp") return "/assets/nexlaptech-logo.webp";
+  if (trimmed === "/assets/nexlaptech-horizontal.png") return "/assets/nexlaptech-horizontal.webp";
+  if (trimmed.startsWith("/images/product-") && trimmed.endsWith(".png")) {
+    return trimmed.replace(/\.png$/, ".webp");
+  }
+
   if (!trimmed.startsWith("/") && !trimmed.startsWith("http://") && !trimmed.startsWith("https://") && !trimmed.startsWith("data:")) {
     return `/${trimmed}`;
   }

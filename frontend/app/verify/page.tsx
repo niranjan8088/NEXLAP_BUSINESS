@@ -168,7 +168,7 @@ export default function VerifyPage() {
                       <div className="mt-8 flex flex-col md:flex-row gap-8 items-start">
                         <div className="relative h-32 w-32 rounded-2xl overflow-hidden border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 shrink-0 flex items-center justify-center mx-auto md:mx-0 print:border-black/10">
                           <Image
-                            src={getSafeImageSrc(certificate.photoUrl, "/assets/nexlaptech-logo.png")}
+                            src={getSafeImageSrc(certificate.photoUrl, "/assets/nexlaptech-logo.webp")}
                             alt={certificate.studentName || "Student Photo"}
                             fill
                             sizes="128px"

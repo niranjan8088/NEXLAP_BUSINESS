@@ -7,10 +7,11 @@ const JSON_HEADERS = { "Content-Type": "application/json" };
 export async function GET() {
   try {
     const session = await getServerSession();
+    // Return empty notifications array with 200 for guest visitors to avoid console 401 errors
     if (!session) {
       return NextResponse.json(
-        { success: false, message: "Unauthorized access.", notifications: [] },
-        { status: 401, headers: JSON_HEADERS }
+        { success: true, notifications: [], unreadCount: 0 },
+        { status: 200, headers: JSON_HEADERS }
       );
     }
 

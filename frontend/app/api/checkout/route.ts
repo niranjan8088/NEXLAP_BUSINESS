@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
         unitPrice,
         price: unitPrice,
         total: lineTotal,
-        image: variant?.image || prod.image || "/images/poster-products.png",
+        image: variant?.image || prod.image || "/images/poster-products.webp",
       });
     }
 

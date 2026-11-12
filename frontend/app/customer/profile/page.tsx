@@ -56,10 +56,15 @@ export default function CustomerProfilePage() {
       const res = await safeJsonFetch("/api/customer/profile");
       if (res.ok && res.data?.profile) {
         const p = res.data.profile;
-        const initialCleanName =
-          p.full_name && p.full_name !== "Demo Customer"
-            ? p.full_name
-            : p.email
+        const isDemo = (name?: string | null) => {
+          if (!name || typeof name !== "string") return true;
+          const lower = name.trim().toLowerCase();
+          return !lower || lower.includes("demo") || lower === "customer";
+        };
+
+        const initialCleanName = !isDemo(p.full_name)
+          ? p.full_name
+          : p.email
             ? p.email.split("@")[0].charAt(0).toUpperCase() + p.email.split("@")[0].slice(1)
             : "";
 
@@ -247,10 +252,16 @@ export default function CustomerProfilePage() {
     }
   };
 
-  const displayName =
-    profile?.full_name && profile.full_name !== "Demo Customer"
-      ? profile.full_name
-      : profile?.email
+  const isDemo = (name?: string | null) => {
+    if (!name || typeof name !== "string") return true;
+    const lower = name.trim().toLowerCase();
+    return !lower || lower.includes("demo") || lower === "customer";
+  };
+
+  const isDemoUser = isDemo(profile?.full_name);
+  const displayName = !isDemoUser
+    ? profile.full_name
+    : profile?.email
       ? profile.email.split("@")[0].charAt(0).toUpperCase() + profile.email.split("@")[0].slice(1)
       : "Customer";
 
@@ -259,11 +270,10 @@ export default function CustomerProfilePage() {
       {/* Alert Banner */}
       {message && (
         <div
-          className={`rounded-2xl p-4 text-xs flex items-center gap-3 border ${
-            message.type === "success"
-              ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-              : "bg-rose-50 text-rose-700 border-rose-200"
-          }`}
+          className={`rounded-2xl p-4 text-xs flex items-center gap-3 border ${message.type === "success"
+            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+            : "bg-rose-50 text-rose-700 border-rose-200"
+            }`}
         >
           {message.type === "success" ? (
             <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
@@ -324,7 +334,7 @@ export default function CustomerProfilePage() {
                 <ShieldCheck className="h-3 w-3" /> Active
               </span>
             </div>
-            <p className="text-xs text-slate-500 font-medium mt-1">{profile?.email || "customer@nexbytetechnologies.com"}</p>
+            <p className="text-xs text-slate-500 font-medium mt-1">{profile?.email || "customer@nexlaptech.in"}</p>
           </div>
         </div>
 
@@ -445,7 +455,7 @@ export default function CustomerProfilePage() {
             <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-100 dark:border-white/5 space-y-1">
               <span className="text-[10px] font-bold uppercase text-slate-400">Full Name</span>
               <p className="font-semibold text-slate-900 dark:text-white text-sm">
-                {profile?.full_name && profile.full_name !== "Demo Customer"
+                {!isDemoUser && profile?.full_name
                   ? profile.full_name
                   : "Not set yet (Click Edit Profile)"}
               </p>
@@ -458,12 +468,12 @@ export default function CustomerProfilePage() {
 
             <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-100 dark:border-white/5 space-y-1">
               <span className="text-[10px] font-bold uppercase text-slate-400">Phone Number</span>
-              <p className="font-semibold text-slate-900 dark:text-white text-sm">{profile?.phone || "N/A"}</p>
+              <p className="font-semibold text-slate-900 dark:text-white text-sm">{profile?.phone || "Not set yet"}</p>
             </div>
 
             <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-100 dark:border-white/5 space-y-1">
               <span className="text-[10px] font-bold uppercase text-slate-400">Date of Birth</span>
-              <p className="font-semibold text-slate-900 dark:text-white text-sm">{profile?.date_of_birth || "N/A"}</p>
+              <p className="font-semibold text-slate-900 dark:text-white text-sm">{profile?.date_of_birth || "Not set yet"}</p>
             </div>
 
             <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-100 dark:border-white/5 space-y-1">
@@ -474,14 +484,16 @@ export default function CustomerProfilePage() {
             <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-100 dark:border-white/5 space-y-1">
               <span className="text-[10px] font-bold uppercase text-slate-400">Address &amp; City</span>
               <p className="font-semibold text-slate-900 dark:text-white text-sm">
-                {profile?.address ? `${profile.address}, ${profile.city || ""}` : "No address specified"}
+                {profile?.address ? `${profile.address}${profile.city ? ", " + profile.city : ""}` : "Not specified"}
               </p>
             </div>
 
             <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-100 dark:border-white/5 space-y-1 md:col-span-2">
               <span className="text-[10px] font-bold uppercase text-slate-400">State / Pincode / Country</span>
               <p className="font-semibold text-slate-900 dark:text-white text-sm">
-                {profile?.state || "Karnataka"} - {profile?.pincode || "560070"}, {profile?.country || "India"}
+                {profile?.state || profile?.pincode
+                  ? `${profile?.state || ""}${profile?.pincode ? " - " + profile.pincode : ""}, ${profile?.country || "India"}`
+                  : "Not specified"}
               </p>
             </div>
           </div>
