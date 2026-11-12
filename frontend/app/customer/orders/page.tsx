@@ -31,14 +31,59 @@ export default function CustomerOrdersPage() {
   const fetchOrders = async () => {
     setLoading(true);
     try {
+      let ordersList: any[] = [];
       const res = await safeJsonFetch("/api/customer/orders");
       if (res.ok && Array.isArray(res.data?.orders)) {
-        setOrders(res.data.orders);
-      } else {
-        setOrders([]);
+        ordersList = res.data.orders;
       }
+
+      // Merge with browser localStorage orders so placed orders are never lost
+      try {
+        const rawLocal = localStorage.getItem("nexbyte_orders");
+        if (rawLocal) {
+          const localParsed = JSON.parse(rawLocal);
+          if (Array.isArray(localParsed) && localParsed.length > 0) {
+            const map = new Map<string, any>();
+            localParsed.forEach((o: any) => {
+              if (o && (o.order_id || o.id)) map.set(o.order_id || o.id, o);
+            });
+            ordersList.forEach((o: any) => {
+              if (o && (o.order_id || o.id)) map.set(o.order_id || o.id, o);
+            });
+            ordersList = Array.from(map.values()).sort(
+              (a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
+            );
+
+            // Sync any local orders not yet on server
+            const missingOnServer = localParsed.filter((lo: any) =>
+              !res.data?.orders?.some((so: any) => (so.order_id || so.id) === (lo.order_id || lo.id))
+            );
+            if (missingOnServer.length > 0) {
+              fetch("/api/system/sync-mock", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ key: "orders", data: localParsed }),
+              }).catch(() => {});
+            }
+          }
+        }
+      } catch {}
+
+      setOrders(ordersList);
+      try {
+        if (ordersList.length > 0) {
+          localStorage.setItem("nexbyte_orders", JSON.stringify(ordersList));
+        }
+      } catch {}
     } catch (e) {
       console.error("Orders load error", e);
+      try {
+        const rawLocal = localStorage.getItem("nexbyte_orders");
+        if (rawLocal) {
+          const parsed = JSON.parse(rawLocal);
+          if (Array.isArray(parsed)) setOrders(parsed);
+        }
+      } catch {}
     } finally {
       setLoading(false);
     }

@@ -48,24 +48,42 @@ export default function AdminOrdersPage() {
           const localParsed = JSON.parse(rawLocal);
           if (Array.isArray(localParsed)) {
             const map = new Map<string, any>();
-            localParsed.forEach((o: any) => map.set(o.order_id || o.id, o));
-            ordersList.forEach((o: any) => map.set(o.order_id || o.id, o));
+            localParsed.forEach((o: any) => {
+              if (o && (o.order_id || o.id)) map.set(o.order_id || o.id, o);
+            });
+            ordersList.forEach((o: any) => {
+              if (o && (o.order_id || o.id)) map.set(o.order_id || o.id, o);
+            });
             ordersList = Array.from(map.values()).sort(
               (a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
             );
+
+            // Sync any local orders to server if missing
+            const missing = localParsed.filter((lo: any) =>
+              !ordersList.some((ol: any) => (ol.order_id || ol.id) === (lo.order_id || lo.id))
+            );
+            if (missing.length > 0) {
+              fetch("/api/system/sync-mock", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ key: "orders", data: localParsed }),
+              }).catch(() => {});
+            }
           }
         }
       } catch {}
 
       setOrders(ordersList);
       try {
-        localStorage.setItem("nexbyte_orders", JSON.stringify(ordersList));
+        if (ordersList.length > 0) {
+          localStorage.setItem("nexbyte_orders", JSON.stringify(ordersList));
+        }
       } catch {}
     } catch (err) {
       console.warn("API orders fetch warning, falling back to local:", err);
       try {
         const list = await dbHelper.orders.list();
-        setOrders(list);
+        setOrders(list || []);
       } catch {}
     } finally {
       setLoading(false);

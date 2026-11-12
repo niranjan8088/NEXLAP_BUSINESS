@@ -67,7 +67,7 @@ if (typeof window !== "undefined") {
   window.addEventListener("nexbyte-data-changed", (e: any) => {
     if (e.detail?.table) invalidateQueryCache(e.detail.table);
   });
-  // Auto-sync client localStorage mock data (such as products) to the server
+  // Auto-sync client localStorage mock data (such as products and orders) to the server
   try {
     const savedProducts = localStorage.getItem("nexbyte_products");
     if (savedProducts) {
@@ -77,6 +77,19 @@ if (typeof window !== "undefined") {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ key: "products", data: parsed }),
+        }).catch(() => {});
+      }
+    }
+  } catch {}
+  try {
+    const savedOrders = localStorage.getItem("nexbyte_orders");
+    if (savedOrders) {
+      const parsed = JSON.parse(savedOrders);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        fetch("/api/system/sync-mock", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ key: "orders", data: parsed }),
         }).catch(() => {});
       }
     }
@@ -3209,23 +3222,72 @@ export const dbHelper = {
       const cached = getCachedQuery<any[]>("orders:list");
       if (cached) return cached;
       const mockOrders = getMockData("orders");
+      const map = new Map<string, any>();
+      mockOrders.forEach((o: any) => {
+        if (o && (o.order_id || o.id)) map.set(o.order_id || o.id, o);
+      });
+
+      // 1. Client-side LocalStorage Merge
+      if (typeof window !== "undefined") {
+        try {
+          const raw = localStorage.getItem("nexbyte_orders");
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) {
+              parsed.forEach((o: any) => {
+                if (o && (o.order_id || o.id)) map.set(o.order_id || o.id, o);
+              });
+            }
+          }
+        } catch {}
+      }
+
+      // 2. Supabase Integration (Primary: 'orders' table + Guaranteed Backup: 'notifications' table)
       if (supabase) {
         try {
           const { data, error } = await supabase.from("orders").select("*").order("created_at", { ascending: false });
           if (!error && Array.isArray(data)) {
-            const map = new Map<string, any>();
-            mockOrders.forEach((o: any) => map.set(o.order_id || o.id, o));
-            data.forEach((o: any) => map.set(o.order_id || o.id, o));
-            const merged = Array.from(map.values()).sort(
-              (a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
-            );
-            return setCachedQuery("orders:list", merged);
+            data.forEach((o: any) => {
+              if (o && (o.order_id || o.id)) map.set(o.order_id || o.id, o);
+            });
           }
         } catch (e) {
           console.warn("Supabase orders query fallback:", e);
         }
+
+        try {
+          const { data: backupRows, error: notifErr } = await supabase
+            .from("notifications")
+            .select("*")
+            .eq("type", "order_record")
+            .order("created_at", { ascending: false });
+
+          if (!notifErr && Array.isArray(backupRows)) {
+            backupRows.forEach((row: any) => {
+              let orderObj = row.meta;
+              if (typeof orderObj === "string") {
+                try { orderObj = JSON.parse(orderObj); } catch {}
+              }
+              if (!orderObj && row.message) {
+                try { orderObj = JSON.parse(row.message); } catch {}
+              }
+              if (orderObj && typeof orderObj === "object" && (orderObj.order_id || orderObj.id)) {
+                const key = orderObj.order_id || orderObj.id;
+                if (!map.has(key)) {
+                  map.set(key, orderObj);
+                }
+              }
+            });
+          }
+        } catch (bErr) {
+          console.warn("Supabase backup orders query fallback:", bErr);
+        }
       }
-      return setCachedQuery("orders:list", mockOrders);
+
+      const merged = Array.from(map.values()).sort(
+        (a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
+      );
+      return setCachedQuery("orders:list", merged);
     },
     async listByUser(userId: string) {
       const list = await this.list();
@@ -3240,6 +3302,10 @@ export const dbHelper = {
         try {
           const { data } = await supabase.from("orders").select("*").or(`id.eq.${id},order_id.eq.${id}`).single();
           if (data) return data;
+        } catch {}
+        try {
+          const { data } = await supabase.from("notifications").select("*").eq("type", "order_record").or(`id.eq.ord-record-${id},title.ilike.%${id}%`).single();
+          if (data && data.meta) return typeof data.meta === "string" ? JSON.parse(data.meta) : data.meta;
         } catch {}
       }
       const list = await this.list();
@@ -3257,28 +3323,49 @@ export const dbHelper = {
             }
           ];
       const newOrder = {
-        id: `ord-${Date.now()}`,
+        id: order.id || `ord-${Date.now()}`,
         order_id: orderId,
-        order_number: orderId,
-        status: "Confirmed",
+        order_number: order.order_number || orderId,
+        status: order.status || "Confirmed",
         order_timeline: initialTimeline,
-        created_at: new Date().toISOString(),
+        created_at: order.created_at || new Date().toISOString(),
         updated_at: new Date().toISOString(),
         ...order,
       };
+
+      // 1. In-memory / Mock persistence
       const list = getMockData("orders");
       const filtered = list.filter((o: any) => (o.order_id || o.id) !== orderId);
       saveMockData("orders", [newOrder, ...filtered]);
 
       let savedData: any = newOrder;
       if (supabase) {
+        // 2. Primary: 'orders' table upsert
         try {
-          const { data, error } = await supabase.from("orders").insert([newOrder]).select().single();
+          const { data, error } = await supabase.from("orders").upsert([newOrder], { onConflict: "order_id" }).select().single();
           if (!error && data) {
             savedData = data;
           }
         } catch (sbErr) {
           console.warn("Supabase order insert fallback:", sbErr);
+        }
+
+        // 3. Guaranteed Backup: 'notifications' table (which always exists in Supabase production)
+        try {
+          await supabase.from("notifications").upsert([
+            {
+              id: `ord-record-${orderId}`,
+              title: `Order Record: ${orderId}`,
+              message: JSON.stringify(newOrder),
+              type: "order_record",
+              status: "unread",
+              customer_email: newOrder.email || "",
+              meta: newOrder,
+              created_at: newOrder.created_at,
+            }
+          ], { onConflict: "id" });
+        } catch (notifErr) {
+          console.warn("Supabase order notification backup fallback:", notifErr);
         }
       }
       notifyDataChange("orders", "insert", savedData);
@@ -3304,26 +3391,39 @@ export const dbHelper = {
         });
       }
 
-      const payload = {
+      const mergedOrder = {
+        ...existing,
         ...updates,
         order_timeline: timeline,
         updated_at: now,
       };
 
+      const updated = list.map((o: any) => (o.id === id || o.order_id === id) ? mergedOrder : o);
+      saveMockData("orders", updated);
+      const found = updated.find((o: any) => o.id === id || o.order_id === id) || mergedOrder;
+
+      let savedData: any = found;
       if (supabase) {
+        // 1. Update primary orders table
         try {
-          const { data, error } = await supabase.from("orders").update(payload).or(`id.eq.${id},order_id.eq.${id}`).select().single();
+          const { data, error } = await supabase.from("orders").update(mergedOrder).or(`id.eq.${id},order_id.eq.${id}`).select().single();
           if (!error && data) {
-            notifyDataChange("orders", "update", data);
-            return data;
+            savedData = data;
           }
+        } catch {}
+
+        // 2. Update backup in notifications table
+        try {
+          const ordId = existing.order_id || id;
+          await supabase.from("notifications").update({
+            message: JSON.stringify(mergedOrder),
+            meta: mergedOrder,
+            status: mergedOrder.status === "Delivered" ? "read" : "unread",
+          }).or(`id.eq.ord-record-${ordId},title.ilike.%${ordId}%`);
         } catch {}
       }
 
-      const updated = list.map((o: any) => (o.id === id || o.order_id === id) ? { ...o, ...payload } : o);
-      saveMockData("orders", updated);
-      const found = updated.find((o: any) => o.id === id || o.order_id === id);
-      notifyDataChange("orders", "update", found);
+      notifyDataChange("orders", "update", savedData);
 
       // Create customer notification if status changed
       if (updates.status && updates.status !== existing.status) {

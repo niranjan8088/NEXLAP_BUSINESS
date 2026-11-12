@@ -57,22 +57,35 @@ export default function CustomerRequestsPage() {
         });
       }
 
-      if (ordersRes.ok && ordersRes.data?.orders) {
-        ordersRes.data.orders.forEach((o: any) => {
-          list.push({
-            id: o.id,
-            reqId: o.order_number || o.id,
-            type: "Product Order",
-            title: `Order for ₹${(o.total_amount || 0).toLocaleString("en-IN")}`,
-            date: o.created_at || new Date().toISOString(),
-            status: mapStatus(o.status),
-            rawStatus: o.status,
-            lastUpdate: o.updated_at || o.created_at || new Date().toISOString(),
-            details: o,
-            category: "orders",
-          });
+      const fetchedOrders: any[] = (ordersRes.ok && Array.isArray(ordersRes.data?.orders)) ? [...ordersRes.data.orders] : [];
+      try {
+        const rawLocal = localStorage.getItem("nexbyte_orders");
+        if (rawLocal) {
+          const parsed = JSON.parse(rawLocal);
+          if (Array.isArray(parsed)) {
+            parsed.forEach((lo: any) => {
+              if (lo && (lo.order_id || lo.id) && !fetchedOrders.some((fo) => (fo.order_id || fo.id) === (lo.order_id || lo.id))) {
+                fetchedOrders.push(lo);
+              }
+            });
+          }
+        }
+      } catch {}
+
+      fetchedOrders.forEach((o: any) => {
+        list.push({
+          id: o.id,
+          reqId: o.order_number || o.order_id || o.id,
+          type: "Product Order",
+          title: `Order for ₹${(o.total_amount || 0).toLocaleString("en-IN")}`,
+          date: o.created_at || new Date().toISOString(),
+          status: mapStatus(o.status),
+          rawStatus: o.status,
+          lastUpdate: o.updated_at || o.created_at || new Date().toISOString(),
+          details: o,
+          category: "orders",
         });
-      }
+      });
 
       if (internshipsRes.ok && internshipsRes.data?.internships) {
         internshipsRes.data.internships.forEach((i: any) => {

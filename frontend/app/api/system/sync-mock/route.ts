@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { invalidateQueryCache } from "@/lib/dbHelper";
+import { invalidateQueryCache, dbHelper } from "@/lib/dbHelper";
 
 function loadMemoryDb(): Record<string, any> {
   const globalRef = globalThis as any;
@@ -55,6 +55,41 @@ export async function POST(req: NextRequest) {
         success: true,
         key: "products",
         count: existingProducts.length,
+      });
+    }
+
+    if (key === "orders") {
+      const existingOrders: any[] = Array.isArray(db.orders) ? [...db.orders] : [];
+      const incomingList: any[] = Array.isArray(data) ? data : [data];
+
+      for (const item of incomingList) {
+        if (!item || typeof item !== "object") continue;
+        const orderKey = item.order_id || item.id;
+        if (!orderKey) continue;
+        const index = existingOrders.findIndex(
+          (o) => (o.order_id && o.order_id === orderKey) || (o.id && o.id === orderKey)
+        );
+
+        if (index >= 0) {
+          existingOrders[index] = { ...existingOrders[index], ...item };
+        } else {
+          existingOrders.unshift(item);
+        }
+
+        // Background persist to server database/backup
+        try {
+          dbHelper.orders.create(item).catch(() => {});
+        } catch {}
+      }
+
+      db.orders = existingOrders;
+      saveMemoryDb(db);
+      invalidateQueryCache("orders");
+
+      return NextResponse.json({
+        success: true,
+        key: "orders",
+        count: existingOrders.length,
       });
     }
 

@@ -415,10 +415,10 @@ export default function CustomerReviewsPage() {
                       }}
                       className="futuristic-input w-full rounded-xl px-3.5 py-2.5 text-xs bg-slate-50 dark:bg-[#0B0718]"
                     >
+                      <option value="__custom__">✏️ Enter Product / Service Manually...</option>
                       {productOptions.map((opt) => (
                         <option key={opt} value={opt}>{opt}</option>
                       ))}
-                      <option value="__custom__">✏️ Other (Enter manually)...</option>
                     </select>
                   )}
                 </div>
