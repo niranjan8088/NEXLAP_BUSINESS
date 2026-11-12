@@ -275,7 +275,15 @@ export default function CheckoutPage() {
             <div className="text-xs space-y-1.5 text-readable-secondary">
               <p><strong className="text-slate-900 dark:text-slate-100">Deliver to:</strong> {customerName}, {addressLine1}, {city} - {pincode}</p>
               <p><strong className="text-slate-900 dark:text-slate-100">Delivery Status:</strong> {orderPlaced.status || "Confirmed"} via {orderPlaced.courier}</p>
-              <p><strong className="text-slate-900 dark:text-slate-100">Tracking Number:</strong> <span className="font-mono text-slate-900 dark:text-slate-100">{orderPlaced.tracking_number}</span></p>
+              <p>
+                <strong className="text-slate-900 dark:text-slate-100">Tracking Number:</strong>{" "}
+                <Link
+                  href={`/track?search=${encodeURIComponent(orderPlaced.order_number || orderPlaced.order_id || orderPlaced.tracking_number)}`}
+                  className="font-mono text-cyan-600 dark:text-cyan-400 font-bold hover:underline"
+                >
+                  {orderPlaced.tracking_number || orderPlaced.tracking_id}
+                </Link>
+              </p>
               
               {orderPlaced.applied_offer_code && (
                 <p className="text-emerald-600 dark:text-emerald-400 font-semibold">
@@ -297,8 +305,15 @@ export default function CheckoutPage() {
 
           <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
             <Link
+              href={`/track?search=${encodeURIComponent(orderPlaced.order_number || orderPlaced.order_id || orderPlaced.tracking_number)}`}
+              className="futuristic-btn-primary px-6 py-3 text-xs inline-flex items-center justify-center font-bold rounded-xl gap-2 shadow-lg"
+            >
+              <Truck className="h-4 w-4" />
+              <span>Track Order Live</span>
+            </Link>
+            <Link
               href="/customer/orders"
-              className="futuristic-btn-primary px-6 py-3 text-xs inline-flex items-center justify-center font-bold rounded-xl"
+              className="futuristic-btn-secondary px-6 py-3 text-xs inline-flex items-center justify-center font-bold rounded-xl"
             >
               View My Orders
             </Link>

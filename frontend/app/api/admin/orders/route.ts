@@ -56,7 +56,7 @@ export async function PATCH(request: Request) {
     }
 
     const body = await request.json();
-    const { id, status, tracking_id, tracking_carrier } = body;
+    const { id, status, tracking_id, tracking_number, tracking_carrier, courier, notes } = body;
 
     if (!id) {
       return NextResponse.json({ error: "Order ID is required." }, { status: 400 });
@@ -64,8 +64,17 @@ export async function PATCH(request: Request) {
 
     const updates: Record<string, any> = {};
     if (status !== undefined) updates.status = status;
-    if (tracking_id !== undefined) updates.tracking_id = tracking_id;
-    if (tracking_carrier !== undefined) updates.tracking_carrier = tracking_carrier;
+    if (notes !== undefined) updates.notes = notes;
+    if (tracking_id !== undefined || tracking_number !== undefined) {
+      const trk = (tracking_id ?? tracking_number)?.trim() || null;
+      updates.tracking_id = trk;
+      updates.tracking_number = trk;
+    }
+    if (tracking_carrier !== undefined || courier !== undefined) {
+      const car = (tracking_carrier ?? courier)?.trim() || null;
+      updates.tracking_carrier = car;
+      updates.courier = car;
+    }
 
     const updated = await dbHelper.orders.update(id, updates);
 

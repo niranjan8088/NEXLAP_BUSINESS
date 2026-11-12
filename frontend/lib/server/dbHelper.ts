@@ -3049,27 +3049,43 @@ export const dbHelper = {
     },
     async getById(id: string) {
       if (supabase) {
-        const { data } = await supabase.from("orders").select("*").eq("id", id).single();
-        return data || null;
+        try {
+          const { data } = await supabase.from("orders").select("*").or(`id.eq.${id},order_id.eq.${id}`).single();
+          if (data) return data;
+        } catch {}
       }
       const list = getMockData("orders");
       return list.find((o: any) => o.id === id || o.order_id === id) || null;
     },
     async create(order: any) {
-      const orderId = await this.getNextOrderId();
+      const orderId = order.order_id || (await this.getNextOrderId());
+      const initialTimeline = Array.isArray(order.order_timeline) && order.order_timeline.length > 0
+        ? order.order_timeline
+        : [
+            {
+              status: order.status || "Confirmed",
+              timestamp: new Date().toISOString(),
+              note: `Order placed and confirmed successfully.`,
+            }
+          ];
       const newOrder = {
         id: `ord-${Date.now()}`,
         order_id: orderId,
-        status: "pending",
+        order_number: orderId,
+        status: "Confirmed",
+        order_timeline: initialTimeline,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         ...order,
       };
       if (supabase) {
-        const { data, error } = await supabase.from("orders").insert([newOrder]).select().single();
-        if (error) throw error;
-        notifyDataChange("orders", "insert", data);
-        return data;
+        try {
+          const { data, error } = await supabase.from("orders").insert([newOrder]).select().single();
+          if (!error && data) {
+            notifyDataChange("orders", "insert", data);
+            return data;
+          }
+        } catch {}
       }
       const list = getMockData("orders");
       saveMockData("orders", [newOrder, ...list]);
@@ -3088,6 +3104,12 @@ export const dbHelper = {
           timestamp: now,
           note: updates.notes || `Order status updated to ${updates.status}`,
         });
+      } else if ((updates.tracking_number || updates.tracking_id) && !existing.tracking_number && !existing.tracking_id) {
+        timeline.push({
+          status: updates.status || existing.status || "Shipped",
+          timestamp: now,
+          note: `Fulfillment tracking assigned: ${updates.tracking_number || updates.tracking_id} via ${updates.courier || updates.tracking_carrier || "Carrier"}`,
+        });
       }
 
       const payload = {
@@ -3097,9 +3119,13 @@ export const dbHelper = {
       };
 
       if (supabase) {
-        const { data } = await supabase.from("orders").update(payload).eq("id", id).select().single();
-        notifyDataChange("orders", "update", data);
-        return data;
+        try {
+          const { data } = await supabase.from("orders").update(payload).or(`id.eq.${id},order_id.eq.${id}`).select().single();
+          if (data) {
+            notifyDataChange("orders", "update", data);
+            return data;
+          }
+        } catch {}
       }
 
       const updated = list.map((o: any) => (o.id === id || o.order_id === id) ? { ...o, ...payload } : o);

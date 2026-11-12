@@ -805,8 +805,6 @@ export default function AdminProductsManager() {
             NightVision: specCctvNightVision,
             Connectivity: specCctvConnectivity,
           } : {}),
-          "GST Invoice Available": specGstInvoice ? "Yes" : "No",
-          "Country Of Origin": specCountry,
         }, category)
       };
 

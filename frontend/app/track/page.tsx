@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { Search, Loader2, Calendar, ClipboardCheck, Laptop, CheckCircle2, Send, ShoppingBag, GraduationCap, Award, Upload } from "lucide-react";
+import { Search, Loader2, Calendar, ClipboardCheck, Laptop, CheckCircle2, Send, ShoppingBag, GraduationCap, Award, Upload, Clock } from "lucide-react";
 import { motion } from "framer-motion";
 import { dbHelper } from "@/lib/dbHelper";
 import { safeJsonFetch } from "@/lib/apiHelper";
@@ -68,7 +68,13 @@ export default function TrackPage() {
   useEffect(() => {
     if (typeof window !== "undefined") {
       const urlParams = new URLSearchParams(window.location.search);
-      const urlSearch = urlParams.get("search") || urlParams.get("ref");
+      const urlSearch =
+        urlParams.get("search") ||
+        urlParams.get("ref") ||
+        urlParams.get("order") ||
+        urlParams.get("order_id") ||
+        urlParams.get("id") ||
+        urlParams.get("tracking");
       if (urlSearch) {
         setSearchVal(urlSearch);
         handleSearchQuery(urlSearch);
@@ -281,13 +287,22 @@ export default function TrackPage() {
                   const s = (order.status || "").toLowerCase();
                   let stepIdx = 0;
                   if (s.includes("delivered")) stepIdx = 3;
-                  else if (s.includes("out for delivery")) stepIdx = 2;
-                  else if (s.includes("processing") || s.includes("shipped") || s.includes("dispatched")) stepIdx = 1;
+                  else if (s.includes("out for delivery") || s.includes("dispatched")) stepIdx = 2;
+                  else if (s.includes("shipped")) stepIdx = 2;
+                  else if (s.includes("processing") || s.includes("packed")) stepIdx = 1;
+                  else if (s.includes("confirmed") || s.includes("pending")) stepIdx = 0;
 
                   const orderId = order.order_number || order.order_id || order.id;
                   const total = Number(order.total_amount || order.total || order.grandTotal || 0);
                   const dateStr = order.created_at ? new Date(order.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "Recent";
                   const items = Array.isArray(order.items) ? order.items : [];
+                  const trackingNum = order.tracking_number || order.tracking_id || "";
+                  const courierName = order.courier || order.tracking_carrier || "NexLapTech Logistics";
+                  const timeline = Array.isArray(order.order_timeline) ? order.order_timeline : [];
+                  const addr = order.shipping_address;
+                  const addrText = typeof addr === "string" 
+                    ? addr 
+                    : addr ? `${addr.addressLine1 || ""}, ${addr.city || ""} ${addr.pincode ? `- ${addr.pincode}` : ""}`.trim() : "";
 
                   return (
                     <motion.div
@@ -310,6 +325,9 @@ export default function TrackPage() {
                             Order #{orderId}
                           </h3>
                           <p className="text-xs text-readable-secondary">Ordered on {dateStr} by {order.customer_name || "Customer"}</p>
+                          {addrText && (
+                            <p className="text-[11px] text-readable-muted mt-0.5">Ship to: {addrText}</p>
+                          )}
                         </div>
                         <div className="text-left sm:text-right">
                           <span className="text-[10px] text-readable-secondary uppercase block">Total Amount</span>
@@ -333,13 +351,46 @@ export default function TrackPage() {
                         <div className="h-2.5 rounded-full bg-slate-100 dark:bg-white/10 overflow-hidden flex">
                           <div className="h-full bg-emerald-500 transition-all duration-500" style={{ width: `${((stepIdx + 1) / 4) * 100}%` }} />
                         </div>
-                        {order.tracking_number && (
-                          <div className="flex flex-wrap items-center justify-between text-xs text-slate-600 dark:text-slate-400 pt-1">
-                            <span>Courier: <strong className="text-slate-800 dark:text-slate-200">{order.courier || "NexLapTech Logistics"}</strong></span>
-                            <span>Tracking: <code className="font-mono font-bold text-slate-900 dark:text-white px-2 py-0.5 bg-slate-100 dark:bg-white/5 rounded border border-slate-200 dark:border-white/10">{order.tracking_number}</code></span>
+                        {trackingNum ? (
+                          <div className="flex flex-wrap items-center justify-between text-xs text-slate-600 dark:text-slate-400 pt-1 gap-2">
+                            <span>Courier: <strong className="text-slate-800 dark:text-slate-200">{courierName}</strong></span>
+                            <div className="flex items-center gap-1.5">
+                              <span>Tracking:</span>
+                              <code className="font-mono font-bold text-slate-900 dark:text-white px-2 py-0.5 bg-slate-100 dark:bg-white/5 rounded border border-slate-200 dark:border-white/10">{trackingNum}</code>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="text-[11px] text-readable-muted pt-1">
+                            Tracking details will be updated once your order is dispatched.
                           </div>
                         )}
                       </div>
+
+                      {/* Realtime Timeline Milestones */}
+                      {timeline.length > 0 && (
+                        <div className="space-y-2 border-t border-slate-200 dark:border-white/10 pt-4">
+                          <h4 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
+                            <Clock className="h-3.5 w-3.5 text-cyan-500" />
+                            Tracking Milestones &amp; History
+                          </h4>
+                          <div className="space-y-1.5">
+                            {timeline.map((evt: any, i: number) => (
+                              <div key={i} className="flex items-start justify-between text-xs p-2.5 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-100 dark:border-white/5">
+                                <div className="space-y-0.5">
+                                  <div className="flex items-center gap-2">
+                                    <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                                    <span className="font-bold text-slate-900 dark:text-white capitalize">{String(evt.status || "").replace(/_/g, " ")}</span>
+                                  </div>
+                                  {evt.note && <p className="text-[11px] text-readable-secondary pl-4">{evt.note}</p>}
+                                </div>
+                                <span className="text-[10px] text-readable-muted font-mono shrink-0 ml-2">
+                                  {evt.timestamp ? new Date(evt.timestamp).toLocaleString("en-IN", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : ""}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
 
                       {/* Items */}
                       {items.length > 0 && (

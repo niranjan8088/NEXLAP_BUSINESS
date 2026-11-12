@@ -115,7 +115,9 @@ export default function AdminOrdersPage() {
     try {
       const updates = {
         tracking_id: trackingIdInput.trim() || null,
+        tracking_number: trackingIdInput.trim() || null,
         tracking_carrier: trackingCarrierInput.trim() || null,
+        courier: trackingCarrierInput.trim() || null,
       };
       const res = await fetch("/api/admin/orders", {
         method: "PATCH",
@@ -134,9 +136,11 @@ export default function AdminOrdersPage() {
       try {
         const updates = {
           tracking_id: trackingIdInput.trim() || null,
+          tracking_number: trackingIdInput.trim() || null,
           tracking_carrier: trackingCarrierInput.trim() || null,
+          courier: trackingCarrierInput.trim() || null,
         };
-        await dbHelper.orders.update(selectedOrder.id, updates);
+        await dbHelper.orders.update(selectedOrder.id || selectedOrder.order_id, updates);
         setSelectedOrder((prev: any) => ({ ...prev, ...updates }));
         await loadOrders();
         alert("Fulfillment tracking details saved successfully.");
@@ -333,8 +337,8 @@ export default function AdminOrdersPage() {
                       <button
                         onClick={() => {
                           setSelectedOrder(o);
-                          setTrackingIdInput(o.tracking_id || "");
-                          setTrackingCarrierInput(o.tracking_carrier || "");
+                          setTrackingIdInput(o.tracking_number || o.tracking_id || "");
+                          setTrackingCarrierInput(o.courier || o.tracking_carrier || "");
                         }}
                         className="futuristic-btn-secondary !py-1.5 !px-3 text-[11px] inline-flex items-center gap-1.5"
                       >
@@ -401,10 +405,15 @@ export default function AdminOrdersPage() {
                 <div className="text-xs font-semibold text-slate-900 dark:text-white flex items-center gap-1.5">
                   <Truck className="h-4 w-4 text-indigo-600 dark:text-cyan-400" /> Shipment &amp; Tracking Details
                 </div>
-                {selectedOrder.tracking_id && (
-                  <span className="text-[10px] font-mono bg-cyan-50 dark:bg-cyan-500/10 border border-cyan-200 dark:border-cyan-500/30 text-cyan-700 dark:text-cyan-400 px-2 py-0.5 rounded">
-                    Tracking: {selectedOrder.tracking_id}
-                  </span>
+                {(selectedOrder.tracking_number || selectedOrder.tracking_id) && (
+                  <a
+                    href={`/track?search=${encodeURIComponent(selectedOrder.order_number || selectedOrder.order_id || selectedOrder.tracking_number || selectedOrder.id)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[10px] font-mono bg-cyan-50 dark:bg-cyan-500/10 border border-cyan-200 dark:border-cyan-500/30 text-cyan-700 dark:text-cyan-400 px-2 py-0.5 rounded hover:underline flex items-center gap-1"
+                  >
+                    Track Live: {selectedOrder.tracking_number || selectedOrder.tracking_id} ↗
+                  </a>
                 )}
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -444,6 +453,31 @@ export default function AdminOrdersPage() {
                 </button>
               </div>
             </div>
+
+            {/* Order Timeline History */}
+            {Array.isArray(selectedOrder.order_timeline) && selectedOrder.order_timeline.length > 0 && (
+              <div className="rounded-xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 p-4 space-y-2.5">
+                <div className="text-xs font-semibold text-slate-900 dark:text-white flex items-center gap-1.5">
+                  <Clock className="h-4 w-4 text-cyan-500" /> Order Fulfillment Milestones ({selectedOrder.order_timeline.length})
+                </div>
+                <div className="space-y-1.5">
+                  {selectedOrder.order_timeline.map((evt: any, i: number) => (
+                    <div key={i} className="flex items-start justify-between text-xs p-2 rounded-lg bg-white dark:bg-white/[0.02] border border-slate-100 dark:border-white/5">
+                      <div>
+                        <div className="flex items-center gap-1.5 font-bold text-slate-800 dark:text-slate-200 capitalize">
+                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                          {String(evt.status || "").replace(/_/g, " ")}
+                        </div>
+                        {evt.note && <div className="text-[11px] text-slate-500 dark:text-slate-400 pl-3">{evt.note}</div>}
+                      </div>
+                      <span className="text-[10px] text-slate-400 font-mono shrink-0 ml-2">
+                        {evt.timestamp ? new Date(evt.timestamp).toLocaleString("en-IN", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : ""}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Customer & Shipping Details */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

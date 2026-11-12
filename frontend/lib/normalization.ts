@@ -257,7 +257,8 @@ export function sanitizeProductSpecs(specs: Record<string, any> | undefined | nu
     "screen size", "display type",
     "operating system", "weight", "touch screen",
     "capacity", "interface", "form factor", "read speed", "write speed", "speed",
-    "camera type", "resolution", "night vision", "connectivity"
+    "camera type", "resolution", "night vision", "connectivity",
+    "gst invoice available", "country of origin"
   ]);
 
   const clean: Record<string, any> = {};
@@ -268,6 +269,9 @@ export function sanitizeProductSpecs(specs: Record<string, any> | undefined | nu
     const lowerKey = rawKey.toLowerCase().replace(/[\s_\-]/g, "");
     const lowerKeySpaced = rawKey.toLowerCase().trim();
 
+    // Reject non-technical store administrative defaults that pollute technical spec tables
+    if (lowerKey === "gstinvoiceavailable" || lowerKey === "countryoforigin") continue;
+
     // 1. CCTV specs (CameraType, Resolution, NightVision, Connectivity PoE)
     const isCctvSpec = ["cameratype", "nightvision", "connectivity", "cameras", "nvr"].includes(lowerKey);
     if (isCctvSpec && !isCctv) continue;
@@ -277,7 +281,7 @@ export function sanitizeProductSpecs(specs: Record<string, any> | undefined | nu
     if (isStorageSpec && !isStorage) continue;
 
     // 3. RAM speeds & DDR generation
-    const isRamSpec = ["ddrgeneration", "ramtype", "ramspeed"].includes(lowerKey);
+    const isRamSpec = ["ddrgeneration", "ramtype", "ramspeed", "speed", "memoryspeed"].includes(lowerKey);
     if (isRamSpec && !isRam && !isLaptop && !isDesktopOrPC) continue;
 
     // 4. Screen & Display specs (14 inch, FHD IPS, Touchscreen)
@@ -297,11 +301,11 @@ export function sanitizeProductSpecs(specs: Record<string, any> | undefined | nu
     }
 
     // 8. Default 1.4 kg weight template
-    if (lowerKey === "weight" && !isLaptop && String(rawVal).trim() === "1.4 kg") continue;
+    if (lowerKey === "weight" && (!isLaptop || String(rawVal).trim() === "1.4 kg")) continue;
 
     // 9. For peripherals, accessories, components, reject all remaining template keys
     const isPeripheralOrGeneral = ["peripherals", "accessories", "laptop_components", "desktop_components", "networking"].includes(cleanCategory) || (!isLaptop && !isDesktopOrPC && !isStorage && !isRam && !isCctv && !isMonitor);
-    if (isPeripheralOrGeneral && templateKeys.has(lowerKeySpaced)) {
+    if (isPeripheralOrGeneral && (templateKeys.has(lowerKeySpaced) || templateKeys.has(lowerKey))) {
       continue;
     }
 

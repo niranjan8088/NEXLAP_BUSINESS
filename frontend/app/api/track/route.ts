@@ -80,19 +80,35 @@ export async function GET(req: Request) {
 
     const orders = await dbHelper.orders.list();
     const cleanDigits = cleanSearch.replace(/\D/g, "");
+    const stripHash = cleanSearch.replace(/^#/, "");
+
     const matchedOrders = orders.filter((o: any) => {
       const orderId = (o.order_id || o.order_number || o.id || "").toLowerCase();
-      const trk = (o.tracking_number || "").toLowerCase();
+      const trk = (o.tracking_number || o.tracking_id || "").toLowerCase();
       const phoneDigits = (o.phone || "").replace(/\D/g, "");
       const email = (o.email || "").toLowerCase();
 
       return (
         orderId === cleanSearch ||
+        orderId === stripHash ||
+        (stripHash.length >= 4 && (orderId.includes(stripHash) || stripHash.includes(orderId))) ||
         trk === cleanSearch ||
+        trk === stripHash ||
+        (stripHash.length >= 4 && trk.includes(stripHash)) ||
         (cleanDigits.length >= 6 && phoneDigits.includes(cleanDigits)) ||
         (cleanSearch.includes("@") && email === cleanSearch)
       );
     });
+
+    // Fallback: direct order lookup if not in cached list
+    if (matchedOrders.length === 0 && stripHash) {
+      try {
+        const directOrder = await dbHelper.orders.getById(stripHash);
+        if (directOrder) {
+          matchedOrders.push(directOrder);
+        }
+      } catch {}
+    }
 
     return NextResponse.json(
       {

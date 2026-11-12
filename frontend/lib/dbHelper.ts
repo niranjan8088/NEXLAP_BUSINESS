@@ -3247,11 +3247,21 @@ export const dbHelper = {
     },
     async create(order: any) {
       const orderId = order.order_id || (await this.getNextOrderId());
+      const initialTimeline = Array.isArray(order.order_timeline) && order.order_timeline.length > 0
+        ? order.order_timeline
+        : [
+            {
+              status: order.status || "Confirmed",
+              timestamp: new Date().toISOString(),
+              note: `Order placed and confirmed successfully.`,
+            }
+          ];
       const newOrder = {
         id: `ord-${Date.now()}`,
         order_id: orderId,
         order_number: orderId,
         status: "Confirmed",
+        order_timeline: initialTimeline,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         ...order,
@@ -3285,6 +3295,12 @@ export const dbHelper = {
           status: updates.status,
           timestamp: now,
           note: updates.notes || `Order status updated to ${updates.status}`,
+        });
+      } else if ((updates.tracking_number || updates.tracking_id) && !existing.tracking_number && !existing.tracking_id) {
+        timeline.push({
+          status: updates.status || existing.status || "Shipped",
+          timestamp: now,
+          note: `Fulfillment tracking assigned: ${updates.tracking_number || updates.tracking_id} via ${updates.courier || updates.tracking_carrier || "Carrier"}`,
         });
       }
 

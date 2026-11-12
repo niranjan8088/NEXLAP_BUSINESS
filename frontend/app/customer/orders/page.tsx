@@ -11,7 +11,8 @@ import {
   MessageSquare,
   ShieldCheck,
   X,
-  Clock
+  Clock,
+  Truck
 } from "lucide-react";
 import { safeJsonFetch } from "@/lib/apiHelper";
 
@@ -190,6 +191,14 @@ export default function CustomerOrdersPage() {
 
                   <div className="flex items-center gap-2">
                     <Link
+                      href={`/track?search=${encodeURIComponent(orderNum)}`}
+                      className="rounded-xl bg-cyan-50 dark:bg-cyan-950/40 border border-cyan-200 dark:border-cyan-800 px-3 py-1.5 text-xs font-bold text-cyan-700 dark:text-cyan-300 flex items-center gap-1 hover:bg-cyan-100 dark:hover:bg-cyan-900/60 transition-colors"
+                    >
+                      <Truck className="h-3.5 w-3.5 text-cyan-500" />
+                      <span>Track Order</span>
+                    </Link>
+
+                    <Link
                       href="/customer/ewarranty"
                       className="rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 px-3 py-1.5 text-xs font-bold text-emerald-700 dark:text-emerald-300 flex items-center gap-1"
                     >
@@ -290,19 +299,25 @@ export default function CustomerOrdersPage() {
             </div>
 
             {/* Actions */}
-            <div className="pt-2 flex gap-2">
+            <div className="pt-2 flex flex-col sm:flex-row gap-2">
+              <Link
+                href={`/track?search=${encodeURIComponent(selectedOrder.order_number || selectedOrder.order_id || selectedOrder.tracking_number || selectedOrder.id)}`}
+                className="flex-1 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs py-2.5 flex items-center justify-center gap-1.5 shadow-sm transition"
+              >
+                <Truck className="h-4 w-4" /> Track Order Live
+              </Link>
               <Link
                 href={`/invoice/view/${selectedOrder.id}`}
                 target="_blank"
                 className="flex-1 futuristic-btn-primary font-bold text-xs py-2.5 flex items-center justify-center gap-1.5 shadow-sm"
               >
-                <FileText className="h-4 w-4" /> Download Tax Invoice
+                <FileText className="h-4 w-4" /> Tax Invoice
               </Link>
               <Link
                 href="/customer/messages"
                 className="flex-1 futuristic-btn-secondary font-bold text-xs py-2.5 flex items-center justify-center gap-1.5"
               >
-                <MessageSquare className="h-4 w-4" /> Contact Seller
+                <MessageSquare className="h-4 w-4" /> Message Seller
               </Link>
             </div>
           </div>
