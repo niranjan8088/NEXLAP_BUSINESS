@@ -8,6 +8,7 @@ import CustomerHeader from "@/components/CustomerHeader";
 import { useCartStore } from "@/lib/cartStore";
 import { dbHelper } from "@/lib/dbHelper";
 import { getSafeImageSrc } from "@/lib/utils";
+import { sanitizeProductSpecs } from "@/lib/normalization";
 import {
   Heart,
   ShoppingCart,
@@ -669,7 +670,7 @@ export default function ProductDetailPage({
   const galleryImages = extractImageUrls(product);
 
   // Specs map
-  const specMap: Record<string, any> = product.specs || product.attributes || {};
+  const specMap: Record<string, any> = sanitizeProductSpecs(product.specs || product.attributes || {}, product.category);
   const isLaptop = ["business_laptops", "premium_used_laptops", "second_hand_laptops"].includes(product.category.toLowerCase());
   const isSsd = (product.category.toLowerCase() === "storage" || product.category.toLowerCase() === "ssd") && !product.category.toLowerCase().includes("laptop");
 
@@ -1163,31 +1164,30 @@ export default function ProductDetailPage({
         </div>
 
         {/* ALL DETAILS & SPECIFICATIONS */}
-        <div className="mt-8 bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-6">
-          <h2 className="text-lg font-bold text-slate-900 flex items-center space-x-2">
-            <Info className="w-5 h-5 text-[#2563EB]" />
-            <span>Technical Specifications & All Details</span>
-          </h2>
+        {Object.keys(specMap).length > 0 && (
+          <div className="mt-8 bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-6">
+            <h2 className="text-lg font-bold text-slate-900 flex items-center space-x-2">
+              <Info className="w-5 h-5 text-[#2563EB]" />
+              <span>Technical Specifications & All Details</span>
+            </h2>
 
-          <div className="border border-slate-200 rounded-xl overflow-hidden divide-y divide-slate-100">
-            {Object.keys(specMap).length > 0 ? (
-              Object.entries(specMap).map(([key, value]) => (
-                <div key={key} className="grid grid-cols-1 sm:grid-cols-12 p-3.5 text-xs hover:bg-slate-50 transition">
-                  <div className="sm:col-span-4 font-semibold text-slate-600 capitalize">
-                    {key.replace(/([A-Z])/g, " $1").trim()}
+            <div className="border border-slate-200 rounded-xl overflow-hidden divide-y divide-slate-100">
+              {Object.entries(specMap).map(([key, value]) => {
+                const formattedKey = key.includes(" ") ? key : key.replace(/([a-z])([A-Z])/g, "$1 $2").trim();
+                return (
+                  <div key={key} className="grid grid-cols-1 sm:grid-cols-12 p-3.5 text-xs hover:bg-slate-50 transition">
+                    <div className="sm:col-span-4 font-semibold text-slate-600">
+                      {formattedKey}
+                    </div>
+                    <div className="sm:col-span-8 font-medium text-slate-900 mt-1 sm:mt-0">
+                      {String(value)}
+                    </div>
                   </div>
-                  <div className="sm:col-span-8 font-medium text-slate-900 mt-1 sm:mt-0">
-                    {String(value)}
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="p-4 text-xs text-slate-500 italic text-center">
-                Standard NexLapTech Hardware Specifications Apply.
-              </div>
-            )}
+                );
+              })}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* SERVICE & PROTECTION PLANS */}
         <div className="mt-8 bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">

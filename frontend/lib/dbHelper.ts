@@ -2,6 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 import { products as initialProducts, services as initialServices } from "./data";
 import { broadcastServerEvent } from "./realtimeServer";
 import { DEFAULT_FILTER_DEFINITIONS } from "./filterEngine";
+import { sanitizeProductSpecs } from "./normalization";
 import { DEFAULT_STORE_SETTINGS, DEFAULT_CUSTOMER_PREFERENCES } from "./data/defaultSettings";
 import type { StoreSettings, CustomerPreferences, SettingsAuditLogEntry } from "./types/settings";
 
@@ -120,6 +121,7 @@ function normalizeProductRow(row: Record<string, any>) {
   const { original_price, cost_price, images, ...product } = row;
   return {
     ...product,
+    specs: sanitizeProductSpecs(product.specs, product.category),
     images: Array.isArray(images) ? images.map((image, index) => typeof image === "string"
       ? { id: `image-${index + 1}`, url: image, is_primary: index === 0, sort_order: index + 1 }
       : image
@@ -131,6 +133,9 @@ function normalizeProductRow(row: Record<string, any>) {
 
 function toProductDatabaseFields(fields: Record<string, any>) {
   const payload = { ...fields };
+  if (payload.specs) {
+    payload.specs = sanitizeProductSpecs(payload.specs, payload.category);
+  }
   if ("compareAtPrice" in payload) {
     payload.original_price = payload.compareAtPrice;
     delete payload.compareAtPrice;

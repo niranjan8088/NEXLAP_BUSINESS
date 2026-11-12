@@ -232,3 +232,82 @@ export function extractStructuredSpecs(product: any): ProductStructuredSpecs {
     ...rawSpecs,
   };
 }
+
+/**
+ * Strict category-aware specification sanitizer.
+ * Removes duplicate, irrelevant, or fabricated template specifications (e.g., laptop CPU/RAM/Display or CCTV PoE on peripherals/storage).
+ */
+export function sanitizeProductSpecs(specs: Record<string, any> | undefined | null, category: string = ""): Record<string, any> {
+  if (!specs || typeof specs !== "object") return {};
+  
+  const cleanCategory = String(category || "").toLowerCase().trim();
+  const isLaptop = ["business_laptops", "premium_used_laptops", "second_hand_laptops"].includes(cleanCategory) || cleanCategory === "laptop";
+  const isDesktopOrPC = ["gaming_pcs", "desktop_systems", "servers"].includes(cleanCategory);
+  const isStorage = ["storage", "ssd"].includes(cleanCategory);
+  const isRam = cleanCategory === "ram";
+  const isCctv = ["cctv", "cctv_security"].includes(cleanCategory);
+  const isMonitor = cleanCategory === "monitors";
+
+  // Template keys commonly injected across products indiscriminately
+  const templateKeys = new Set([
+    "processor brand", "processor", "processor generation",
+    "ram capacity", "ram type",
+    "ssd capacity", "storage type",
+    "graphics", "dedicated graphics memory",
+    "screen size", "display type",
+    "operating system", "weight", "touch screen",
+    "capacity", "interface", "form factor", "read speed", "write speed", "speed",
+    "camera type", "resolution", "night vision", "connectivity"
+  ]);
+
+  const clean: Record<string, any> = {};
+
+  for (const [rawKey, rawVal] of Object.entries(specs)) {
+    if (rawVal === undefined || rawVal === null || rawVal === "" || String(rawVal).trim() === "") continue;
+
+    const lowerKey = rawKey.toLowerCase().replace(/[\s_\-]/g, "");
+    const lowerKeySpaced = rawKey.toLowerCase().trim();
+
+    // 1. CCTV specs (CameraType, Resolution, NightVision, Connectivity PoE)
+    const isCctvSpec = ["cameratype", "nightvision", "connectivity", "cameras", "nvr"].includes(lowerKey);
+    if (isCctvSpec && !isCctv) continue;
+
+    // 2. Storage read/write/interface specs
+    const isStorageSpec = ["readspeed", "writespeed", "interface", "formfactor", "controller"].includes(lowerKey);
+    if (isStorageSpec && !isStorage) continue;
+
+    // 3. RAM speeds & DDR generation
+    const isRamSpec = ["ddrgeneration", "ramtype", "ramspeed"].includes(lowerKey);
+    if (isRamSpec && !isRam && !isLaptop && !isDesktopOrPC) continue;
+
+    // 4. Screen & Display specs (14 inch, FHD IPS, Touchscreen)
+    const isDisplaySpec = ["screensize", "displaytype", "touchscreen"].includes(lowerKey);
+    if (isDisplaySpec && !isLaptop && !isMonitor) continue;
+
+    // 5. Processor, CPU, GPU, OS specs
+    const isComputeSpec = ["processor", "processorbrand", "processorgeneration", "graphics", "dedicatedgraphicsmemory", "operatingsystem"].includes(lowerKey);
+    if (isComputeSpec && !isLaptop && !isDesktopOrPC) continue;
+
+    // 6. Generic "Capacity" on peripherals or general accessories
+    if (lowerKey === "capacity" && !isStorage && !isRam) continue;
+
+    // 7. RAM Capacity & SSD Capacity on peripherals, accessories, CCTV
+    if ((lowerKey === "ramcapacity" || lowerKey === "ssdcapacity" || lowerKey === "storagetype") && !isLaptop && !isDesktopOrPC && !isStorage && !isRam) {
+      continue;
+    }
+
+    // 8. Default 1.4 kg weight template
+    if (lowerKey === "weight" && !isLaptop && String(rawVal).trim() === "1.4 kg") continue;
+
+    // 9. For peripherals, accessories, components, reject all remaining template keys
+    const isPeripheralOrGeneral = ["peripherals", "accessories", "laptop_components", "desktop_components", "networking"].includes(cleanCategory) || (!isLaptop && !isDesktopOrPC && !isStorage && !isRam && !isCctv && !isMonitor);
+    if (isPeripheralOrGeneral && templateKeys.has(lowerKeySpaced)) {
+      continue;
+    }
+
+    clean[rawKey] = rawVal;
+  }
+
+  return clean;
+}
+

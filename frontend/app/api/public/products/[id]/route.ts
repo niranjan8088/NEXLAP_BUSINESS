@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { dbHelper } from "@/lib/dbHelper";
+import { sanitizeProductSpecs } from "@/lib/normalization";
 
 export async function GET(
   request: NextRequest,
@@ -52,10 +53,13 @@ export async function GET(
       stockStatus = `Only ${stockQty} left`;
     }
 
+    const cleanSpecs = sanitizeProductSpecs(customerSafeProduct.specs, customerSafeProduct.category);
+
     return NextResponse.json({
       success: true,
       product: {
         ...customerSafeProduct,
+        specs: cleanSpecs,
         variants: customerSafeVariants,
         stockStatus,
         inStock: stockQty > 0,

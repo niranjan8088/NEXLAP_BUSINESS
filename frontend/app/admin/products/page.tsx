@@ -30,6 +30,7 @@ import {
 import { dbHelper } from "@/lib/dbHelper";
 import Image from "next/image";
 import { getSafeImageSrc } from "@/lib/utils";
+import { sanitizeProductSpecs } from "@/lib/normalization";
 import ProductCatalogImport from "@/components/ProductCatalogImport";
 
 const CATEGORIES = [
@@ -756,7 +757,8 @@ export default function AdminProductsManager() {
           alt_text: img.alt_text || ""
         })),
         status: editingProduct ? editingProduct.status : "show",
-        specs: {
+        specs: sanitizeProductSpecs({
+          ...(editingProduct?.specs || {}),
           ...(category === "business_laptops" || category === "premium_used_laptops" || category === "second_hand_laptops" ? {
             "Processor Brand": specProcBrand,
             Processor: specProcessor,
@@ -805,8 +807,7 @@ export default function AdminProductsManager() {
           } : {}),
           "GST Invoice Available": specGstInvoice ? "Yes" : "No",
           "Country Of Origin": specCountry,
-          ...(editingProduct?.specs || {})
-        }
+        }, category)
       };
 
       if (editingProduct) {
