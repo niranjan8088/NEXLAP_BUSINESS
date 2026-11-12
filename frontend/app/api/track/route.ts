@@ -18,7 +18,7 @@ export async function OPTIONS() {
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
-    const searchVal = searchParams.get("search");
+    const searchVal = searchParams.get("search") || searchParams.get("order") || searchParams.get("order_id") || searchParams.get("tracking") || searchParams.get("ref");
 
     if (!searchVal) {
       return NextResponse.json(
