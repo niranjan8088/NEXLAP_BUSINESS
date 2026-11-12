@@ -26,6 +26,9 @@ import {
   ChevronRight,
   Copy,
   Filter,
+  CloudUpload,
+  Download,
+  RefreshCw,
 } from "lucide-react";
 import { dbHelper } from "@/lib/dbHelper";
 import Image from "next/image";
@@ -231,10 +234,57 @@ export default function AdminProductsManager() {
   const [uploadProgress, setUploadProgress] = useState("");
   const [imageError, setImageError] = useState("");
   const [isDragging, setIsDragging] = useState(false);
+  const [syncingAll, setSyncingAll] = useState(false);
+  const [syncMessage, setSyncMessage] = useState("");
 
   const loadProducts = async () => {
     const list = await dbHelper.products.list();
     setProducts(list);
+    try {
+      if (Array.isArray(list) && list.length > 0) {
+        fetch("/api/system/sync-mock", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ key: "products", data: list }),
+        }).catch(() => {});
+      }
+    } catch {}
+  };
+
+  const handleSyncToAllDevices = async () => {
+    setSyncingAll(true);
+    setSyncMessage("");
+    try {
+      const currentList = await dbHelper.products.list();
+      const res = await fetch("/api/system/sync-mock", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: "products", data: currentList }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Sync failed");
+      setSyncMessage(`Catalog synced! Total ${currentList.length} products written to server storage. Commit and push to git to update on other devices.`);
+      setTimeout(() => setSyncMessage(""), 8000);
+    } catch (e: any) {
+      setSyncMessage(`Sync error: ${e.message}`);
+    } finally {
+      setSyncingAll(false);
+    }
+  };
+
+  const handleExportCatalogJson = async () => {
+    try {
+      const currentList = await dbHelper.products.list();
+      const blob = new Blob([JSON.stringify(currentList, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `nexlaptech-products-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e: any) {
+      alert("Failed to export products JSON: " + e.message);
+    }
   };
 
   useEffect(() => {
@@ -1004,6 +1054,23 @@ export default function AdminProductsManager() {
 
         <div className="flex flex-wrap items-center gap-2">
           <ProductCatalogImport onImported={loadProducts} />
+          <button
+            onClick={handleSyncToAllDevices}
+            disabled={syncingAll}
+            className="btn-secondary !py-2.5 !px-3.5 text-xs bg-cyan-500/10 border-cyan-500/20 text-cyan-400 hover:bg-cyan-500/20 min-h-[44px] flex items-center gap-1.5 cursor-pointer"
+            title="Sync products from this laptop to server database so other devices can see them"
+          >
+            {syncingAll ? <Loader2 className="h-4 w-4 animate-spin" /> : <CloudUpload className="h-4 w-4" />}
+            <span>Sync to All Devices</span>
+          </button>
+          <button
+            onClick={handleExportCatalogJson}
+            className="btn-secondary !py-2.5 !px-3.5 text-xs bg-white/5 border-white/10 text-slate-300 hover:bg-white/10 min-h-[44px] flex items-center gap-1.5 cursor-pointer"
+            title="Download complete products catalog backup JSON"
+          >
+            <Download className="h-4 w-4" />
+            <span>Export JSON</span>
+          </button>
           {selectedIds.length > 0 && (
             <button
               onClick={handleBulkDelete}
@@ -1022,6 +1089,13 @@ export default function AdminProductsManager() {
           </button>
         </div>
       </div>
+
+      {syncMessage && (
+        <div className="p-3.5 rounded-xl bg-cyan-950/40 border border-cyan-500/30 text-xs font-semibold text-cyan-200 flex items-center justify-between gap-3 animate-in fade-in">
+          <span>{syncMessage}</span>
+          <button onClick={() => setSyncMessage("")} className="hover:text-white"><X className="h-4 w-4" /></button>
+        </div>
+      )}
 
       {/* ── SEARCH & FILTER CONTROLS ────────────────────────────────────────── */}
       <div className="glass-panel p-4 rounded-2xl border border-white/5 bg-nex-ink space-y-3">

@@ -133,14 +133,35 @@ function ProductsCatalogContent() {
     setSearchInput(searchParam);
   }, [searchParam]);
 
-  // Load Data from Database / dbHelper
+  // Load Data from Server API & Database / dbHelper
   const loadCatalogData = async () => {
     setLoading(true);
     try {
-      const [prodList, defs] = await Promise.all([
-        dbHelper.products.list(),
-        dbHelper.filterDefinitions.list(categoryParam),
-      ]);
+      let prodList: any[] = [];
+      try {
+        const res = await fetch("/api/public/products?limit=1000", { cache: "no-store" });
+        if (res.ok) {
+          const json = await res.json();
+          if (Array.isArray(json.products) && json.products.length > 0) {
+            prodList = json.products;
+          }
+        }
+      } catch (apiErr) {
+        console.warn("Public products API fallback:", apiErr);
+      }
+
+      if (prodList.length === 0) {
+        prodList = await dbHelper.products.list();
+      }
+
+      // Sync into client localStorage cache for instant fast renders
+      if (typeof window !== "undefined" && prodList.length > 0) {
+        try {
+          localStorage.setItem("nexbyte_products", JSON.stringify(prodList));
+        } catch {}
+      }
+
+      const defs = await dbHelper.filterDefinitions.list(categoryParam);
       setProducts(prodList || []);
       setFilterDefinitions(defs || []);
     } catch (err) {

@@ -17,6 +17,30 @@ function saveMemoryDb(db: Record<string, any>) {
   globalRef.__nexbyteMockDb = { ...globalRef.__nexbyteMockDb, ...db };
 }
 
+function trySaveDiskDb(key: string, data: any) {
+  if (typeof process === "undefined" || !process.cwd) return;
+  try {
+    const fs = eval("require")("fs");
+    const path = eval("require")("path");
+    const possiblePaths = [
+      path.join(process.cwd(), "data", "mock_db.json"),
+      path.join(process.cwd(), "frontend", "data", "mock_db.json"),
+      path.join(process.cwd(), "nexbyte", "frontend", "data", "mock_db.json"),
+    ];
+    for (const p of possiblePaths) {
+      if (fs.existsSync(p)) {
+        const raw = fs.readFileSync(p, "utf8");
+        const current = JSON.parse(raw);
+        current[key] = data;
+        fs.writeFileSync(p, JSON.stringify(current, null, 2), "utf8");
+        break;
+      }
+    }
+  } catch {
+    // Edge/serverless runtime environment without filesystem write access
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -49,6 +73,7 @@ export async function POST(req: NextRequest) {
 
       db.products = existingProducts;
       saveMemoryDb(db);
+      trySaveDiskDb("products", existingProducts);
       invalidateQueryCache("products");
 
       return NextResponse.json({
@@ -84,6 +109,7 @@ export async function POST(req: NextRequest) {
 
       db.orders = existingOrders;
       saveMemoryDb(db);
+      trySaveDiskDb("orders", existingOrders);
       invalidateQueryCache("orders");
 
       return NextResponse.json({
@@ -113,6 +139,7 @@ export async function POST(req: NextRequest) {
     }
 
     saveMemoryDb(db);
+    trySaveDiskDb(key, db[key]);
     invalidateQueryCache(key);
 
     return NextResponse.json({
