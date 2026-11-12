@@ -888,15 +888,6 @@ function ProductsCatalogContent() {
                             <span>{prod.warranty || "Warranty Backed"}</span>
                           </div>
                         )}
-
-                        {/* DYNAMIC STRUCTURED SPECIFICATION HIGHLIGHTS */}
-                        <div className="mt-2.5 space-y-1 text-[11px] text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-white/[0.03] p-2.5 rounded-xl border border-slate-100 dark:border-white/5">
-                          {specs.processor && <div className="truncate">⚡ <strong>CPU:</strong> {specs.processor} {specs.processorGen}</div>}
-                          {specs.ramCapacity && <div className="truncate">🧠 <strong>RAM:</strong> {specs.ramCapacity} {specs.ramType}</div>}
-                          {specs.ssdCapacity && <div className="truncate">💾 <strong>Storage:</strong> {specs.ssdCapacity} {specs.storageType}</div>}
-                          {specs.screenSize && <div className="truncate">🖥️ <strong>Display:</strong> {specs.screenSize}</div>}
-                          {specs.graphics && <div className="truncate">🎮 <strong>GPU:</strong> {specs.graphics}</div>}
-                        </div>
                       </div>
 
                       {/* Pricing & Actions */}
@@ -1014,15 +1005,17 @@ function ProductsCatalogContent() {
                     ₹{(prod.price || 0).toLocaleString("en-IN")}
                   </div>
 
-                  <div className="space-y-1.5 text-xs bg-slate-50 p-3 rounded-xl border border-slate-100">
-                    <h4 className="font-bold text-slate-700 uppercase tracking-wider text-[10px]">Specifications</h4>
-                    {Object.entries(specs).slice(0, 8).map(([k, v]) => (
-                      <div key={k} className="flex justify-between border-b border-slate-200/50 pb-0.5">
-                        <span className="text-slate-500">{k}:</span>
-                        <span className="font-semibold text-slate-900">{String(v)}</span>
-                      </div>
-                    ))}
-                  </div>
+                  {prod.specs && Object.keys(prod.specs).length > 0 && (
+                    <div className="space-y-1.5 text-xs bg-slate-50 p-3 rounded-xl border border-slate-100">
+                      <h4 className="font-bold text-slate-700 uppercase tracking-wider text-[10px]">Specifications</h4>
+                      {Object.entries(prod.specs).slice(0, 8).map(([k, v]) => (
+                        <div key={k} className="flex justify-between border-b border-slate-200/50 pb-0.5">
+                          <span className="text-slate-500">{k}:</span>
+                          <span className="font-semibold text-slate-900">{String(v)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
 
                   <button
                     onClick={() => {

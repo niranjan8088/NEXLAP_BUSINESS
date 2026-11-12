@@ -670,8 +670,8 @@ export default function ProductDetailPage({
 
   // Specs map
   const specMap: Record<string, any> = product.specs || product.attributes || {};
-  const isLaptop = product.category.toLowerCase().includes("laptop");
-  const isSsd = product.category.toLowerCase().includes("storage") || product.category.toLowerCase().includes("ssd");
+  const isLaptop = ["business_laptops", "premium_used_laptops", "second_hand_laptops"].includes(product.category.toLowerCase());
+  const isSsd = (product.category.toLowerCase() === "storage" || product.category.toLowerCase() === "ssd") && !product.category.toLowerCase().includes("laptop");
 
   const deliveryCfg = storeConfig?.deliveryWarranty;
   const categoryOverride = deliveryCfg?.categoryOverrides?.find(
@@ -1059,26 +1059,36 @@ export default function ProductDetailPage({
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
             {isLaptop ? (
               <>
-                <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 text-xs">
-                  <span className="text-slate-400 block font-semibold">Processor</span>
-                  <span className="font-bold text-slate-900">{specMap.Processor || specMap.processorBrand || "Intel Core i5"}</span>
-                </div>
-                <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 text-xs">
-                  <span className="text-slate-400 block font-semibold">RAM</span>
-                  <span className="font-bold text-slate-900">{specMap.RAM || specMap.ramCapacity || "16 GB DDR4"}</span>
-                </div>
-                <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 text-xs">
-                  <span className="text-slate-400 block font-semibold">Storage</span>
-                  <span className="font-bold text-slate-900">{specMap.SSD || specMap.ssdCapacity || "512 GB SSD"}</span>
-                </div>
-                <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 text-xs">
-                  <span className="text-slate-400 block font-semibold">Display</span>
-                  <span className="font-bold text-slate-900">{specMap.Display || specMap.screenSize || '15.6" FHD'}</span>
-                </div>
-                <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 text-xs">
-                  <span className="text-slate-400 block font-semibold">OS</span>
-                  <span className="font-bold text-slate-900">{specMap.OS || specMap.operatingSystem || "Windows 11 Home"}</span>
-                </div>
+                {(specMap.Processor || specMap.processorBrand) && (
+                  <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 text-xs">
+                    <span className="text-slate-400 block font-semibold">Processor</span>
+                    <span className="font-bold text-slate-900">{specMap.Processor || specMap.processorBrand}</span>
+                  </div>
+                )}
+                {(specMap.RAM || specMap.ramCapacity) && (
+                  <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 text-xs">
+                    <span className="text-slate-400 block font-semibold">RAM</span>
+                    <span className="font-bold text-slate-900">{specMap.RAM || specMap.ramCapacity}</span>
+                  </div>
+                )}
+                {(specMap.SSD || specMap.ssdCapacity || specMap.Storage) && (
+                  <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 text-xs">
+                    <span className="text-slate-400 block font-semibold">Storage</span>
+                    <span className="font-bold text-slate-900">{specMap.SSD || specMap.ssdCapacity || specMap.Storage}</span>
+                  </div>
+                )}
+                {(specMap.Display || specMap.screenSize) && (
+                  <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 text-xs">
+                    <span className="text-slate-400 block font-semibold">Display</span>
+                    <span className="font-bold text-slate-900">{specMap.Display || specMap.screenSize}</span>
+                  </div>
+                )}
+                {(specMap.OS || specMap.operatingSystem) && (
+                  <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 text-xs">
+                    <span className="text-slate-400 block font-semibold">OS</span>
+                    <span className="font-bold text-slate-900">{specMap.OS || specMap.operatingSystem}</span>
+                  </div>
+                )}
                 <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 text-xs">
                   <span className="text-slate-400 block font-semibold">Warranty</span>
                   <span className="font-bold text-slate-900">{effectiveWarranty}</span>
@@ -1086,26 +1096,36 @@ export default function ProductDetailPage({
               </>
             ) : isSsd ? (
               <>
-                <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 text-xs">
-                  <span className="text-slate-400 block font-semibold">Capacity</span>
-                  <span className="font-bold text-slate-900">{specMap.Capacity || "1 TB"}</span>
-                </div>
-                <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 text-xs">
-                  <span className="text-slate-400 block font-semibold">Interface</span>
-                  <span className="font-bold text-slate-900">{specMap.Interface || "PCIe 4.0 NVMe"}</span>
-                </div>
-                <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 text-xs">
-                  <span className="text-slate-400 block font-semibold">Form Factor</span>
-                  <span className="font-bold text-slate-900">{specMap.FormFactor || "M.2 2280"}</span>
-                </div>
-                <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 text-xs">
-                  <span className="text-slate-400 block font-semibold">Read Speed</span>
-                  <span className="font-bold text-slate-900">{specMap.ReadSpeed || "Up to 7,000 MB/s"}</span>
-                </div>
-                <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 text-xs">
-                  <span className="text-slate-400 block font-semibold">Write Speed</span>
-                  <span className="font-bold text-slate-900">{specMap.WriteSpeed || "Up to 5,000 MB/s"}</span>
-                </div>
+                {specMap.Capacity && (
+                  <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 text-xs">
+                    <span className="text-slate-400 block font-semibold">Capacity</span>
+                    <span className="font-bold text-slate-900">{specMap.Capacity}</span>
+                  </div>
+                )}
+                {specMap.Interface && (
+                  <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 text-xs">
+                    <span className="text-slate-400 block font-semibold">Interface</span>
+                    <span className="font-bold text-slate-900">{specMap.Interface}</span>
+                  </div>
+                )}
+                {specMap.FormFactor && (
+                  <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 text-xs">
+                    <span className="text-slate-400 block font-semibold">Form Factor</span>
+                    <span className="font-bold text-slate-900">{specMap.FormFactor}</span>
+                  </div>
+                )}
+                {specMap.ReadSpeed && (
+                  <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 text-xs">
+                    <span className="text-slate-400 block font-semibold">Read Speed</span>
+                    <span className="font-bold text-slate-900">{specMap.ReadSpeed}</span>
+                  </div>
+                )}
+                {specMap.WriteSpeed && (
+                  <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 text-xs">
+                    <span className="text-slate-400 block font-semibold">Write Speed</span>
+                    <span className="font-bold text-slate-900">{specMap.WriteSpeed}</span>
+                  </div>
+                )}
                 <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 text-xs">
                   <span className="text-slate-400 block font-semibold">Warranty</span>
                   <span className="font-bold text-slate-900">{effectiveWarranty}</span>
